@@ -29,6 +29,7 @@ pnpm-debug.log*
 
 # Coverage
 coverage/
+.nyc_output/
 
 # Playwright
 playwright-report/
