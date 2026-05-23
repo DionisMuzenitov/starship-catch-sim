@@ -1,0 +1,44 @@
+# Architecture Decision Records
+
+This directory holds the project's **Architecture Decision Records (ADRs)** — short documents that capture *why* a non-trivial decision was made, not just *what* the code does.
+
+## Why ADRs
+
+Code shows the current state. Git history shows the diff. Neither answers: *"why did we choose this over the obvious alternative?"* ADRs fill that gap. Six months from now, when someone (often future-you) asks "why don't we just use X?", the ADR explains what was already considered and rejected.
+
+## Format
+
+We use **MADR-lite** — see `template.md`. Every ADR has:
+
+- **Title** — kebab-case file name, `NNN-short-decision.md`
+- **Status** — Proposed / Accepted / Superseded by ADR-XXX
+- **Context** — what forces are at play, why we have to decide now
+- **Decision** — the actual choice, stated clearly
+- **Consequences** — what changes as a result, including the bad parts
+- **Alternatives considered** — at least two, with the reason each was rejected
+
+Keep them to ~150–300 words. They are signposts, not essays.
+
+## Rules
+
+1. **One decision per file.** If your ADR has more than one decision, split it.
+2. **Immutable.** Once accepted, an ADR is never edited beyond fixing typos. If the decision changes, write a new ADR that *supersedes* the old one — link both ways.
+3. **Numbered sequentially.** `001`, `002`, `003`, … never reuse a number.
+4. **Reference from code** when the ADR governs a non-obvious convention. E.g. an ESLint rule that enforces ADR-004 should have a comment `// see docs/adr/004-engine-agnostic-physics.md`.
+
+## Adding a new ADR
+
+```bash
+cp docs/adr/template.md docs/adr/00N-your-decision.md
+```
+
+Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers focus on the *Alternatives* section — if it's thin, the decision probably hasn't been stress-tested.
+
+## Index
+
+| #   | Title                                                                 | Status   |
+| --- | --------------------------------------------------------------------- | -------- |
+| 001 | [Tech stack](001-tech-stack.md)                                       | Accepted |
+| 002 | [6-DOF state and 3D rendering from day one](002-6dof-and-3d-from-day-one.md) | Accepted |
+| 003 | [Controller interface](003-controller-interface.md)                   | Accepted |
+| 004 | [Engine-agnostic physics core](004-engine-agnostic-physics.md)        | Accepted |
