@@ -48,4 +48,25 @@ export default tseslint.config(
       ],
     },
   },
+  // Enforces ADR-004 (docs/adr/004-engine-agnostic-physics.md):
+  // physics core must not depend on any rendering or UI library.
+  {
+    files: ["packages/physics/**/*.{ts,tsx,js,jsx,mjs,cjs}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "three", message: "ADR-004: physics core is engine-agnostic — no Three.js imports." },
+            { name: "react", message: "ADR-004: physics core is engine-agnostic — no React imports." },
+            { name: "react-dom", message: "ADR-004: physics core is engine-agnostic — no React DOM imports." },
+          ],
+          patterns: [
+            { group: ["three/*"], message: "ADR-004: physics core is engine-agnostic — no Three.js imports." },
+            { group: ["@react-three/*"], message: "ADR-004: physics core is engine-agnostic — no @react-three imports." },
+          ],
+        },
+      ],
+    },
+  },
 );
