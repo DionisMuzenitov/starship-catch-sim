@@ -33,6 +33,28 @@ fix(web): correct camera FOV on resize
 docs: update repo layout in README
 ```
 
+## Running the tests
+
+Unit and property tests run in Vitest from the repo root:
+
+```bash
+pnpm test            # one-shot
+pnpm test:watch      # watch mode
+```
+
+End-to-end tests use Playwright against a built bundle. A fresh clone needs to download the Chromium browser binary once:
+
+```bash
+pnpm playwright:install   # one-time, ~92 MB
+pnpm test:e2e
+```
+
+The perf harness is a stub today; real benchmarks land with the integrator in M1:
+
+```bash
+pnpm bench
+```
+
 ## Pull request checklist
 
 Before requesting review, make sure:
@@ -48,29 +70,12 @@ Before requesting review, make sure:
 
 ## How to add an ADR
 
-We track Architecture Decision Records in `docs/adr/`.
+Architecture Decision Records live in [`docs/adr/`](./docs/adr/). The process, format (MADR-lite), and rules are documented in [`docs/adr/README.md`](./docs/adr/README.md) — read that first.
 
-1. Copy the template: `cp docs/adr/000-template.md docs/adr/NNN-title.md`
-2. Fill in the status, context, decision, and consequences sections.
-3. Number sequentially (check the highest existing number).
-4. Submit the ADR as part of your feature PR or as a standalone PR.
+In short:
 
-ADR format:
-
-```markdown
-# NNN - Title
-
-**Status:** Proposed | Accepted | Deprecated | Superseded by NNN
-
-## Context
-
-Why is this decision needed?
-
-## Decision
-
-What did we decide?
-
-## Consequences
-
-What are the trade-offs?
+```bash
+cp docs/adr/template.md docs/adr/NNN-your-decision.md
 ```
+
+Then fill it in, submit as part of your feature PR or as a standalone PR, and link from the relevant Jira ticket.
