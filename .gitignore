@@ -30,5 +30,10 @@ pnpm-debug.log*
 # Coverage
 coverage/
 
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+
 # Claude Code per-user settings (kept local)
 .claude/settings.local.json
