@@ -1,7 +1,8 @@
 import { chromium } from "@playwright/test";
 
 const PORT = process.env.PORT ?? "4173";
-const URL = `http://localhost:${PORT}/`;
+const URL_PATH = process.argv[3] ?? "/";
+const URL = `http://localhost:${PORT}${URL_PATH}`;
 const OUT = process.argv[2] ?? "scene-capture.png";
 
 const browser = await chromium.launch();
