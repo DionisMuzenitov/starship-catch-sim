@@ -36,8 +36,13 @@ export function Flap({ surface, state, bodyRadius }: Props) {
     hingeRef.current.rotation.y = state.deflection;
   });
 
+  // See SLS-39: Y-rotation sign matches the math convention used in
+  // mountAngle (atan2) only when negated, because Three.js Y-up rotation
+  // about +Y sends +X → −Z, not +Z. Current flap mounts are on ±X so the
+  // sign doesn't matter today, but matching GridFin keeps the convention
+  // consistent and prevents the same bug if Z-mounted flaps are added.
   return (
-    <group position={[mx, my, mz]} rotation={[0, mountAngle, 0]}>
+    <group position={[mx, my, mz]} rotation={[0, -mountAngle, 0]}>
       <group ref={hingeRef}>
         <mesh
           position={[FLAP_SPAN / 2, 0, 0]}
