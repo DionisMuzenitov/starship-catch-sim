@@ -35,3 +35,24 @@ test("/sandbox/models loads canvas + control panel without errors", async ({
     [],
   );
 });
+
+test("/sandbox/tower loads canvas + tower panel without errors", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error") errors.push(msg.text());
+  });
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/sandbox/tower");
+
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.locator('[data-testid="tower-control-panel"]'),
+  ).toBeVisible();
+
+  expect(errors, `unexpected console errors:\n${errors.join("\n")}`).toEqual(
+    [],
+  );
+});
