@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { SandboxModels } from "./sandbox/SandboxModels";
+import { SandboxTower } from "./sandbox/SandboxTower";
 import { Scene } from "./scene/Scene";
 
 function currentPath(): string {
@@ -19,6 +20,8 @@ export function App() {
   switch (path) {
     case "/sandbox/models":
       return <SandboxModels />;
+    case "/sandbox/tower":
+      return <SandboxTower />;
     default:
       return <Scene />;
   }
