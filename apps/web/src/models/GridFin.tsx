@@ -43,8 +43,13 @@ export function GridFin({ surface, state, bodyRadius }: Props) {
     hingeRef.current.rotation.y = state.deflection;
   });
 
+  // Three.js Y-up rotation about +Y by θ sends local +X → world (cos θ, 0,
+  // −sin θ). To make local +X (the fin's outward direction) align with the
+  // mount's outward radial vector (cos mountAngle, 0, sin mountAngle), we
+  // need to rotate by −mountAngle. Without the negation, fins on the Z axis
+  // end up pointing into the body. See SLS-39.
   return (
-    <group position={[mx, my, mz]} rotation={[0, mountAngle, 0]}>
+    <group position={[mx, my, mz]} rotation={[0, -mountAngle, 0]}>
       <group ref={hingeRef}>
         {/* Fin centred FIN_SPAN/2 outward from the body surface, with the
             long axis (chord) parallel to body Y. */}
