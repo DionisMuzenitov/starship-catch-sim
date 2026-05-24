@@ -19,6 +19,24 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
 
 Real-time browser simulation of SpaceX's Starship booster "Mechazilla" catch manoeuvre — 6-DOF rigid-body dynamics, grid-fin + engine-gimbal control, MPC strategies. pnpm workspace: `apps/web` (Three.js/React), `packages/physics`, `packages/controllers`, `services/mpc`. See `README.md` for milestones.
 
+## Knowledge base & reference material
+
+Reference knowledge for this project lives in two places — check them before grounding
+any physical numbers or modelling decisions:
+
+- **Confluence — Starship Reference Knowledge Base** (SLS space): narrative / media
+  reference for how the real Starship, Raptor engine, catch sequence, reentry, and
+  attitude control work. Start at the **"Working with Claude on this knowledge base"**
+  page for conventions (how we add videos / web info, record sources + dates, and
+  make or revise decisions).
+- **`docs/reference/`**: machine-consumed reference data the simulator actually reads
+  (thrust curves, ISA atmosphere tables, geometry). See `docs/reference/README.md`.
+
+Decisions about the code / architecture go in `docs/adr/` (not the KB).
+When you learn something reference-worthy from a video, paper, or the web, capture it
+in the Confluence KB (in our own words, with the source link and date) rather than
+letting it evaporate.
+
 ## Working notes
 
 - Node 20 is keg-only on this machine — prepend `/opt/homebrew/opt/node@20/bin` to `PATH` for `pnpm`/`node`.
