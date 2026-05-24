@@ -22,7 +22,12 @@ export const G0 = 9.80665;
 export type Engine = {
   /** Engine attachment point in body frame (m). */
   readonly mount: Vec3;
-  /** Nominal thrust direction in body frame, unit vector (e.g. (0,-1,0)). */
+  /**
+   * Force direction on the body in body frame, unit vector, when the engine
+   * is firing at full throttle with zero gimbal. For a rocket engine that
+   * pushes the vehicle "up" along its +y body axis, this is `(0, +1, 0)` —
+   * the *direction the body accelerates*, not the direction exhaust leaves.
+   */
   readonly direction: Vec3;
   readonly thrustVac: number; // N — thrust in vacuum
   readonly thrustSea: number; // N — thrust at sea-level pressure

@@ -17,7 +17,8 @@ import type { Engine } from "../thrust.js";
 import { RaptorSeaParams, RaptorVacParams } from "./raptor.js";
 
 const Y = 0;
-const DOWN = Vec3.of(0, -1, 0);
+// Force direction on the body when the engine fires — see `thrust.ts` docs.
+const UP = Vec3.of(0, 1, 0);
 
 const SL_RADIUS = 1.0; // m — tight cluster
 const VAC_RADIUS = 2.8; // m — wider ring on the perimeter
@@ -35,14 +36,14 @@ const ringMounts = (count: number, radius: number, phaseDeg = 0): Vec3[] => {
 const seaLevel: Engine[] = ringMounts(3, SL_RADIUS).map((mount) => ({
   ...RaptorSeaParams,
   mount,
-  direction: DOWN,
+  direction: UP,
   canGimbal: true,
 }));
 
 const vacuum: Engine[] = ringMounts(3, VAC_RADIUS, 60).map((mount) => ({
   ...RaptorVacParams,
   mount,
-  direction: DOWN,
+  direction: UP,
   canGimbal: false,
 }));
 

@@ -22,7 +22,9 @@ import type { Engine } from "../thrust.js";
 import { RaptorSeaParams } from "./raptor.js";
 
 const Y = 0; // engines mounted at the engine plane (body origin)
-const DOWN = Vec3.of(0, -1, 0);
+// Engines push the body upward along +y in body frame. (`direction` is the
+// force direction on the body, not the exhaust direction.)
+const UP = Vec3.of(0, 1, 0);
 
 const CENTRE_RADIUS = 0.6; // m — small ring of 3 centre engines
 const INNER_RADIUS = 1.8; // m
@@ -41,14 +43,14 @@ const ringMounts = (count: number, radius: number, phaseDeg = 0): Vec3[] => {
 const centreEngines: Engine[] = ringMounts(3, CENTRE_RADIUS).map((mount) => ({
   ...RaptorSeaParams,
   mount,
-  direction: DOWN,
+  direction: UP,
   canGimbal: true,
 }));
 
 const innerEngines: Engine[] = ringMounts(10, INNER_RADIUS).map((mount) => ({
   ...RaptorSeaParams,
   mount,
-  direction: DOWN,
+  direction: UP,
   canGimbal: false,
   maxGimbal: 0,
   maxGimbalRate: 0,
@@ -58,7 +60,7 @@ const innerEngines: Engine[] = ringMounts(10, INNER_RADIUS).map((mount) => ({
 const outerEngines: Engine[] = ringMounts(20, OUTER_RADIUS, 9).map((mount) => ({
   ...RaptorSeaParams,
   mount,
-  direction: DOWN,
+  direction: UP,
   canGimbal: false,
   maxGimbal: 0,
   maxGimbalRate: 0,
