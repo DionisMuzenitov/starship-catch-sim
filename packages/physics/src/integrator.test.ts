@@ -163,7 +163,13 @@ describe("RK4 integrator — rotation", () => {
 });
 
 describe("RK4 integrator — performance", () => {
-  it("10 000 steps in under 50 ms", () => {
+  // Local dev hardware (M-series Mac) measures ~15 ms for this loop.
+  // GitHub Actions `ubuntu-latest` runners are ~3–4x slower for CPU-bound
+  // JS, so we use 200 ms as the bound — still catches a ~13x regression
+  // from the local baseline while not flaking on CI. Tracked in SLS-38.
+  const PERF_BUDGET_MS = 200;
+
+  it(`10 000 steps in under ${PERF_BUDGET_MS} ms`, () => {
     const dt = 0.01;
     let s = asymBody({
       position: Vec3.of(0, 100, 0),
@@ -180,7 +186,7 @@ describe("RK4 integrator — performance", () => {
     const elapsed = performance.now() - start;
     // Log so the bound is visible in test output (SLS-8 AC).
     console.log(`[perf] 10,000 RK4 steps in ${elapsed.toFixed(2)} ms`);
-    expect(elapsed).toBeLessThan(50);
+    expect(elapsed).toBeLessThan(PERF_BUDGET_MS);
     // Silence unused-state warning while still validating it stays finite.
     expect(Number.isFinite(s.position.y)).toBe(true);
   });
