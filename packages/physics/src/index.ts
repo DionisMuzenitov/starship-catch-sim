@@ -54,3 +54,9 @@ export type {
 } from "./aero.js";
 export { BoosterFins } from "./presets/booster-fins.js";
 export { ShipFlaps } from "./presets/ship-flaps.js";
+export {
+  constantWind,
+  drydenTurbulence,
+  layeredWind,
+} from "./wind.js";
+export type { DrydenOpts, WindField, WindLayer } from "./wind.js";
