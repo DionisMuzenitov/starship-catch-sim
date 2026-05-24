@@ -43,6 +43,42 @@ describe("Mat3", () => {
     expect(Mat3.transpose(Mat3.IDENTITY)).toEqual(Mat3.IDENTITY);
   });
 
+  it("determinant of IDENTITY is 1", () => {
+    expect(Mat3.determinant(Mat3.IDENTITY)).toBe(1);
+  });
+
+  it("determinant of a diagonal matrix is the product of diagonal entries", () => {
+    expect(Mat3.determinant(Mat3.fromDiagonal(Vec3.of(2, 3, 5)))).toBe(30);
+  });
+
+  it("inverse of IDENTITY is IDENTITY", () => {
+    expect(Mat3.equals(Mat3.inverse(Mat3.IDENTITY), Mat3.IDENTITY)).toBe(true);
+  });
+
+  it("inverse of diagonal matrix reciprocates the diagonal", () => {
+    const d = Mat3.fromDiagonal(Vec3.of(2, 4, 5));
+    const expected = Mat3.fromDiagonal(Vec3.of(0.5, 0.25, 0.2));
+    expect(Mat3.equals(Mat3.inverse(d), expected, 1e-12)).toBe(true);
+  });
+
+  it("inverse times original is IDENTITY (general 3x3)", () => {
+    const m = Mat3.of(1, 2, 3, 0, 1, 4, 5, 6, 0);
+    expect(
+      Mat3.equals(Mat3.multiplyMat3(m, Mat3.inverse(m)), Mat3.IDENTITY, 1e-12),
+    ).toBe(true);
+  });
+
+  it("inverse throws on a singular matrix", () => {
+    const singular = Mat3.of(1, 2, 3, 2, 4, 6, 3, 6, 9);
+    expect(() => Mat3.inverse(singular)).toThrow(/singular/);
+  });
+
+  it("multiplyMat3 by IDENTITY is the original", () => {
+    const m = Mat3.of(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    expect(Mat3.multiplyMat3(m, Mat3.IDENTITY)).toEqual(m);
+    expect(Mat3.multiplyMat3(Mat3.IDENTITY, m)).toEqual(m);
+  });
+
   it("equals respects epsilon", () => {
     const a = Mat3.of(1, 0, 0, 0, 1, 0, 0, 0, 1);
     const b = Mat3.of(1 + 1e-12, 0, 0, 0, 1, 0, 0, 0, 1);
