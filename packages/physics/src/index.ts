@@ -31,3 +31,13 @@ export type {
 } from "./thrust.js";
 export { SuperHeavyEngines } from "./presets/super-heavy-engines.js";
 export { StarshipEngines } from "./presets/starship-engines.js";
+export {
+  densityAt,
+  pressureAt,
+  pressureRatio,
+  RHO0,
+  P0,
+  H_RHO,
+  H_P,
+} from "./atmosphere.js";
+export { bodyDragForce } from "./drag.js";
