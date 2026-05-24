@@ -15,3 +15,19 @@ export {
 export type { MassProperties } from "./mass.js";
 export { SuperHeavyMass } from "./presets/super-heavy.js";
 export { StarshipMass } from "./presets/starship.js";
+export {
+  aggregate,
+  engineForceTorque,
+  initialEngineState,
+  updateEngineState,
+  G0,
+} from "./thrust.js";
+export type {
+  Engine,
+  EngineCommand,
+  EngineContribution,
+  EngineState,
+  PlantOutput,
+} from "./thrust.js";
+export { SuperHeavyEngines } from "./presets/super-heavy-engines.js";
+export { StarshipEngines } from "./presets/starship-engines.js";
