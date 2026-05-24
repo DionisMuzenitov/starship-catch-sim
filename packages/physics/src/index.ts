@@ -41,3 +41,16 @@ export {
   H_P,
 } from "./atmosphere.js";
 export { bodyDragForce } from "./drag.js";
+export {
+  initialSurfaceState,
+  surfaceForceTorque,
+  updateSurface,
+} from "./aero.js";
+export type {
+  Surface,
+  SurfaceContribution,
+  SurfaceKind,
+  SurfaceState,
+} from "./aero.js";
+export { BoosterFins } from "./presets/booster-fins.js";
+export { ShipFlaps } from "./presets/ship-flaps.js";
