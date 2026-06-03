@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 
+import { initialSurfaceState } from "./aero.js";
 import { neutralControl, type ControlInput } from "./control.js";
+import { full } from "./mass.js";
+import { Quat } from "./math/quat.js";
+import { Vec3 } from "./math/vec3.js";
+import { BoosterFins } from "./presets/booster-fins.js";
+import { SuperHeavyEngines } from "./presets/super-heavy-engines.js";
+import { SuperHeavyMass } from "./presets/super-heavy.js";
+import { createRigidBody } from "./state.js";
+import { initialEngineState } from "./thrust.js";
 import {
   BoosterVehicle,
   boosterDescentScenario,
 } from "./scenarios.js";
-import { simStep } from "./world.js";
+import { createWorld, defineVehicle, simStep } from "./world.js";
 
 const DT = 1 / 250;
 
@@ -62,10 +71,69 @@ describe("simStep — booster descent scenario", () => {
     for (let i = 0; i < 250; i++) {
       world = simStep(world, BoosterVehicle, ctl, DT);
     }
-    // Identity attitude + zero ω + no torques → rotation untouched.
     expect(world.rigidBody.attitude.w).toBeCloseTo(1, 6);
     expect(Math.abs(world.rigidBody.angularVelocity.x)).toBeLessThan(1e-6);
     expect(Math.abs(world.rigidBody.angularVelocity.y)).toBeLessThan(1e-6);
     expect(Math.abs(world.rigidBody.angularVelocity.z)).toBeLessThan(1e-6);
+  });
+});
+
+describe("defineVehicle", () => {
+  it("throws when engineGroupOf length doesn't match engines", () => {
+    expect(() =>
+      defineVehicle({
+        engines: SuperHeavyEngines,
+        engineGroupOf: ["centre"],
+        surfaces: BoosterFins,
+        bodyRefArea: 1,
+        bodyCd: 1,
+      }),
+    ).toThrow(/engineGroupOf length/);
+  });
+
+  it("assigns separate index spaces to fin vs flap surfaces", () => {
+    const finSurface = BoosterFins[0]!;
+    const flapSurface = { ...finSurface, kind: "flap" as const };
+    const v = defineVehicle({
+      engines: [],
+      engineGroupOf: [],
+      surfaces: [finSurface, flapSurface, finSurface, flapSurface],
+      bodyRefArea: 0,
+      bodyCd: 0,
+    });
+    expect(v.surfaceCtlIndexOf).toEqual([0, 0, 1, 1]);
+  });
+});
+
+describe("createWorld", () => {
+  it("builds a World with initialised engine + surface states", () => {
+    const mass = full(SuperHeavyMass);
+    const rb = createRigidBody({
+      mass: 1,
+      inertia: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      position: Vec3.of(0, 100, 0),
+      attitude: Quat.IDENTITY,
+    });
+    const world = createWorld({ vehicle: BoosterVehicle, mass, rigidBody: rb });
+    expect(world.t).toBe(0);
+    expect(world.engineStates.length).toBe(SuperHeavyEngines.length);
+    expect(world.engineStates[0]).toEqual(initialEngineState());
+    expect(world.surfaceStates.length).toBe(BoosterFins.length);
+    expect(world.surfaceStates[0]).toEqual(initialSurfaceState());
+  });
+
+  it("respects an explicit initial t", () => {
+    const mass = full(SuperHeavyMass);
+    const rb = createRigidBody({
+      mass: 1,
+      inertia: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    });
+    const world = createWorld({
+      vehicle: BoosterVehicle,
+      mass,
+      rigidBody: rb,
+      t: 42,
+    });
+    expect(world.t).toBe(42);
   });
 });
