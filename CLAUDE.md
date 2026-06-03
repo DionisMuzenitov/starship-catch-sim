@@ -15,6 +15,32 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
 - `gh` CLI is installed and authenticated for this account with scopes `gist, read:org, repo, workflow`. Git uses `gh` as credential helper (`gh auth setup-git` already run).
 - Workflow: from SLS-5 onward, each ticket gets its own feature branch + PR. Direct commits to `main` are only for bootstrap.
 
+## Working agreements
+
+- **Never merge a PR without explicit user approval.** Green CI is not
+  approval. Open the PR, surface the CI result, wait. Phrases like
+  "merge it", "ship it", "you can merge", "approved" are approval;
+  ambiguous replies are not. Approval is per-PR and does not roll over
+  to the next one.
+- **Milestone collection review.** For multi-ticket milestones (M2, M3,
+  …) prefer a single end-of-milestone review over per-ticket approvals:
+  bring every ticket to "CI green, awaiting approval", then prepare one
+  sandbox + checklist the user can walk through in one sitting.
+- **Research-first for real-world geometry, vehicle reference, or
+  physics constants.** Anything involving Starship / Super Heavy /
+  Raptor / Mechazilla / atmosphere / orbital mechanics: check the
+  Confluence KB first; if it's silent, web-search authoritative sources
+  (SpaceX press kits, presentations, reputable space journalism);
+  backfill the KB with what you learned (own words, source links + dates)
+  before or during the implementation PR. Don't guess real-world details.
+- **Substantive Jira completion comments.** After every merge, post a
+  Jira comment summarising what shipped, deviations from the ticket,
+  verification done, and the merged commit SHA — not just a bare PR
+  link.
+- **Each ticket is its own feature branch + PR** (already stated above);
+  if a follow-up bug is spotted during review, file a new ticket rather
+  than amending the merged PR.
+
 ## What this repo is
 
 Real-time browser simulation of SpaceX's Starship booster "Mechazilla" catch manoeuvre — 6-DOF rigid-body dynamics, grid-fin + engine-gimbal control, MPC strategies. pnpm workspace: `apps/web` (Three.js/React), `packages/physics`, `packages/controllers`, `services/mpc`. See `README.md` for milestones.
