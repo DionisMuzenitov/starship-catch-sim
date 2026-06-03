@@ -60,3 +60,9 @@ export {
   layeredWind,
 } from "./wind.js";
 export type { DrydenOpts, WindField, WindLayer } from "./wind.js";
+export { neutralControl } from "./control.js";
+export type { ControlInput, EngineGroup, EngineGroupBag } from "./control.js";
+export { createWorld, defineVehicle, simStep } from "./world.js";
+export type { Vehicle, World } from "./world.js";
+export { BoosterVehicle, boosterDescentScenario } from "./scenarios.js";
+export type { Scenario } from "./scenarios.js";

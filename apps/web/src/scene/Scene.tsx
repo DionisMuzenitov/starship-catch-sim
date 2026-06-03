@@ -3,7 +3,10 @@ import { useState } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
-import { BoosterPlaceholder } from "./BoosterPlaceholder";
+import { BoosterFlight } from "../sim/BoosterFlight";
+import { SimStatusChip } from "../sim/SimStatusChip";
+import { useSimRunner } from "../sim/useSimRunner";
+
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "./constants";
 import { DebugHud, DebugSampler, type DebugSample } from "./DebugOverlay";
 import { Fog } from "./Fog";
@@ -13,6 +16,7 @@ import { Sky } from "./Sky";
 import { Sun } from "./Sun";
 
 export function Scene() {
+  useSimRunner();
   const [sample, setSample] = useState<DebugSample>({
     fps: 0,
     x: 0,
@@ -25,7 +29,7 @@ export function Scene() {
       <Canvas
         gl={{ logarithmicDepthBuffer: true, antialias: false }}
         camera={{
-          position: [120, 80, 200],
+          position: [220, 820, 220],
           fov: 50,
           near: CAMERA_NEAR_M,
           far: CAMERA_FAR_M,
@@ -35,16 +39,20 @@ export function Scene() {
         <Sun />
         <Sky />
         <Ground />
-        <BoosterPlaceholder />
+        <BoosterFlight />
+        {/* Default frame: side-on view of the bootstrap booster at 800 m.
+            Proper chase / tower / ground camera modes land in SLS-17. */}
         <OrbitControls
-          target={[0, 35, 0]}
+          target={[0, 800, 0]}
           maxDistance={20_000}
           minDistance={5}
+          enablePan={false}
         />
         <PostFX />
         <DebugSampler onSample={setSample} />
       </Canvas>
       <DebugHud sample={sample} />
+      <SimStatusChip />
     </div>
   );
 }
