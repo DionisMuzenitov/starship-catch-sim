@@ -23,10 +23,13 @@
  *   [ / ]          time scale ÷2 / ×2
  *   R              reset to scenario initial conditions
  *   B              rewind 5 s
+ *   C / T / G / O / N / M / V (SLS-17 camera modes — set on the camera store)
  */
 
 import type { ManualInputState } from "@starship-catch-sim/controllers";
 import type { EngineGroup } from "@starship-catch-sim/physics";
+
+import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
 
 import type { SimRunner } from "../sim/runner.js";
 
@@ -37,6 +40,10 @@ type Bindings = {
 
 function setGroup(input: ManualInputState, g: EngineGroup): void {
   input.selectedGroup = g;
+}
+
+function setCameraMode(mode: CameraMode): void {
+  useCameraStore.getState().setMode(mode);
 }
 
 function shouldIgnoreEvent(target: EventTarget | null): boolean {
@@ -109,6 +116,27 @@ export function installKeyboardBindings(b: Bindings): () => void {
         return;
       case "KeyB":
         b.runner.rewind(5);
+        return;
+      case "KeyC":
+        setCameraMode("chase");
+        return;
+      case "KeyT":
+        setCameraMode("tower");
+        return;
+      case "KeyG":
+        setCameraMode("ground");
+        return;
+      case "KeyO":
+        setCameraMode("free");
+        return;
+      case "KeyN":
+        setCameraMode("onboard");
+        return;
+      case "KeyM":
+        setCameraMode("cinematic");
+        return;
+      case "KeyV":
+        useCameraStore.getState().cycleMode();
         return;
     }
   };
