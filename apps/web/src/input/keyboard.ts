@@ -24,12 +24,15 @@
  *   R              reset to scenario initial conditions
  *   B              rewind 5 s
  *   C / T / G / O / N / M / V (SLS-17 camera modes — set on the camera store)
+ *   H              cycle HUD mode (full / minimal / off) — SLS-18
+ *   U              toggle units (metric / imperial) — SLS-18
  */
 
 import type { ManualInputState } from "@starship-catch-sim/controllers";
 import type { EngineGroup } from "@starship-catch-sim/physics";
 
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
+import { useHudStore } from "../state/hudStore.js";
 
 import type { SimRunner } from "../sim/runner.js";
 
@@ -137,6 +140,12 @@ export function installKeyboardBindings(b: Bindings): () => void {
         return;
       case "KeyV":
         useCameraStore.getState().cycleMode();
+        return;
+      case "KeyH":
+        useHudStore.getState().cycleMode();
+        return;
+      case "KeyU":
+        useHudStore.getState().toggleUnits();
         return;
     }
   };

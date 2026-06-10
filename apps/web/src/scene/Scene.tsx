@@ -3,8 +3,9 @@ import { useState } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
+import { Hud } from "../hud/Hud";
+import { ImpactReticle } from "../hud/ImpactReticle";
 import { BoosterFlight } from "../sim/BoosterFlight";
-import { SimStatusChip } from "../sim/SimStatusChip";
 import { useSimRunner } from "../sim/useSimRunner";
 import { useCameraStore } from "../state/cameraStore";
 
@@ -32,8 +33,6 @@ export function Scene() {
       <Canvas
         gl={{ logarithmicDepthBuffer: true, antialias: false }}
         camera={{
-          // Initial position is a sensible fallback; CameraRig damps to
-          // the active mode's target from here on first frame.
           position: [220, 820, 220],
           fov: 50,
           near: CAMERA_NEAR_M,
@@ -46,6 +45,7 @@ export function Scene() {
         <Ground />
         <BoosterFlight />
         <CameraRig />
+        <ImpactReticle />
         <OrbitControls
           enabled={cameraMode === "free"}
           target={[0, 800, 0]}
@@ -57,7 +57,7 @@ export function Scene() {
         <DebugSampler onSample={setSample} />
       </Canvas>
       <DebugHud sample={sample} />
-      <SimStatusChip />
+      <Hud />
     </div>
   );
 }
