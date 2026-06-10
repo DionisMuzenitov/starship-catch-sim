@@ -19,6 +19,7 @@ import {
   Vec3,
   simStep,
   type ControlInput,
+  type SimEnv,
   type Vehicle,
   type World,
 } from "@starship-catch-sim/physics";
@@ -42,6 +43,9 @@ export type RunnerArgs = {
   initialWorld: World;
   controller: Controller;
   callbacks: RunnerCallbacks;
+  /** Per-scenario environment (wind + gravity). Optional — defaults
+   * to no wind + Earth gravity, matching `simStep`'s own default. */
+  env?: SimEnv;
 };
 
 type Snapshot = {
@@ -75,6 +79,7 @@ export class SimRunner {
   private readonly controller: Controller;
   private readonly callbacks: RunnerCallbacks;
   private readonly initial: World;
+  private readonly env: SimEnv | undefined;
 
   /** State BEFORE the most recent physics step — for render interpolation. */
   private prevWorld: World;
@@ -95,6 +100,7 @@ export class SimRunner {
     this.controller = args.controller;
     this.callbacks = args.callbacks;
     this.initial = args.initialWorld;
+    this.env = args.env;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;
     this.snapshot();
@@ -186,7 +192,13 @@ export class SimRunner {
   private physicsTick(): void {
     this.prevWorld = this.world;
     const ctl: ControlInput = this.controller.step(this.world, PHYSICS_DT);
-    this.world = simStep(this.world, this.vehicle, ctl, PHYSICS_DT);
+    this.world = simStep(
+      this.world,
+      this.vehicle,
+      ctl,
+      PHYSICS_DT,
+      this.env,
+    );
     this.tickIndex++;
     if (this.tickIndex % SNAPSHOT_EVERY_N_TICKS === 0) this.snapshot();
   }

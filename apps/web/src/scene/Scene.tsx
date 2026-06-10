@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
+import { ScenarioPicker } from "../menu/ScenarioPicker";
 import { BoosterFlight } from "../sim/BoosterFlight";
 import { useSimRunner } from "../sim/useSimRunner";
 import { useCameraStore } from "../state/cameraStore";
@@ -57,6 +58,7 @@ export function Scene() {
         <DebugSampler onSample={setSample} />
       </Canvas>
       <DebugHud sample={sample} />
+      <ScenarioPicker />
       <Hud />
     </div>
   );
