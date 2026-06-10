@@ -10,7 +10,8 @@ import type { Vec3 } from "@starship-catch-sim/physics";
 import { type Group, MeshStandardMaterial, Vector3 } from "three";
 
 // Real-world dimensions, approximate gameplay constants.
-const TOWER_HEIGHT = 146; // m
+export const MECHAZILLA_TOWER_HEIGHT_M = 146; // m
+const TOWER_HEIGHT = MECHAZILLA_TOWER_HEIGHT_M;
 const LEG_RADIUS = 0.5; // m (1 m diameter per ticket)
 const LEG_FOOTPRINT = 12; // m (corner-to-corner of the square base)
 const BRACE_SPACING = 10; // m (cross-bracing every 10 m)
