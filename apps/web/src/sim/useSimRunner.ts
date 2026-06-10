@@ -1,11 +1,11 @@
 /**
- * React glue for the `SimRunner`. Constructs a runner with a
- * `ManualController`, wires it to the zustand `useSimStore`, installs
- * keyboard + gamepad bindings, and starts/stops the rAF loop with the
+ * React glue for the `SimRunner`. Reads the active scenario id from
+ * `useScenarioStore`, constructs a runner + ManualController, wires
+ * keyboard + gamepad bindings, and drives the rAF loop with the
  * component's lifecycle.
  *
- * Returns the `inputState` (so a debug panel can show it later) and the
- * underlying `runner` (for tests + future programmatic control).
+ * Scenario changes are handled by `<App />` re-mounting `<Scene />`
+ * via `key={scenarioId}`, which tears down and rebuilds this hook.
  */
 
 import { useEffect, useRef } from "react";
@@ -16,7 +16,8 @@ import {
   type ManualInputState,
 } from "@starship-catch-sim/controllers";
 import {
-  boosterDescentScenario,
+  BoosterDescentStandard,
+  scenarioById,
   type Scenario,
 } from "@starship-catch-sim/physics";
 
@@ -25,6 +26,7 @@ import {
   installPointerBindings,
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
+import { useScenarioStore } from "../state/scenarioStore.js";
 import { useSimStore } from "../state/simStore.js";
 
 import { SimRunner } from "./runner.js";
@@ -37,7 +39,9 @@ export type UseSimRunner = {
 export function useSimRunner(): UseSimRunner {
   const ref = useRef<UseSimRunner | null>(null);
   if (ref.current === null) {
-    const scenario: Scenario = boosterDescentScenario();
+    const scenarioId = useScenarioStore.getState().currentScenarioId;
+    const scenario: Scenario =
+      scenarioById(scenarioId) ?? BoosterDescentStandard;
     const inputState = createManualInputState();
     const controller = new ManualController(scenario.vehicle, inputState);
     const setWorld = useSimStore.getState().setWorld;
@@ -47,6 +51,7 @@ export function useSimRunner(): UseSimRunner {
       vehicle: scenario.vehicle,
       initialWorld: scenario.initialWorld,
       controller,
+      env: scenario.env,
       callbacks: {
         onRender: (world) => setWorld(world),
         onMeta: (meta) => {

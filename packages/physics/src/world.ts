@@ -27,10 +27,29 @@ import { Vec3 } from "./math/vec3.js";
 import type { RigidBodyState } from "./state.js";
 import { aggregate, initialEngineState } from "./thrust.js";
 import type { Engine, EngineCommand, EngineState } from "./thrust.js";
+import { constantWind } from "./wind.js";
+import type { WindField } from "./wind.js";
 
 /** Standard surface gravity (m/s²). Distinct from `G0` in thrust.ts which
  * is used solely for the Isp definition. */
 const G_EARTH = 9.80665;
+
+/**
+ * Environment in which the simulation runs — varies per scenario.
+ * `wind(positionWorld, t)` returns the local wind vector in m/s; drag and
+ * surface aero use velocity-relative-to-wind. `gravity` is the surface
+ * gravitational acceleration in m/s² (Earth's value by default).
+ */
+export type SimEnv = {
+  readonly wind: WindField;
+  readonly gravity: number;
+};
+
+/** Default env: no wind, Earth gravity. Keeps simStep callers untouched. */
+export const DEFAULT_ENV: SimEnv = Object.freeze({
+  wind: constantWind(Vec3.ZERO),
+  gravity: G_EARTH,
+});
 
 /**
  * Full simulation state at one instant. Carries the rigid-body 6-DOF
@@ -150,6 +169,7 @@ export function simStep(
   vehicle: Vehicle,
   control: ControlInput,
   dt: number,
+  env: SimEnv = DEFAULT_ENV,
 ): World {
   // 1. Engine commands.
   const commands: EngineCommand[] = vehicle.engines.map((engine, i) => {
@@ -176,6 +196,10 @@ export function simStep(
     dt,
   );
 
+  // Wind at the body's location; aero forces use velocity-relative-to-wind.
+  const windWorld = env.wind.at(world.rigidBody.position, world.t);
+  const relVelWorld = Vec3.sub(world.rigidBody.velocity, windWorld);
+
   // 3. Aero surfaces.
   const newSurfaceStates: SurfaceState[] = new Array(vehicle.surfaces.length);
   let aeroForceBody = Vec3.ZERO;
@@ -193,7 +217,7 @@ export function simStep(
     const c = surfaceForceTorque(
       s,
       nextSt,
-      world.rigidBody.velocity,
+      relVelWorld,
       world.rigidBody.angularVelocity,
       world.rigidBody.attitude,
       comBody,
@@ -213,11 +237,12 @@ export function simStep(
     aeroForceBody,
   );
 
-  // 5. Gravity (world) + body drag (world).
+  // 5. Gravity (world) + body drag (world). Drag uses velocity-relative-
+  //    to-wind so calm vs stormy scenarios actually differ in flight.
   const m = world.rigidBody.mass;
-  const gravityForceWorld = Vec3.of(0, -m * G_EARTH, 0);
+  const gravityForceWorld = Vec3.of(0, -m * env.gravity, 0);
   const dragForceWorld = bodyDragForce(
-    world.rigidBody.velocity,
+    relVelWorld,
     altitudeM,
     vehicle.bodyRefArea,
     vehicle.bodyCd,
