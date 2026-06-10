@@ -62,7 +62,21 @@ export {
 export type { DrydenOpts, WindField, WindLayer } from "./wind.js";
 export { neutralControl } from "./control.js";
 export type { ControlInput, EngineGroup, EngineGroupBag } from "./control.js";
-export { createWorld, defineVehicle, simStep } from "./world.js";
-export type { Vehicle, World } from "./world.js";
-export { BoosterVehicle, boosterDescentScenario } from "./scenarios.js";
-export type { Scenario } from "./scenarios.js";
+export { createWorld, defineVehicle, simStep, DEFAULT_ENV } from "./world.js";
+export type { SimEnv, Vehicle, World } from "./world.js";
+export {
+  BoosterDescentCalm,
+  BoosterDescentStandard,
+  BoosterDescentStormy,
+  BoosterVehicle,
+  SCENARIOS,
+  boosterDescentScenario,
+  evaluateCatch,
+  scenarioById,
+} from "./scenarios.js";
+export type {
+  CatchEnvelope,
+  Scenario,
+  ScenarioDifficulty,
+  SuccessVerdict,
+} from "./scenarios.js";

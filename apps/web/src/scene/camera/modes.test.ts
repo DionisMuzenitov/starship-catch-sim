@@ -18,6 +18,9 @@ function worldAtAltitude(altM: number): World {
     ...baseWorld,
     rigidBody: {
       ...baseWorld.rigidBody,
+      // Reset attitude to identity so position-only tests aren't
+      // confounded by the scenario IC's retrograde attitude.
+      attitude: { x: 0, y: 0, z: 0, w: 1 },
       position: Vec3.of(0, altM, 0),
     },
   };

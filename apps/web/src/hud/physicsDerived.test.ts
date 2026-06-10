@@ -64,17 +64,37 @@ describe("speed components", () => {
 
 describe("machNumber", () => {
   it("reaches ~Mach 1 at sea level with v = 340 m/s", () => {
-    const w = withVelocity({ x: 340, y: 0, z: 0 });
+    // Force position to sea level — `baseWorld` is at the scenario IC
+    // (65 km), where the speed of sound is lower so the same |v| would
+    // yield Mach > 1.
+    const w: World = {
+      ...baseWorld,
+      rigidBody: {
+        ...baseWorld.rigidBody,
+        position: Vec3.of(0, 0, 0),
+        velocity: Vec3.of(340, 0, 0),
+      },
+    };
     expect(machNumber(w)).toBeCloseTo(1, 1);
   });
   it("is higher at altitude for the same speed (lower c)", () => {
-    const low = { ...withVelocity({ x: 0, y: -200, z: 0 }) };
-    const high = withPosition({ x: 0, y: 10_000, z: 0 });
-    const highVel = {
-      ...high,
-      rigidBody: { ...high.rigidBody, velocity: Vec3.of(0, -200, 0) },
+    const seaLevel: World = {
+      ...baseWorld,
+      rigidBody: {
+        ...baseWorld.rigidBody,
+        position: Vec3.of(0, 0, 0),
+        velocity: Vec3.of(0, -200, 0),
+      },
     };
-    expect(machNumber(highVel)).toBeGreaterThan(machNumber(low));
+    const upper: World = {
+      ...baseWorld,
+      rigidBody: {
+        ...baseWorld.rigidBody,
+        position: Vec3.of(0, 30_000, 0),
+        velocity: Vec3.of(0, -200, 0),
+      },
+    };
+    expect(machNumber(upper)).toBeGreaterThan(machNumber(seaLevel));
   });
 });
 
@@ -127,10 +147,10 @@ describe("engine group reads", () => {
 });
 
 describe("fuelFraction", () => {
-  it("at the bootstrap scenario the tank is ~30% full", () => {
+  it("at the bootstrap scenario the tank is ~10% full (SLS-20 IC)", () => {
     const f = fuelFraction(baseWorld);
-    expect(f).toBeGreaterThan(0.25);
-    expect(f).toBeLessThan(0.35);
+    expect(f).toBeGreaterThan(0.08);
+    expect(f).toBeLessThan(0.12);
   });
 });
 

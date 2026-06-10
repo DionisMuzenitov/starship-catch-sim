@@ -1,5 +1,5 @@
 import {
-  boosterDescentScenario,
+  BoosterDescentStandard,
   type World,
 } from "@starship-catch-sim/physics";
 import { create } from "zustand";
@@ -23,7 +23,7 @@ export type SimState = {
   setT: (t: number) => void;
 };
 
-const initial = boosterDescentScenario().initialWorld;
+const initial = BoosterDescentStandard.initialWorld;
 
 export const useSimStore = create<SimState>((set) => ({
   world: initial,
