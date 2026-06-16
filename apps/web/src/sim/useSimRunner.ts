@@ -60,6 +60,11 @@ export function useSimRunner(): UseSimRunner {
         },
       },
     });
+    // Push the scenario's initial world into the store synchronously so
+    // the first paint after a scenario switch already reflects the new
+    // vehicle shape — otherwise the booster-shaped stale world would be
+    // fed into the StarshipModel (or vice versa) and crash on render.
+    setWorld(scenario.initialWorld);
     ref.current = { inputState, runner };
   }
 

@@ -1,6 +1,11 @@
-import { BoosterVehicle, type EngineGroup } from "@starship-catch-sim/physics";
+import {
+  BoosterDescentStandard,
+  scenarioById,
+  type EngineGroup,
+} from "@starship-catch-sim/physics";
 
 import { useHudStore } from "../state/hudStore";
+import { useScenarioStore } from "../state/scenarioStore";
 import { useSimStore } from "../state/simStore";
 
 import { formatMass, formatPercent } from "./formatters";
@@ -11,16 +16,27 @@ import {
   propellantMass,
 } from "./physicsDerived";
 
-const GROUPS: readonly { key: EngineGroup; label: string }[] = [
+const ALL_GROUPS: readonly { key: EngineGroup; label: string }[] = [
   { key: "centre", label: "C" },
   { key: "inner", label: "I" },
   { key: "outer", label: "O" },
+  { key: "ship", label: "S" },
 ];
 
 export function FuelAndThrottle() {
   const world = useSimStore((s) => s.world);
   const units = useHudStore((s) => s.units);
+  const scenarioId = useScenarioStore((s) => s.currentScenarioId);
+  const vehicle =
+    (scenarioById(scenarioId) ?? BoosterDescentStandard).vehicle;
   const fuel = fuelFraction(world);
+  // Only show meters for groups the active vehicle actually populates,
+  // and only when the world payload matches the vehicle shape (avoids
+  // out-of-bounds reads during a scenario switch).
+  const shapesMatch = world.engineStates.length === vehicle.engines.length;
+  const groups = shapesMatch
+    ? ALL_GROUPS.filter((g) => vehicle.engineGroupOf.includes(g.key))
+    : [];
 
   return (
     <div
@@ -36,9 +52,9 @@ export function FuelAndThrottle() {
         />
       </div>
       <div className="mt-2 flex items-end gap-3">
-        {GROUPS.map((g) => {
-          const t = groupThrottle(world, BoosterVehicle, g.key);
-          const on = groupAnyOn(world, BoosterVehicle, g.key);
+        {groups.map((g) => {
+          const t = groupThrottle(world, vehicle, g.key);
+          const on = groupAnyOn(world, vehicle, g.key);
           return (
             <div key={g.key} className="flex flex-col items-center">
               <div className="relative h-12 w-3 rounded bg-white/15">
