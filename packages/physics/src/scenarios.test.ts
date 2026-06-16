@@ -9,20 +9,31 @@ import {
   BoosterDescentStandard,
   BoosterDescentStormy,
   SCENARIOS,
+  ShipDescentStandard,
+  ShipDescentStormy,
   evaluateCatch,
   scenarioById,
 } from "./scenarios.js";
 
 const DT = 0.05;
+const BOOSTER_IDS = [
+  "booster-descent-calm",
+  "booster-descent-standard",
+  "booster-descent-stormy",
+] as const;
+const SHIP_IDS = [
+  "ship-descent-calm",
+  "ship-descent-standard",
+  "ship-descent-stormy",
+] as const;
 
 describe("scenarios — exported set", () => {
-  it("registers exactly the 3 booster descent variants", () => {
-    expect(SCENARIOS.map((s) => s.id)).toEqual([
-      "booster-descent-calm",
-      "booster-descent-standard",
-      "booster-descent-stormy",
-    ]);
+  it("registers the 3 booster + 3 ship descent variants", () => {
+    expect(SCENARIOS.map((s) => s.id)).toEqual([...BOOSTER_IDS, ...SHIP_IDS]);
     expect(SCENARIOS.map((s) => s.difficulty)).toEqual([
+      "calm",
+      "standard",
+      "stormy",
       "calm",
       "standard",
       "stormy",
@@ -33,11 +44,14 @@ describe("scenarios — exported set", () => {
     expect(scenarioById("booster-descent-stormy")?.id).toBe(
       "booster-descent-stormy",
     );
+    expect(scenarioById("ship-descent-stormy")?.id).toBe("ship-descent-stormy");
     expect(scenarioById("no-such-scenario")).toBeUndefined();
   });
 
-  it("all variants share initial position, velocity, fuel ~10 % of tank capacity", () => {
-    for (const s of SCENARIOS) {
+  it("booster variants share position, velocity, fuel ~10 % of tank capacity", () => {
+    const boosters = SCENARIOS.filter((s) => s.id.startsWith("booster-"));
+    expect(boosters).toHaveLength(3);
+    for (const s of boosters) {
       const r = s.initialWorld.rigidBody.position;
       expect(r).toEqual(Vec3.of(0, 65_000, 50_000));
       const v = s.initialWorld.rigidBody.velocity;
@@ -47,6 +61,52 @@ describe("scenarios — exported set", () => {
       expect(propMass / cap).toBeGreaterThan(0.08);
       expect(propMass / cap).toBeLessThan(0.12);
     }
+  });
+
+  it("ship variants share position (-100 km, 100 km, 0), velocity (1500, -200, 0), fuel ~6 % of tank capacity", () => {
+    const ships = SCENARIOS.filter((s) => s.id.startsWith("ship-"));
+    expect(ships).toHaveLength(3);
+    for (const s of ships) {
+      const r = s.initialWorld.rigidBody.position;
+      expect(r).toEqual(Vec3.of(-100_000, 100_000, 0));
+      const v = s.initialWorld.rigidBody.velocity;
+      expect(v).toEqual(Vec3.of(1500, -200, 0));
+      const propMass = s.initialWorld.mass.propellantMass;
+      const cap = tankCapacity(s.initialWorld.mass);
+      expect(propMass / cap).toBeGreaterThan(0.04);
+      expect(propMass / cap).toBeLessThan(0.08);
+    }
+  });
+
+  it("ship belly-flop attitude: body +Y rotated by initial attitude points along world +X", () => {
+    const q = ShipDescentStandard.initialWorld.rigidBody.attitude;
+    // Quaternion rotation of (0,1,0).
+    const bodyUpWorld = {
+      x: 2 * (q.x * q.y - q.w * q.z),
+      y: q.w * q.w - q.x * q.x + q.y * q.y - q.z * q.z,
+      z: 2 * (q.y * q.z + q.w * q.x),
+    };
+    expect(bodyUpWorld.x).toBeCloseTo(1, 6);
+    expect(bodyUpWorld.y).toBeCloseTo(0, 6);
+    expect(bodyUpWorld.z).toBeCloseTo(0, 6);
+  });
+
+  it("ship variants start with all flaps deflected to +20° uniformly", () => {
+    const ships = SCENARIOS.filter((s) => s.id.startsWith("ship-"));
+    const expected = (20 * Math.PI) / 180;
+    for (const s of ships) {
+      expect(s.initialWorld.surfaceStates).toHaveLength(4);
+      for (const st of s.initialWorld.surfaceStates) {
+        expect(st.deflection).toBeCloseTo(expected, 6);
+      }
+    }
+  });
+
+  it("ship targetCatch is tighter than booster (|vy|<3, |vh|<1)", () => {
+    expect(ShipDescentStandard.targetCatch.verticalSpeedTolMps).toBe(3);
+    expect(ShipDescentStandard.targetCatch.horizontalSpeedTolMps).toBe(1);
+    expect(BoosterDescentStandard.targetCatch.verticalSpeedTolMps).toBe(5);
+    expect(BoosterDescentStandard.targetCatch.horizontalSpeedTolMps).toBe(2);
   });
 
   it("retrograde attitude: body +Y in world frame is opposite the velocity vector", () => {
@@ -104,8 +164,40 @@ describe("Standard scenario — engines-off smoke", () => {
   });
 });
 
+describe("Ship Descent — smoke", () => {
+  it("after 240 s of zero control input, altitude has dropped at least 5 km", () => {
+    let world = ShipDescentStandard.initialWorld;
+    const ctl = neutralControl(0, ShipDescentStandard.vehicle.surfaces.length);
+    const y0 = world.rigidBody.position.y;
+    const N = Math.round(240 / DT);
+    for (let i = 0; i < N; i++) {
+      world = simStep(
+        world,
+        ShipDescentStandard.vehicle,
+        ctl,
+        DT,
+        ShipDescentStandard.env,
+      );
+    }
+    expect(world.rigidBody.position.y).toBeLessThan(y0 - 5_000);
+  });
+
+  it("fuel-exhaustion verdict fires before the ship reaches the tower", () => {
+    // Synthetic far-from-tower world with zero propellant.
+    const base = ShipDescentStandard.initialWorld;
+    const drained = {
+      ...base,
+      mass: { ...base.mass, propellantMass: 0 },
+      rigidBody: { ...base.rigidBody, mass: base.mass.dryMass },
+    };
+    const v = ShipDescentStandard.successCriteria(drained);
+    expect(v.caught).toBe(false);
+    expect(v.reason).toContain("fuel exhausted");
+  });
+});
+
 describe("Wind plumbing — Calm vs Stormy", () => {
-  it("stormy wind is deterministic across two fresh runs", () => {
+  it("booster stormy wind is deterministic across two fresh runs", () => {
     let a = BoosterDescentStormy.initialWorld;
     let b = BoosterDescentStormy.initialWorld;
     const ctl = neutralControl(BoosterDescentStormy.vehicle.surfaces.length, 0);
@@ -128,6 +220,10 @@ describe("Wind plumbing — Calm vs Stormy", () => {
     }
     expect(a.rigidBody.position).toEqual(b.rigidBody.position);
     expect(a.rigidBody.velocity).toEqual(b.rigidBody.velocity);
+  });
+
+  it("ship stormy uses an independent Dryden state from the booster", () => {
+    expect(ShipDescentStormy.env.wind).not.toBe(BoosterDescentStormy.env.wind);
   });
 });
 

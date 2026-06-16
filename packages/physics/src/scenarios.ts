@@ -20,6 +20,7 @@
 
 import type { SurfaceState } from "./aero.js";
 import { BoosterFins } from "./presets/booster-fins.js";
+import { ShipFlaps } from "./presets/ship-flaps.js";
 import {
   consumeFuel,
   currentInertia,
@@ -29,7 +30,9 @@ import {
 } from "./mass.js";
 import { Quat } from "./math/quat.js";
 import { Vec3 } from "./math/vec3.js";
+import { StarshipMass } from "./presets/starship.js";
 import { SuperHeavyMass } from "./presets/super-heavy.js";
+import { StarshipEngines } from "./presets/starship-engines.js";
 import { SuperHeavyEngines } from "./presets/super-heavy-engines.js";
 import { createRigidBody } from "./state.js";
 import type { EngineState } from "./thrust.js";
@@ -67,6 +70,27 @@ export const BoosterVehicle: Vehicle = defineVehicle({
   surfaces: BoosterFins,
   bodyRefArea: BOOSTER_REF_AREA,
   bodyCd: BOOSTER_CD,
+});
+
+// ---------------------------------------------------------------------------
+// Ship vehicle — all 6 Raptors live in the single `ship` engine group; the
+// belly-flop attitude exposes a much larger aero profile than a vertical
+// stack, so the body Cd is bumped accordingly.
+// ---------------------------------------------------------------------------
+
+const shipEngineGroupOf: readonly EngineGroup[] = Array<EngineGroup>(
+  StarshipEngines.length,
+).fill("ship");
+
+const SHIP_REF_AREA = Math.PI * 4.5 * 4.5;
+const SHIP_CD = 0.9;
+
+export const ShipVehicle: Vehicle = defineVehicle({
+  engines: StarshipEngines,
+  engineGroupOf: shipEngineGroupOf,
+  surfaces: ShipFlaps,
+  bodyRefArea: SHIP_REF_AREA,
+  bodyCd: SHIP_CD,
 });
 
 // ---------------------------------------------------------------------------
@@ -329,10 +353,146 @@ export const BoosterDescentStormy: Scenario = buildScenario(
   stormyWind,
 );
 
+// ---------------------------------------------------------------------------
+// Ship Descent variants — belly-flop entry → flip → catch attempt.
+// ---------------------------------------------------------------------------
+
+const SHIP_INITIAL_POSITION = Vec3.of(-100_000, 100_000, 0);
+const SHIP_INITIAL_VELOCITY = Vec3.of(1500, -200, 0);
+/**
+ * Belly-flop attitude: body +Y aligned with world +X (nose pointing
+ * prograde along the velocity vector). Rotating (0,1,0) onto (1,0,0)
+ * is a -π/2 turn about world +Z.
+ */
+const SHIP_BELLYFLOP_ATTITUDE: Quat = Quat.fromAxisAngle(
+  Vec3.of(0, 0, 1),
+  -Math.PI / 2,
+);
+/** ~6 % propellant left — typical post-orbit return reserve. */
+const SHIP_INITIAL_FUEL_FRACTION = 0.06;
+/** All 4 flaps deployed at +20° uniformly so the ship presents area to
+ * the airstream from t=0. */
+const SHIP_INITIAL_FLAP_DEFLECTION = (20 * Math.PI) / 180;
+
+/** Tighter than the booster envelope — Starship is the precision pass. */
+const SHIP_CATCH_ENVELOPE: CatchEnvelope = {
+  targetPosition: CATCH_POINT_WORLD,
+  positionTolM: 8,
+  verticalSpeedTolMps: 3,
+  horizontalSpeedTolMps: 1,
+  attitudeTiltTolRad: (3 * Math.PI) / 180,
+  angularRateTolRadPerS: (5 * Math.PI) / 180,
+};
+
+function makeShipInitialWorld(): World {
+  const initialMass = consumeFuel(
+    full(StarshipMass),
+    (1 - SHIP_INITIAL_FUEL_FRACTION) * tankCapacity(StarshipMass),
+  );
+  const rigidBody = createRigidBody({
+    mass: currentMass(initialMass),
+    inertia: currentInertia(initialMass),
+    position: SHIP_INITIAL_POSITION,
+    velocity: SHIP_INITIAL_VELOCITY,
+    attitude: SHIP_BELLYFLOP_ATTITUDE,
+    angularVelocity: Vec3.ZERO,
+  });
+  const engineStates: readonly EngineState[] = StarshipEngines.map(() =>
+    initialEngineState(),
+  );
+  const surfaceStates: readonly SurfaceState[] = ShipFlaps.map(() => ({
+    deflection: SHIP_INITIAL_FLAP_DEFLECTION,
+  }));
+  return {
+    rigidBody,
+    mass: initialMass,
+    engineStates,
+    surfaceStates,
+    t: 0,
+  };
+}
+
+// Ship stormy wind: independent Dryden state so booster + ship scenarios
+// don't share PRNG output if a session switches between them.
+const stormyWindShip: WindField = combinedWind(
+  layeredWind([
+    { altitude: 0, wind: Vec3.of(15, 0, 5) },
+    { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
+    { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
+    { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
+  ]),
+  drydenTurbulence({
+    sigma: Vec3.of(6, 1, 6),
+    tau: Vec3.of(2, 2, 2),
+    seed: 73,
+  }),
+);
+
+const shipWindByDifficulty: Record<ScenarioDifficulty, WindField> = {
+  calm: calmWind,
+  standard: standardWind,
+  stormy: stormyWindShip,
+};
+
+/**
+ * Ship success criteria: evaluate the catch envelope normally, but if the
+ * verdict is a miss AND propellant has run out before reaching the tower,
+ * report `fuel exhausted` — this is the dominant failure mode at low
+ * starting fuel and the catch-envelope reason would mislead the player.
+ */
+function shipSuccessCriteria(world: World): SuccessVerdict {
+  const verdict = evaluateCatch(world, SHIP_CATCH_ENVELOPE);
+  if (verdict.caught) return verdict;
+  if (world.mass.propellantMass <= 0) {
+    return { caught: false, reason: "fuel exhausted before catch" };
+  }
+  return verdict;
+}
+
+function buildShipScenario(
+  id: string,
+  name: string,
+  difficulty: ScenarioDifficulty,
+): Scenario {
+  const env: SimEnv = { wind: shipWindByDifficulty[difficulty], gravity: G };
+  const initialWorld = makeShipInitialWorld();
+  return {
+    id,
+    name,
+    difficulty,
+    vehicle: ShipVehicle,
+    initialWorld,
+    env,
+    targetCatch: SHIP_CATCH_ENVELOPE,
+    successCriteria: shipSuccessCriteria,
+  };
+}
+
+export const ShipDescentCalm: Scenario = buildShipScenario(
+  "ship-descent-calm",
+  "Ship Descent — Calm",
+  "calm",
+);
+
+export const ShipDescentStandard: Scenario = buildShipScenario(
+  "ship-descent-standard",
+  "Ship Descent — Standard",
+  "standard",
+);
+
+export const ShipDescentStormy: Scenario = buildShipScenario(
+  "ship-descent-stormy",
+  "Ship Descent — Stormy",
+  "stormy",
+);
+
 export const SCENARIOS: readonly Scenario[] = [
   BoosterDescentCalm,
   BoosterDescentStandard,
   BoosterDescentStormy,
+  ShipDescentCalm,
+  ShipDescentStandard,
+  ShipDescentStormy,
 ];
 
 export function scenarioById(id: string): Scenario | undefined {

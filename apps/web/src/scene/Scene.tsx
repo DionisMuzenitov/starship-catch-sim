@@ -18,6 +18,7 @@ import { Ground } from "./Ground";
 import { PostFX } from "./PostFX";
 import { Sky } from "./Sky";
 import { Sun } from "./Sun";
+import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 
 export function Scene() {
   useSimRunner();
@@ -47,6 +48,7 @@ export function Scene() {
         <BoosterFlight />
         <CameraRig />
         <ImpactReticle />
+        <DragTrajectoryOverlay />
         <OrbitControls
           enabled={cameraMode === "free"}
           target={[0, 800, 0]}
