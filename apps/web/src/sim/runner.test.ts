@@ -1,7 +1,13 @@
 import {
+  BoosterDescentStandard,
+  DEFAULT_TOWER_STATE,
+  Vec3,
   boosterDescentScenario,
+  chopstickCaptureVolume,
   neutralControl,
+  type CatchOutcome,
   type ControlInput,
+  type World,
 } from "@starship-catch-sim/physics";
 import type { Controller } from "@starship-catch-sim/controllers";
 import { describe, expect, it } from "vitest";
@@ -92,5 +98,89 @@ describe("SimRunner smoke", () => {
     expect(tRewound).toBeLessThan(tAfter);
     expect(tAfter - tRewound).toBeGreaterThan(3);
     expect(tAfter - tRewound).toBeLessThan(7);
+  });
+});
+
+describe("SimRunner — catch outcome plumbing", () => {
+  it("rocket starting inside the capture volume at rest reports caught + freezes", () => {
+    const scenario = BoosterDescentStandard;
+    const capture = chopstickCaptureVolume(DEFAULT_TOWER_STATE);
+    const inCatchInitial: World = {
+      ...scenario.initialWorld,
+      rigidBody: {
+        ...scenario.initialWorld.rigidBody,
+        position: capture.center,
+        velocity: Vec3.ZERO,
+        attitude: { x: 0, y: 0, z: 0, w: 1 },
+        angularVelocity: Vec3.ZERO,
+      },
+    };
+    const outcomes: CatchOutcome[] = [];
+    const runner = new SimRunner({
+      vehicle: scenario.vehicle,
+      initialWorld: inCatchInitial,
+      controller: new Idle(),
+      env: scenario.env,
+      catchEnvelope: scenario.targetCatch,
+      callbacks: {
+        onRender: () => undefined,
+        onOutcome: (o) => outcomes.push(o),
+      },
+    });
+    runner.setPaused(false);
+    runner.advance(0.1);
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]!.kind).toBe("caught");
+    // After the outcome fires, further advances must not change t.
+    const t1 = runner.getWorld().t;
+    runner.advance(1);
+    expect(runner.getWorld().t).toBe(t1);
+    // World pose was snapped to the catch target.
+    expect(runner.getWorld().rigidBody.position).toEqual(
+      scenario.targetCatch.targetPosition,
+    );
+  });
+
+  it("zero-input booster eventually fires a non-caught outcome", () => {
+    const scenario = BoosterDescentStandard;
+    const outcomes: CatchOutcome[] = [];
+    const runner = new SimRunner({
+      vehicle: scenario.vehicle,
+      initialWorld: scenario.initialWorld,
+      controller: new Idle(),
+      env: scenario.env,
+      catchEnvelope: scenario.targetCatch,
+      callbacks: {
+        onRender: () => undefined,
+        onOutcome: (o) => outcomes.push(o),
+      },
+    });
+    runner.setPaused(false);
+    // 5 minutes of sim time is well past free-fall ground impact.
+    runner.advance(300);
+    expect(outcomes).toHaveLength(1);
+    // From the (0, 65 km, 50 km) start with retrograde attitude the rocket
+    // doesn't land in the capture volume — expect ground impact (crash).
+    expect(["crash", "near_miss", "tower_collision"]).toContain(
+      outcomes[0]!.kind,
+    );
+  });
+
+  it("with no catchEnvelope passed, no outcome ever fires", () => {
+    const scenario = BoosterDescentStandard;
+    const outcomes: CatchOutcome[] = [];
+    const runner = new SimRunner({
+      vehicle: scenario.vehicle,
+      initialWorld: scenario.initialWorld,
+      controller: new Idle(),
+      env: scenario.env,
+      callbacks: {
+        onRender: () => undefined,
+        onOutcome: (o) => outcomes.push(o),
+      },
+    });
+    runner.setPaused(false);
+    runner.advance(300);
+    expect(outcomes).toHaveLength(0);
   });
 });

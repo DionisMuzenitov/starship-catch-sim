@@ -1,5 +1,6 @@
 import {
   BoosterDescentStandard,
+  type CatchOutcome,
   type World,
 } from "@starship-catch-sim/physics";
 import { create } from "zustand";
@@ -9,18 +10,22 @@ import { create } from "zustand";
  * per requestAnimationFrame; UI components subscribe to the fields they
  * care about. Direct mutation is forbidden — go through the setters.
  *
- * In v1 the booster vehicle is fixed at scenario load. Multiple vehicles
- * land in a later ticket.
+ * `outcome` is the run's terminal verdict — `null` while the rocket is
+ * still in the air; populated exactly once when the catch detector fires
+ * (caught / near_miss / tower_collision / crash). The `CatchOutcomeOverlay`
+ * subscribes to it and renders the post-attempt panel.
  */
 export type SimState = {
   world: World;
   t: number;
   paused: boolean;
   scale: number;
+  outcome: CatchOutcome | null;
   setWorld: (world: World) => void;
   setPaused: (paused: boolean) => void;
   setScale: (scale: number) => void;
   setT: (t: number) => void;
+  setOutcome: (outcome: CatchOutcome | null) => void;
 };
 
 const initial = BoosterDescentStandard.initialWorld;
@@ -30,8 +35,10 @@ export const useSimStore = create<SimState>((set) => ({
   t: 0,
   paused: true,
   scale: 1,
+  outcome: null,
   setWorld: (world) => set({ world, t: world.t }),
   setPaused: (paused) => set({ paused }),
   setScale: (scale) => set({ scale }),
   setT: (t) => set({ t }),
+  setOutcome: (outcome) => set({ outcome }),
 }));

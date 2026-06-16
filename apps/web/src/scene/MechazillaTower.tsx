@@ -6,29 +6,38 @@ import {
 } from "react";
 
 import { useFrame } from "@react-three/fiber";
-import type { Vec3 } from "@starship-catch-sim/physics";
+import {
+  ARM_ANGLE_OPEN_RAD,
+  ARM_LENGTH_M,
+  DEFAULT_ARM_HEIGHT_M,
+  HARDPOINT_AFT_OFFSET_M,
+  HARDPOINT_FORE_OFFSET_M,
+  TOWER_FOOTPRINT_M,
+  TOWER_HEIGHT_M,
+  type Vec3,
+} from "@starship-catch-sim/physics";
 import { type Group, MeshStandardMaterial, Vector3 } from "three";
 
-// Real-world dimensions, approximate gameplay constants.
-export const MECHAZILLA_TOWER_HEIGHT_M = 146; // m
-const TOWER_HEIGHT = MECHAZILLA_TOWER_HEIGHT_M;
+// Re-exported for the rest of the web app that imports the height directly.
+export const MECHAZILLA_TOWER_HEIGHT_M = TOWER_HEIGHT_M;
+const TOWER_HEIGHT = TOWER_HEIGHT_M;
 const LEG_RADIUS = 0.5; // m (1 m diameter per ticket)
-const LEG_FOOTPRINT = 12; // m (corner-to-corner of the square base)
+const LEG_FOOTPRINT = TOWER_FOOTPRINT_M;
 const BRACE_SPACING = 10; // m (cross-bracing every 10 m)
 const BRACE_THICKNESS = 0.4; // m
 const ARM_HINGE_OFFSET = 5; // m to either side of tower centreline
 const ARM_PIVOT_FROM_TOWER = 1.5; // m radial offset from leg face
-const ARM_LENGTH = 30; // m
+const ARM_LENGTH = ARM_LENGTH_M;
 const ARM_BEAM_WIDTH = 1.2;
 const ARM_BEAM_HEIGHT = 1.8;
-const DEFAULT_ARM_HEIGHT = 91; // m (matches real Mechazilla chopstick height)
+const DEFAULT_ARM_HEIGHT = DEFAULT_ARM_HEIGHT_M;
 const ARM_HEIGHT_MIN = 30;
 const ARM_HEIGHT_MAX = 130;
 
 // Arm swing: angle measured from "pointing toward rocket axis" (0 = closed,
 // embracing the booster) to "pointing outward" (open). The two arms mirror.
 const ARM_ANGLE_CLOSED = 0; // pointing toward rocket axis (gripping pose)
-const ARM_ANGLE_OPEN = (110 * Math.PI) / 180; // swept wide open
+const ARM_ANGLE_OPEN = ARM_ANGLE_OPEN_RAD;
 
 // First-order lag on opening so commanded steps are smoothed visually.
 const TAU_OPENING = 0.5; // s
@@ -41,10 +50,8 @@ const QD_ARM_LENGTH = 10;
 
 // World-space hard-points where the chopstick gripper pads contact the
 // rocket. Two pads per arm — fore (positive X along arm) and aft (negative).
-// At zero opening these sit just inside the rocket body radius (4.5 m) so
-// the gripper pads "land on" the booster ring.
-const HARDPOINT_FORE_OFFSET = 4.5; // m along arm from hinge
-const HARDPOINT_AFT_OFFSET = -2.5; // m along arm from hinge
+const HARDPOINT_FORE_OFFSET = HARDPOINT_FORE_OFFSET_M;
+const HARDPOINT_AFT_OFFSET = HARDPOINT_AFT_OFFSET_M;
 
 // Steel-truss material, slightly darker / rougher than the booster's stainless.
 let towerMat: MeshStandardMaterial | null = null;
