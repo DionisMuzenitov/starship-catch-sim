@@ -70,6 +70,10 @@ export {
   BoosterDescentStormy,
   BoosterVehicle,
   SCENARIOS,
+  ShipDescentCalm,
+  ShipDescentStandard,
+  ShipDescentStormy,
+  ShipVehicle,
   boosterDescentScenario,
   evaluateCatch,
   scenarioById,
@@ -80,3 +84,5 @@ export type {
   ScenarioDifficulty,
   SuccessVerdict,
 } from "./scenarios.js";
+export { currentPhase } from "./phase.js";
+export type { Phase } from "./phase.js";

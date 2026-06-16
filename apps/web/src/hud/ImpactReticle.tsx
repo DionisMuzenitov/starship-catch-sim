@@ -13,11 +13,13 @@ import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 
 import {
-  BoosterVehicle,
+  BoosterDescentStandard,
+  scenarioById,
   type Vec3,
 } from "@starship-catch-sim/physics";
 
 import { useHudStore } from "../state/hudStore";
+import { useScenarioStore } from "../state/scenarioStore";
 import { useSimStore } from "../state/simStore";
 
 import { predictedImpact } from "./physicsDerived";
@@ -26,6 +28,9 @@ const RECOMPUTE_S = 0.2;
 
 export function ImpactReticle() {
   const hudMode = useHudStore((s) => s.mode);
+  const scenarioId = useScenarioStore((s) => s.currentScenarioId);
+  const vehicle =
+    (scenarioById(scenarioId) ?? BoosterDescentStandard).vehicle;
   const [impact, setImpact] = useState<Vec3 | null>(null);
   const accumRef = useRef(0);
   useFrame((_, dt) => {
@@ -33,7 +38,8 @@ export function ImpactReticle() {
     if (accumRef.current < RECOMPUTE_S) return;
     accumRef.current = 0;
     const world = useSimStore.getState().world;
-    setImpact(predictedImpact(world, BoosterVehicle));
+    if (world.engineStates.length !== vehicle.engines.length) return;
+    setImpact(predictedImpact(world, vehicle));
   });
   if (hudMode === "off") return null;
   if (!impact) return null;

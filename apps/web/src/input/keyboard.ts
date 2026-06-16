@@ -32,6 +32,7 @@ import type { ManualInputState } from "@starship-catch-sim/controllers";
 import type { EngineGroup } from "@starship-catch-sim/physics";
 
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
+import { useDebugStore } from "../state/debugStore.js";
 import { useHudStore } from "../state/hudStore.js";
 
 import type { SimRunner } from "../sim/runner.js";
@@ -100,6 +101,12 @@ export function installKeyboardBindings(b: Bindings): () => void {
         return;
       case "Digit3":
         setGroup(b.input, "outer");
+        return;
+      case "Digit4":
+        setGroup(b.input, "ship");
+        return;
+      case "KeyP":
+        useDebugStore.getState().toggleTrace();
         return;
       case "KeyF":
         b.input.finsDeployed = !b.input.finsDeployed;

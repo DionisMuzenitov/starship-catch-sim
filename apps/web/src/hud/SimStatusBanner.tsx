@@ -5,7 +5,7 @@
  * pilot needs.
  */
 
-import { scenarioById } from "@starship-catch-sim/physics";
+import { currentPhase, scenarioById } from "@starship-catch-sim/physics";
 
 import { useCameraStore } from "../state/cameraStore";
 import { useHudStore } from "../state/hudStore";
@@ -16,11 +16,13 @@ export function SimStatusBanner() {
   const paused = useSimStore((s) => s.paused);
   const scale = useSimStore((s) => s.scale);
   const t = useSimStore((s) => s.t);
+  const world = useSimStore((s) => s.world);
   const camMode = useCameraStore((s) => s.mode);
   const hudMode = useHudStore((s) => s.mode);
   const units = useHudStore((s) => s.units);
   const scenarioId = useScenarioStore((s) => s.currentScenarioId);
   const scenario = scenarioById(scenarioId);
+  const phase = currentPhase(world);
   return (
     <div
       className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 select-none rounded-md bg-black/55 px-3 py-1 font-mono text-[11px] text-white/90"
@@ -36,6 +38,7 @@ export function SimStatusBanner() {
       <span className="text-amber-200/90">
         {scenario?.name ?? scenarioId}
       </span>
+      <span className="mx-2 opacity-40">·</span>phase: {phase}
       <span className="mx-2 opacity-40">·</span>
       <span className="opacity-70">
         H hud {hudMode} · U units {units}
