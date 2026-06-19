@@ -86,3 +86,27 @@ export type {
 } from "./scenarios.js";
 export { currentPhase } from "./phase.js";
 export type { Phase } from "./phase.js";
+export {
+  ARM_ANGLE_OPEN_RAD,
+  ARM_HINGE_OFFSET_X_M,
+  ARM_HINGE_OFFSET_Z_M,
+  ARM_LENGTH_M,
+  CAPTURE_VOLUME_Y_HALF_M,
+  DEFAULT_ARM_HEIGHT_M,
+  DEFAULT_TOWER_STATE,
+  HARDPOINT_AFT_OFFSET_M,
+  HARDPOINT_FORE_OFFSET_M,
+  TOWER_FOOTPRINT_M,
+  TOWER_HEIGHT_M,
+  chopstickCaptureVolume,
+  chopstickCatchPoints,
+  pointInAabb,
+  towerStructureAabb,
+} from "./tower.js";
+export type { Aabb, CaptureVolume, TowerState } from "./tower.js";
+export { GROUND_Y_M, evaluateCatchOutcome } from "./catch.js";
+export type {
+  CatchOutcome,
+  CatchOutcomeKind,
+  TerminalMetrics,
+} from "./catch.js";

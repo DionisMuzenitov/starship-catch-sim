@@ -47,17 +47,20 @@ export function useSimRunner(): UseSimRunner {
     const setWorld = useSimStore.getState().setWorld;
     const setPaused = useSimStore.getState().setPaused;
     const setScale = useSimStore.getState().setScale;
+    const setOutcome = useSimStore.getState().setOutcome;
     const runner = new SimRunner({
       vehicle: scenario.vehicle,
       initialWorld: scenario.initialWorld,
       controller,
       env: scenario.env,
+      catchEnvelope: scenario.targetCatch,
       callbacks: {
         onRender: (world) => setWorld(world),
         onMeta: (meta) => {
           setPaused(meta.paused);
           setScale(meta.scale);
         },
+        onOutcome: (outcome) => setOutcome(outcome),
       },
     });
     // Push the scenario's initial world into the store synchronously so
@@ -65,6 +68,8 @@ export function useSimRunner(): UseSimRunner {
     // vehicle shape — otherwise the booster-shaped stale world would be
     // fed into the StarshipModel (or vice versa) and crash on render.
     setWorld(scenario.initialWorld);
+    // Clear any outcome left over from a prior scenario.
+    setOutcome(null);
     ref.current = { inputState, runner };
   }
 
