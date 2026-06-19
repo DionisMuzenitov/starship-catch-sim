@@ -14,6 +14,7 @@
 
 import type { CatchOutcomeKind } from "@starship-catch-sim/physics";
 
+import { downloadReplay } from "../replay/replayIO";
 import { useHudStore } from "../state/hudStore";
 import { useScenarioStore } from "../state/scenarioStore";
 import { useSimStore } from "../state/simStore";
@@ -36,6 +37,7 @@ const KIND_BANNER: Record<CatchOutcomeKind, { label: string; tone: string }> = {
 export function CatchOutcomeOverlay() {
   const outcome = useSimStore((s) => s.outcome);
   const setOutcome = useSimStore((s) => s.setOutcome);
+  const lastReplay = useSimStore((s) => s.lastReplay);
   const units = useHudStore((s) => s.units);
   const resetCurrent = useScenarioStore((s) => s.resetCurrent);
 
@@ -47,6 +49,11 @@ export function CatchOutcomeOverlay() {
   function resetScenario() {
     setOutcome(null);
     resetCurrent();
+  }
+
+  function saveReplay() {
+    if (lastReplay === null) return;
+    downloadReplay(lastReplay);
   }
 
   return (
@@ -83,14 +90,25 @@ export function CatchOutcomeOverlay() {
           </Row>
           <Row label="fuel left">{formatMass(metrics.fuelRemainingKg, units)}</Row>
         </dl>
-        <button
-          type="button"
-          onClick={resetScenario}
-          className="mt-5 w-full rounded-md bg-white/10 px-3 py-2 text-xs uppercase tracking-wider text-white/90 hover:bg-white/20"
-          data-testid="catch-outcome-reset"
-        >
-          Reset scenario
-        </button>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={resetScenario}
+            className="rounded-md bg-white/10 px-3 py-2 text-xs uppercase tracking-wider text-white/90 hover:bg-white/20"
+            data-testid="catch-outcome-reset"
+          >
+            Reset scenario
+          </button>
+          <button
+            type="button"
+            onClick={saveReplay}
+            disabled={lastReplay === null}
+            className="rounded-md bg-white/10 px-3 py-2 text-xs uppercase tracking-wider text-white/90 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+            data-testid="catch-outcome-save-replay"
+          >
+            Save replay
+          </button>
+        </div>
       </div>
     </div>
   );

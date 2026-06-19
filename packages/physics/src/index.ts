@@ -110,3 +110,17 @@ export type {
   CatchOutcomeKind,
   TerminalMetrics,
 } from "./catch.js";
+export {
+  REPLAY_SCHEMA_VERSION,
+  createRecorder,
+  interpolateReplay,
+  parseReplay,
+  serializeReplay,
+} from "./replay.js";
+export type {
+  Recorder,
+  RecorderArgs,
+  Replay,
+  ReplayFrame,
+  ReplayHeader,
+} from "./replay.js";
