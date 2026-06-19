@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 
 import {
   ManualController,
+  OverrideController,
   PIDController,
   createManualInputState,
   type Controller,
@@ -42,6 +43,37 @@ export type UseSimRunner = {
   runner: SimRunner;
 };
 
+function isManualInputActive(s: ManualInputState): boolean {
+  if (
+    s.throttleUp ||
+    s.throttleDown ||
+    s.fullThrottle ||
+    s.engineCutoff ||
+    s.ignite ||
+    s.pitchUp ||
+    s.pitchDown ||
+    s.yawLeft ||
+    s.yawRight
+  ) {
+    return true;
+  }
+  if (s.pointerDx !== 0 || s.pointerDy !== 0) return true;
+  const gp = s.gamepad;
+  if (gp) {
+    if (
+      Math.abs(gp.leftStickX) > 0.1 ||
+      Math.abs(gp.leftStickY) > 0.1 ||
+      gp.rightTrigger > 0.05 ||
+      gp.leftTrigger > 0.05 ||
+      gp.buttonA ||
+      gp.buttonB
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function useSimRunner(): UseSimRunner {
   const ref = useRef<UseSimRunner | null>(null);
   if (ref.current === null) {
@@ -50,6 +82,7 @@ export function useSimRunner(): UseSimRunner {
       scenarioById(scenarioId) ?? BoosterDescentStandard;
     const inputState = createManualInputState();
     const controllerKind = useControllerStore.getState().kind;
+    const manual = new ManualController(scenario.vehicle, inputState);
     let controller: Controller;
     if (controllerKind === "pid") {
       const pid = new PIDController(
@@ -59,9 +92,19 @@ export function useSimRunner(): UseSimRunner {
       );
       usePidStore.getState().clearFrames();
       pid.setObserver((frame) => usePidStore.getState().pushFrame(frame));
-      controller = pid;
+      controller = new OverrideController({
+        primary: pid,
+        manual,
+        isManualActive: () => isManualInputActive(inputState),
+        overrideDurationS: 2,
+        getMode: () => useControllerStore.getState().overrideMode,
+        onTransition: (active) =>
+          useControllerStore.getState().setOverrideActive(active),
+      });
     } else {
-      controller = new ManualController(scenario.vehicle, inputState);
+      // Manual mode: ignore the override layer; clear the "YOU" flash.
+      useControllerStore.getState().setOverrideActive(false);
+      controller = manual;
     }
     const setWorld = useSimStore.getState().setWorld;
     const setPaused = useSimStore.getState().setPaused;

@@ -12,3 +12,18 @@ export {
   type PIDDebugFrame,
   type PIDObserver,
 } from "./pidController.js";
+export {
+  runMonteCarlo,
+  scaleWind,
+  windScaleSweep,
+  type MonteCarloConfig,
+  type MonteCarloEnvironment,
+  type MonteCarloResult,
+  type MonteCarloSummary,
+  type RunResult,
+} from "./eval/monteCarlo.js";
+export {
+  OverrideController,
+  type OverrideControllerOpts,
+  type OverrideMode,
+} from "./overrideController.js";

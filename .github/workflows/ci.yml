@@ -44,6 +44,17 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Eval matrix (quick)
+        run: pnpm eval:all --quick
+
+      - name: Upload eval reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eval-reports
+          path: eval/results/
+          retention-days: 7
+
   e2e:
     name: e2e (Playwright / Chromium)
     runs-on: ubuntu-latest

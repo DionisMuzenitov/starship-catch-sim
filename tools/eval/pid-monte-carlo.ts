@@ -1,56 +1,22 @@
 /**
- * SLS-23 — headless Monte-Carlo evaluation of the cascaded PID baseline.
- *
- * Runs the BoosterDescentCalm scenario N times with seeded IC jitter
- * (Box-Muller perturbations on initial velocity ±5 % and position ±20 m),
- * driving the PID controller from `packages/controllers` directly against
- * `simStep`. No web runtime; no rendering. Prints per-seed outcomes and
- * the aggregate catch rate.
+ * SLS-23 — headless Monte-Carlo evaluation of the cascaded PID baseline
+ * on `BoosterDescentCalm`. Thin wrapper around the generic SLS-24
+ * `runMonteCarlo` harness; printed table + per-seed lines exist so the
+ * CLI is still readable when the user re-runs it after a gain tweak.
  *
  *   pnpm eval:pid               # 30 seeds (CLI default)
  *   pnpm eval:pid --seeds=10    # smaller pass
  *
- * Used as the headless reference for the SLS-23 acceptance criterion
- * ("≥ 50 % catch in 30 seeds on Calm"). Smoke-tested in CI with a 3-seed
- * call via the `evalPidMonteCarlo` export.
+ * Smoke-tested in CI with a 3-seed call via the `evalPidMonteCarlo`
+ * export (`packages/controllers/src/pidMonteCarlo.test.ts`).
  */
 
 import {
-  BoosterDescentCalm,
-  Vec3,
-  evaluateCatchOutcome,
-  DEFAULT_TOWER_STATE,
-  simStep,
-} from "../../packages/physics/src/index.js";
-import { DEFAULT_PID_GAINS, PIDController } from "../../packages/controllers/src/index.js";
-
-const PHYSICS_DT = 1 / 250;
-const MAX_SIM_TIME_S = 600;
-
-/**
- * Seeded splitmix32 PRNG → uniform [0,1). Wrapped Box-Muller below.
- */
-function makeRng(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x9e3779b9) >>> 0;
-    let z = state;
-    z = ((z ^ (z >>> 16)) * 0x85ebca6b) >>> 0;
-    z = ((z ^ (z >>> 13)) * 0xc2b2ae35) >>> 0;
-    z = (z ^ (z >>> 16)) >>> 0;
-    return z / 0x1_0000_0000;
-  };
-}
-
-function gaussian(rng: () => number): number {
-  // Box-Muller. Two uniforms → one standard-normal sample. We discard the
-  // second to keep the call signature simple.
-  let u1 = 0;
-  let u2 = 0;
-  while (u1 === 0) u1 = rng();
-  while (u2 === 0) u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
+  DEFAULT_PID_GAINS,
+  PIDController,
+  runMonteCarlo,
+  type MonteCarloResult,
+} from "../../packages/controllers/src/index.js";
 
 export type SeedResult = {
   seed: number;
@@ -62,122 +28,41 @@ export type SeedResult = {
   durationS: number;
 };
 
-export type MonteCarloResult = {
+export type LegacyMonteCarloResult = {
   seeds: SeedResult[];
   successRate: number;
 };
 
-/**
- * Run `nSeeds` instances of the BoosterDescentCalm scenario through the
- * cascaded PID, applying seeded IC jitter per the SLS-23 plan.
- */
-export function evalPidMonteCarlo(nSeeds: number): MonteCarloResult {
-  const results: SeedResult[] = [];
-  for (let i = 0; i < nSeeds; i++) {
-    const rng = makeRng(0x1234_0000 ^ i);
-    const initial = BoosterDescentCalm.initialWorld;
-    const v0 = initial.rigidBody.velocity;
-    const p0 = initial.rigidBody.position;
-    // ±5 % velocity, ±20 m position perturbation per axis.
-    const jitterV = Vec3.of(
-      v0.x * (1 + 0.05 * gaussian(rng)),
-      v0.y * (1 + 0.05 * gaussian(rng)),
-      v0.z * (1 + 0.05 * gaussian(rng)),
-    );
-    const jitterP = Vec3.of(
-      p0.x + 20 * gaussian(rng),
-      p0.y + 20 * gaussian(rng),
-      p0.z + 20 * gaussian(rng),
-    );
-    const startWorld = {
-      ...initial,
-      rigidBody: {
-        ...initial.rigidBody,
-        position: jitterP,
-        velocity: jitterV,
-      },
-    };
-    const pid = new PIDController(
-      BoosterDescentCalm.vehicle,
-      BoosterDescentCalm.targetCatch.targetPosition,
-      () => DEFAULT_PID_GAINS,
-    );
-    let world = startWorld;
-    const maxTicks = Math.round(MAX_SIM_TIME_S / PHYSICS_DT);
-    let kind = "none";
-    let metrics = {
-      position: world.rigidBody.position,
-      verticalSpeedMps: world.rigidBody.velocity.y,
-      horizontalSpeedMps: Math.hypot(
-        world.rigidBody.velocity.x,
-        world.rigidBody.velocity.z,
-      ),
-      distanceToTargetM: 0,
-    };
-    for (let t = 0; t < maxTicks; t++) {
-      const ctl = pid.step(world, PHYSICS_DT);
-      world = simStep(
-        world,
-        BoosterDescentCalm.vehicle,
-        ctl,
-        PHYSICS_DT,
-        BoosterDescentCalm.env,
-      );
-      const outcome = evaluateCatchOutcome(
-        world,
-        BoosterDescentCalm.targetCatch,
-        DEFAULT_TOWER_STATE,
-      );
-      if (outcome.kind !== "none") {
-        kind = outcome.kind;
-        metrics = {
-          position: outcome.metrics.position,
-          verticalSpeedMps: outcome.metrics.verticalSpeedMps,
-          horizontalSpeedMps: outcome.metrics.horizontalSpeedMps,
-          distanceToTargetM: outcome.metrics.distanceToTargetM,
-        };
-        break;
-      }
-      // Bail-out if we've drifted out of relevance.
-      if (
-        world.rigidBody.position.y < -500 ||
-        Math.hypot(world.rigidBody.position.x, world.rigidBody.position.z) > 200_000
-      ) {
-        kind = "crash";
-        metrics = {
-          position: world.rigidBody.position,
-          verticalSpeedMps: world.rigidBody.velocity.y,
-          horizontalSpeedMps: Math.hypot(
-            world.rigidBody.velocity.x,
-            world.rigidBody.velocity.z,
-          ),
-          distanceToTargetM: Math.hypot(
-            world.rigidBody.position.x -
-              BoosterDescentCalm.targetCatch.targetPosition.x,
-            world.rigidBody.position.y -
-              BoosterDescentCalm.targetCatch.targetPosition.y,
-            world.rigidBody.position.z -
-              BoosterDescentCalm.targetCatch.targetPosition.z,
-          ),
-        };
-        break;
-      }
-    }
-    results.push({
-      seed: i,
-      caught: kind === "caught",
-      outcomeKind: kind,
-      finalY: metrics.position.y,
+function flatten(mc: MonteCarloResult): LegacyMonteCarloResult {
+  return {
+    successRate: mc.summary.successRate,
+    seeds: mc.runs.map((r) => ({
+      seed: r.seed,
+      caught: r.caught,
+      outcomeKind: r.outcomeKind,
+      finalY: r.terminalMetrics.position.y,
       finalSpeed: Math.hypot(
-        metrics.verticalSpeedMps,
-        metrics.horizontalSpeedMps,
+        r.terminalMetrics.verticalSpeedMps,
+        r.terminalMetrics.horizontalSpeedMps,
       ),
-      distanceToTargetM: metrics.distanceToTargetM,
-      durationS: world.t,
-    });
-  }
-  const caughtCount = results.filter((r) => r.caught).length;
-  return { seeds: results, successRate: caughtCount / nSeeds };
+      distanceToTargetM: r.terminalMetrics.distanceToTargetM,
+      durationS: r.durationS,
+    })),
+  };
+}
+
+export function evalPidMonteCarlo(nSeeds: number): LegacyMonteCarloResult {
+  const mc = runMonteCarlo({
+    scenarioId: "booster-descent-calm",
+    nRuns: nSeeds,
+    controllerFactory: (scenario) =>
+      new PIDController(
+        scenario.vehicle,
+        scenario.targetCatch.targetPosition,
+        () => DEFAULT_PID_GAINS,
+      ),
+  });
+  return flatten(mc);
 }
 
 function parseSeedArg(argv: string[]): number {
@@ -210,7 +95,6 @@ function main(): void {
   );
 }
 
-// Run only when invoked directly via `tsx tools/eval/pid-monte-carlo.ts`.
 const invokedDirectly =
   typeof process !== "undefined" &&
   process.argv[1] !== undefined &&
