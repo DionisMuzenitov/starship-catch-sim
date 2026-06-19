@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { SandboxModels } from "./sandbox/SandboxModels";
 import { SandboxTower } from "./sandbox/SandboxTower";
 import { Scene } from "./scene/Scene";
+import { useControllerStore } from "./state/controllerStore";
 import { useScenarioStore } from "./state/scenarioStore";
 
 function currentPath(): string {
@@ -13,6 +14,7 @@ export function App() {
   const [path, setPath] = useState(currentPath);
   const scenarioId = useScenarioStore((s) => s.currentScenarioId);
   const epoch = useScenarioStore((s) => s.epoch);
+  const controllerKind = useControllerStore((s) => s.kind);
 
   useEffect(() => {
     const handler = () => setPath(currentPath());
@@ -26,9 +28,10 @@ export function App() {
     case "/sandbox/tower":
       return <SandboxTower />;
     default:
-      // Keying Scene on (scenarioId, epoch) forces a full remount when
-      // the user picks a new scenario OR clicks "Reset" on the outcome
-      // overlay — `useSimRunner` then constructs a fresh runner.
-      return <Scene key={`${scenarioId}-${epoch}`} />;
+      // Keying Scene on (scenarioId, epoch, controllerKind) forces a full
+      // remount when the user picks a new scenario, swaps Manual ↔ PID,
+      // or clicks "Reset" on the outcome overlay — `useSimRunner` then
+      // constructs a fresh runner with the chosen controller.
+      return <Scene key={`${scenarioId}-${epoch}-${controllerKind}`} />;
   }
 }

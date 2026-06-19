@@ -12,7 +12,9 @@ import { useEffect, useRef } from "react";
 
 import {
   ManualController,
+  PIDController,
   createManualInputState,
+  type Controller,
   type ManualInputState,
 } from "@starship-catch-sim/controllers";
 import {
@@ -27,6 +29,8 @@ import {
   installPointerBindings,
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
+import { useControllerStore } from "../state/controllerStore.js";
+import { usePidStore } from "../state/pidStore.js";
 import { useReplayStore } from "../state/replayStore.js";
 import { useScenarioStore } from "../state/scenarioStore.js";
 import { useSimStore } from "../state/simStore.js";
@@ -45,7 +49,20 @@ export function useSimRunner(): UseSimRunner {
     const scenario: Scenario =
       scenarioById(scenarioId) ?? BoosterDescentStandard;
     const inputState = createManualInputState();
-    const controller = new ManualController(scenario.vehicle, inputState);
+    const controllerKind = useControllerStore.getState().kind;
+    let controller: Controller;
+    if (controllerKind === "pid") {
+      const pid = new PIDController(
+        scenario.vehicle,
+        scenario.targetCatch.targetPosition,
+        () => usePidStore.getState().gains,
+      );
+      usePidStore.getState().clearFrames();
+      pid.setObserver((frame) => usePidStore.getState().pushFrame(frame));
+      controller = pid;
+    } else {
+      controller = new ManualController(scenario.vehicle, inputState);
+    }
     const setWorld = useSimStore.getState().setWorld;
     const setPaused = useSimStore.getState().setPaused;
     const setScale = useSimStore.getState().setScale;
