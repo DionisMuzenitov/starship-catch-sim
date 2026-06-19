@@ -6,6 +6,8 @@ import { Canvas } from "@react-three/fiber";
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
 import { ScenarioPicker } from "../menu/ScenarioPicker";
+import { ReplayDriver } from "../replay/ReplayDriver";
+import { ReplayPlayer } from "../replay/ReplayPlayer";
 import { BoosterFlight } from "../sim/BoosterFlight";
 import { useSimRunner } from "../sim/useSimRunner";
 import { useCameraStore } from "../state/cameraStore";
@@ -62,6 +64,8 @@ export function Scene() {
       <DebugHud sample={sample} />
       <ScenarioPicker />
       <Hud />
+      <ReplayDriver />
+      <ReplayPlayer />
     </div>
   );
 }

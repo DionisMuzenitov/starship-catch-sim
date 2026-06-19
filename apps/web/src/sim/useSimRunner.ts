@@ -17,6 +17,7 @@ import {
 } from "@starship-catch-sim/controllers";
 import {
   BoosterDescentStandard,
+  createRecorder,
   scenarioById,
   type Scenario,
 } from "@starship-catch-sim/physics";
@@ -26,6 +27,7 @@ import {
   installPointerBindings,
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
+import { useReplayStore } from "../state/replayStore.js";
 import { useScenarioStore } from "../state/scenarioStore.js";
 import { useSimStore } from "../state/simStore.js";
 
@@ -48,12 +50,22 @@ export function useSimRunner(): UseSimRunner {
     const setPaused = useSimStore.getState().setPaused;
     const setScale = useSimStore.getState().setScale;
     const setOutcome = useSimStore.getState().setOutcome;
+    const setLastReplay = useSimStore.getState().setLastReplay;
+    // Booster vs ship is the only vehicle distinction so far; mark it from
+    // the scenario id prefix so the replay header carries useful metadata.
+    const vehicleId = scenarioId.startsWith("ship-") ? "ship" : "booster";
+    const recorder = createRecorder({
+      scenarioId,
+      vehicleId,
+      createdAt: new Date().toISOString(),
+    });
     const runner = new SimRunner({
       vehicle: scenario.vehicle,
       initialWorld: scenario.initialWorld,
       controller,
       env: scenario.env,
       catchEnvelope: scenario.targetCatch,
+      recorder,
       callbacks: {
         onRender: (world) => setWorld(world),
         onMeta: (meta) => {
@@ -61,6 +73,7 @@ export function useSimRunner(): UseSimRunner {
           setScale(meta.scale);
         },
         onOutcome: (outcome) => setOutcome(outcome),
+        onReplay: (replay) => setLastReplay(replay),
       },
     });
     // Push the scenario's initial world into the store synchronously so
@@ -70,6 +83,7 @@ export function useSimRunner(): UseSimRunner {
     setWorld(scenario.initialWorld);
     // Clear any outcome left over from a prior scenario.
     setOutcome(null);
+    setLastReplay(null);
     ref.current = { inputState, runner };
   }
 
@@ -83,11 +97,22 @@ export function useSimRunner(): UseSimRunner {
       canvas instanceof HTMLElement
         ? installPointerBindings(inputState, canvas)
         : () => undefined;
+
+    // Force-pause the runner whenever replay mode is active so the live
+    // simulation can't fight the replay driver's writes to simStore.world.
+    // Exiting replay mode re-mounts the scene (via scenarioStore.epoch) so
+    // we don't have to manually restore the paused state here.
+    const unsubReplay = useReplayStore.subscribe((s) => {
+      if (s.mode === "replay") runner.setPaused(true);
+    });
+    if (useReplayStore.getState().mode === "replay") runner.setPaused(true);
+
     return () => {
       runner.stop();
       removeKeys();
       removePad();
       removePointer();
+      unsubReplay();
     };
   }, []);
 
