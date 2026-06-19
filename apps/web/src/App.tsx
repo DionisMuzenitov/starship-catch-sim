@@ -12,6 +12,7 @@ function currentPath(): string {
 export function App() {
   const [path, setPath] = useState(currentPath);
   const scenarioId = useScenarioStore((s) => s.currentScenarioId);
+  const epoch = useScenarioStore((s) => s.epoch);
 
   useEffect(() => {
     const handler = () => setPath(currentPath());
@@ -25,9 +26,9 @@ export function App() {
     case "/sandbox/tower":
       return <SandboxTower />;
     default:
-      // Keying Scene on the scenario id forces a full remount when the
-      // user picks a new scenario — `useSimRunner` then constructs a
-      // fresh runner from the new IC + env.
-      return <Scene key={scenarioId} />;
+      // Keying Scene on (scenarioId, epoch) forces a full remount when
+      // the user picks a new scenario OR clicks "Reset" on the outcome
+      // overlay — `useSimRunner` then constructs a fresh runner.
+      return <Scene key={`${scenarioId}-${epoch}`} />;
   }
 }

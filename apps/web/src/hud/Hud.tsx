@@ -14,6 +14,7 @@
 
 import { AltitudeStrip } from "./AltitudeStrip";
 import { AttitudeIndicator } from "./AttitudeIndicator";
+import { CatchOutcomeOverlay } from "./CatchOutcomeOverlay";
 import { FuelAndThrottle } from "./FuelAndThrottle";
 import { SimStatusBanner } from "./SimStatusBanner";
 import { TowerProximity } from "./TowerProximity";
@@ -21,7 +22,11 @@ import { useHudStore } from "../state/hudStore";
 
 export function Hud() {
   const mode = useHudStore((s) => s.mode);
-  if (mode === "off") return null;
+  // The outcome overlay renders on top of every HUD mode (including "off")
+  // so a player who cleared the chrome can still see their verdict + reset.
+  if (mode === "off") {
+    return <CatchOutcomeOverlay />;
+  }
 
   return (
     <>
@@ -38,6 +43,7 @@ export function Hud() {
           </div>
         </>
       )}
+      <CatchOutcomeOverlay />
     </>
   );
 }

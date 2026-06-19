@@ -15,11 +15,16 @@
  */
 
 import {
+  DEFAULT_TOWER_STATE,
   Quat,
   Vec3,
+  evaluateCatchOutcome,
   simStep,
+  type CatchEnvelope,
+  type CatchOutcome,
   type ControlInput,
   type SimEnv,
+  type TowerState,
   type Vehicle,
   type World,
 } from "@starship-catch-sim/physics";
@@ -36,6 +41,8 @@ export type RunnerCallbacks = {
   onRender: (world: World) => void;
   /** Called when pause/scale changes so the UI can reflect it. */
   onMeta?: (meta: { paused: boolean; scale: number }) => void;
+  /** Called once when the catch detector reports a non-`none` outcome. */
+  onOutcome?: (outcome: CatchOutcome) => void;
 };
 
 export type RunnerArgs = {
@@ -46,6 +53,12 @@ export type RunnerArgs = {
   /** Per-scenario environment (wind + gravity). Optional — defaults
    * to no wind + Earth gravity, matching `simStep`'s own default. */
   env?: SimEnv;
+  /** Catch envelope for the active scenario. If omitted, catch detection
+   *  is disabled (used by unit tests that don't care about outcomes). */
+  catchEnvelope?: CatchEnvelope;
+  /** Tower geometry the catch detector evaluates against. Defaults to the
+   *  closed-pose, default-height chopstick state. */
+  towerState?: TowerState;
 };
 
 type Snapshot = {
@@ -80,6 +93,8 @@ export class SimRunner {
   private readonly callbacks: RunnerCallbacks;
   private readonly initial: World;
   private readonly env: SimEnv | undefined;
+  private readonly catchEnvelope: CatchEnvelope | undefined;
+  private readonly towerState: TowerState;
 
   /** State BEFORE the most recent physics step — for render interpolation. */
   private prevWorld: World;
@@ -92,6 +107,10 @@ export class SimRunner {
   private scale = 1;
   private lastTimeMs: number | null = null;
   private rafId: number | null = null;
+  /** Once an outcome fires, the runner stops stepping the world. */
+  private ended = false;
+  /** Memoised outcome so the callback fires exactly once. */
+  private outcome: CatchOutcome | null = null;
 
   private readonly ring: Snapshot[] = [];
 
@@ -101,6 +120,8 @@ export class SimRunner {
     this.callbacks = args.callbacks;
     this.initial = args.initialWorld;
     this.env = args.env;
+    this.catchEnvelope = args.catchEnvelope;
+    this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;
     this.snapshot();
@@ -147,8 +168,14 @@ export class SimRunner {
     this.accumulator = 0;
     this.tickIndex = 0;
     this.ring.length = 0;
+    this.ended = false;
+    this.outcome = null;
     this.snapshot();
     this.callbacks.onRender(this.world);
+  }
+
+  getOutcome(): CatchOutcome | null {
+    return this.outcome;
   }
 
   rewind(seconds: number): void {
@@ -168,10 +195,14 @@ export class SimRunner {
 
   /** Step `realDt` worth of sim time forward — exposed for headless tests. */
   advance(realDt: number): void {
-    if (this.paused) return;
+    if (this.paused || this.ended) return;
     this.accumulator += realDt * this.scale;
     while (this.accumulator >= PHYSICS_DT) {
       this.physicsTick();
+      if (this.ended) {
+        this.accumulator = 0;
+        break;
+      }
       this.accumulator -= PHYSICS_DT;
     }
   }
@@ -201,6 +232,36 @@ export class SimRunner {
     );
     this.tickIndex++;
     if (this.tickIndex % SNAPSHOT_EVERY_N_TICKS === 0) this.snapshot();
+    this.checkOutcome();
+  }
+
+  private checkOutcome(): void {
+    if (this.ended || this.catchEnvelope === undefined) return;
+    const outcome = evaluateCatchOutcome(
+      this.world,
+      this.catchEnvelope,
+      this.towerState,
+    );
+    if (outcome.kind === "none") return;
+    this.outcome = outcome;
+    this.ended = true;
+    if (outcome.kind === "caught") {
+      // Pose-lock to the centre of the capture volume so the post-attempt
+      // overlay renders the rocket sitting in the chopstick slot.
+      const target = this.catchEnvelope.targetPosition;
+      this.world = {
+        ...this.world,
+        rigidBody: {
+          ...this.world.rigidBody,
+          position: target,
+          velocity: Vec3.ZERO,
+          angularVelocity: Vec3.ZERO,
+        },
+      };
+      this.prevWorld = this.world;
+    }
+    this.callbacks.onOutcome?.(outcome);
+    this.callbacks.onRender(this.world);
   }
 
   private snapshot(): void {
