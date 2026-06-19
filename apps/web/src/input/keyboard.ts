@@ -34,6 +34,7 @@ import type { EngineGroup } from "@starship-catch-sim/physics";
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
 import { useDebugStore } from "../state/debugStore.js";
 import { useHudStore } from "../state/hudStore.js";
+import { useReplayStore } from "../state/replayStore.js";
 
 import type { SimRunner } from "../sim/runner.js";
 
@@ -56,9 +57,44 @@ function shouldIgnoreEvent(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
 }
 
+// Sim-control keys (manual pilot input + runner control). Suppressed while
+// the replay player owns the scene so the user can't accidentally pump
+// throttle or reset the runner against an inert paused state.
+const SIM_KEYS = new Set([
+  "KeyW",
+  "KeyS",
+  "KeyX",
+  "KeyI",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "KeyQ",
+  "KeyE",
+  "Digit1",
+  "Digit2",
+  "Digit3",
+  "Digit4",
+  "KeyF",
+  "Space",
+  "BracketLeft",
+  "BracketRight",
+  "KeyR",
+  "KeyB",
+]);
+
 export function installKeyboardBindings(b: Bindings): () => void {
   const onKeyDown = (ev: KeyboardEvent) => {
     if (shouldIgnoreEvent(ev.target)) return;
+    // Lock sim-control keys while replay is playing; camera + HUD keys
+    // (C/T/G/O/N/M/V/H/U/P) stay live so the user can still pan around the
+    // recording.
+    if (
+      useReplayStore.getState().mode === "replay" &&
+      SIM_KEYS.has(ev.code)
+    ) {
+      return;
+    }
     if (ev.repeat) {
       // Edge-triggered keys (toggle / pause / scale / reset / rewind)
       // already fired; held-down keys (throttle, gimbal) are polled

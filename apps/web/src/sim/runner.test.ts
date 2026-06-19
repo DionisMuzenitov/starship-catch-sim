@@ -4,9 +4,11 @@ import {
   Vec3,
   boosterDescentScenario,
   chopstickCaptureVolume,
+  createRecorder,
   neutralControl,
   type CatchOutcome,
   type ControlInput,
+  type Replay,
   type World,
 } from "@starship-catch-sim/physics";
 import type { Controller } from "@starship-catch-sim/controllers";
@@ -164,6 +166,43 @@ describe("SimRunner — catch outcome plumbing", () => {
     expect(["crash", "near_miss", "tower_collision"]).toContain(
       outcomes[0]!.kind,
     );
+  });
+
+  it("recorder receives frames and finalises on outcome", () => {
+    const scenario = BoosterDescentStandard;
+    const replays: Replay[] = [];
+    const recorder = createRecorder({
+      scenarioId: scenario.id,
+      vehicleId: "booster",
+      frameRateHz: 50,
+      createdAt: "2026-06-19T12:00:00.000Z",
+    });
+    const runner = new SimRunner({
+      vehicle: scenario.vehicle,
+      initialWorld: scenario.initialWorld,
+      controller: new Idle(),
+      env: scenario.env,
+      catchEnvelope: scenario.targetCatch,
+      recorder,
+      callbacks: {
+        onRender: () => undefined,
+        onReplay: (r) => replays.push(r),
+      },
+    });
+    runner.setPaused(false);
+    runner.advance(300);
+    expect(replays).toHaveLength(1);
+    const replay = replays[0]!;
+    expect(replay.header.scenarioId).toBe(scenario.id);
+    expect(replay.header.frameRateHz).toBe(50);
+    expect(replay.header.outcome).not.toBeNull();
+    expect(replay.frames.length).toBeGreaterThan(10);
+    // Frame timestamps are monotonic.
+    for (let i = 1; i < replay.frames.length; i++) {
+      expect(replay.frames[i]!.t).toBeGreaterThanOrEqual(
+        replay.frames[i - 1]!.t,
+      );
+    }
   });
 
   it("with no catchEnvelope passed, no outcome ever fires", () => {

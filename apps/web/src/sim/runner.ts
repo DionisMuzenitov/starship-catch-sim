@@ -23,6 +23,8 @@ import {
   type CatchEnvelope,
   type CatchOutcome,
   type ControlInput,
+  type Recorder,
+  type Replay,
   type SimEnv,
   type TowerState,
   type Vehicle,
@@ -43,6 +45,8 @@ export type RunnerCallbacks = {
   onMeta?: (meta: { paused: boolean; scale: number }) => void;
   /** Called once when the catch detector reports a non-`none` outcome. */
   onOutcome?: (outcome: CatchOutcome) => void;
+  /** Called once when recording finalises (immediately after `onOutcome`). */
+  onReplay?: (replay: Replay) => void;
 };
 
 export type RunnerArgs = {
@@ -59,6 +63,8 @@ export type RunnerArgs = {
   /** Tower geometry the catch detector evaluates against. Defaults to the
    *  closed-pose, default-height chopstick state. */
   towerState?: TowerState;
+  /** Replay recorder. If omitted, no replay is captured. */
+  recorder?: Recorder;
 };
 
 type Snapshot = {
@@ -95,6 +101,10 @@ export class SimRunner {
   private readonly env: SimEnv | undefined;
   private readonly catchEnvelope: CatchEnvelope | undefined;
   private readonly towerState: TowerState;
+  private readonly recorder: Recorder | undefined;
+  /** Most recent ControlInput from the controller this tick — captured so
+   *  the recorder can pair it with the post-step world. */
+  private lastControl: ControlInput | null = null;
 
   /** State BEFORE the most recent physics step — for render interpolation. */
   private prevWorld: World;
@@ -122,6 +132,7 @@ export class SimRunner {
     this.env = args.env;
     this.catchEnvelope = args.catchEnvelope;
     this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
+    this.recorder = args.recorder;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;
     this.snapshot();
@@ -223,6 +234,7 @@ export class SimRunner {
   private physicsTick(): void {
     this.prevWorld = this.world;
     const ctl: ControlInput = this.controller.step(this.world, PHYSICS_DT);
+    this.lastControl = ctl;
     this.world = simStep(
       this.world,
       this.vehicle,
@@ -232,6 +244,9 @@ export class SimRunner {
     );
     this.tickIndex++;
     if (this.tickIndex % SNAPSHOT_EVERY_N_TICKS === 0) this.snapshot();
+    // Recorder samples the post-step world paired with the control input
+    // that produced it; it owns the cadence downsampling itself.
+    this.recorder?.push(this.world.t, this.world, ctl);
     this.checkOutcome();
   }
 
@@ -261,6 +276,17 @@ export class SimRunner {
       this.prevWorld = this.world;
     }
     this.callbacks.onOutcome?.(outcome);
+    if (this.recorder !== undefined) {
+      // One final sample at the terminal frame so the replay always ends
+      // on the moment the outcome fired.
+      this.recorder.push(
+        this.world.t,
+        this.world,
+        this.lastControl ?? this.controller.step(this.world, PHYSICS_DT),
+      );
+      const replay = this.recorder.finalize(outcome);
+      this.callbacks.onReplay?.(replay);
+    }
     this.callbacks.onRender(this.world);
   }
 
