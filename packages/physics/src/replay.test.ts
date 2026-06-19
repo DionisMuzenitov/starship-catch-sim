@@ -188,6 +188,100 @@ describe("serialize / parse round-trip", () => {
   it("rejects invalid JSON", () => {
     expect(() => parseReplay("{not json")).toThrow(/invalid JSON/);
   });
+
+  it("rejects a non-object root", () => {
+    expect(() => parseReplay("42")).toThrow(/object at the root/);
+    expect(() => parseReplay("null")).toThrow(/object at the root/);
+  });
+
+  it("rejects a missing or non-object header", () => {
+    expect(() => parseReplay(JSON.stringify({ frames: [] }))).toThrow(
+      /missing header/,
+    );
+  });
+
+  it("rejects a non-array frames field", () => {
+    expect(() =>
+      parseReplay(
+        JSON.stringify({
+          header: {
+            schemaVersion: REPLAY_SCHEMA_VERSION,
+            scenarioId: "x",
+            vehicleId: "booster",
+            seed: null,
+            outcome: null,
+            durationS: 0,
+            frameRateHz: 100,
+            createdAt: CREATED_AT,
+          },
+          frames: "nope",
+        }),
+      ),
+    ).toThrow(/frames array/);
+  });
+
+  it("rejects a non-string or empty scenarioId / vehicleId", () => {
+    const base = {
+      schemaVersion: REPLAY_SCHEMA_VERSION,
+      seed: null,
+      outcome: null,
+      durationS: 0,
+      frameRateHz: 100,
+      createdAt: CREATED_AT,
+    };
+    expect(() =>
+      parseReplay(
+        JSON.stringify({
+          header: { ...base, scenarioId: "", vehicleId: "booster" },
+          frames: [{}],
+        }),
+      ),
+    ).toThrow(/scenarioId/);
+    expect(() =>
+      parseReplay(
+        JSON.stringify({
+          header: { ...base, scenarioId: "x", vehicleId: 0 },
+          frames: [{}],
+        }),
+      ),
+    ).toThrow(/vehicleId/);
+  });
+
+  it("rejects a non-positive frameRateHz", () => {
+    expect(() =>
+      parseReplay(
+        JSON.stringify({
+          header: {
+            schemaVersion: REPLAY_SCHEMA_VERSION,
+            scenarioId: "x",
+            vehicleId: "booster",
+            seed: null,
+            outcome: null,
+            durationS: 0,
+            frameRateHz: 0,
+            createdAt: CREATED_AT,
+          },
+          frames: [{}],
+        }),
+      ),
+    ).toThrow(/frameRateHz/);
+  });
+});
+
+describe("interpolateReplay edge cases", () => {
+  it("returns the only frame for a single-frame replay", () => {
+    const rec = mkRecorder(10);
+    rec.push(0.5, worldAt(0.5, Vec3.of(0, 42, 0), Vec3.ZERO), CTL);
+    const r = rec.finalize(null);
+    const { world } = interpolateReplay(r, 0.7);
+    expect(world.rigidBody.position.y).toBe(42);
+  });
+
+  it("throws on an empty replay", () => {
+    const rec = mkRecorder(10);
+    const r = rec.finalize(null);
+    expect(() => interpolateReplay(r, 0)).toThrow(/no frames/);
+  });
 });
 
 describe("interpolateReplay quaternion math", () => {
