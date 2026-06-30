@@ -25,6 +25,11 @@ const LEG_RADIUS = 0.5; // m (1 m diameter per ticket)
 const LEG_FOOTPRINT = TOWER_FOOTPRINT_M;
 const BRACE_SPACING = 10; // m (cross-bracing every 10 m)
 const BRACE_THICKNESS = 0.4; // m
+// Diagonal spans one level vertically (BRACE_SPACING) and corner-to-
+// corner horizontally (LEG_FOOTPRINT) on the +X face. Rotation is about
+// the local X axis so the box tilts in the YZ plane.
+const DIAG_LEN = Math.hypot(LEG_FOOTPRINT, BRACE_SPACING);
+const DIAG_ANGLE = Math.atan2(BRACE_SPACING, LEG_FOOTPRINT);
 const ARM_HINGE_OFFSET = 5; // m to either side of tower centreline
 const ARM_PIVOT_FROM_TOWER = 1.5; // m radial offset from leg face
 const ARM_LENGTH = ARM_LENGTH_M;
@@ -275,16 +280,21 @@ export const MechazillaTower = forwardRef<MechazillaApi, Props>(
             >
               <boxGeometry args={[BRACE_THICKNESS, BRACE_THICKNESS, LEG_FOOTPRINT]} />
             </mesh>
-            {/* Diagonals on the rocket-facing face (+X) */}
-            <mesh
-              position={[LEG_FOOTPRINT / 2, 0, 0]}
-              rotation={[0, 0, Math.PI / 4]}
-              material={getTowerMaterial()}
-            >
-              <boxGeometry
-                args={[LEG_FOOTPRINT * Math.SQRT2, BRACE_THICKNESS * 0.7, BRACE_THICKNESS * 0.7]}
-              />
-            </mesh>
+            {/* Diagonal on the rocket-facing face (+X): lies flat in the
+                YZ plane, spanning from this level's corner to the next
+                level's opposite corner. Skipped on the topmost level
+                when it would overshoot the tower top. */}
+            {y + BRACE_SPACING <= TOWER_HEIGHT && (
+              <mesh
+                position={[LEG_FOOTPRINT / 2, BRACE_SPACING / 2, 0]}
+                rotation={[DIAG_ANGLE, 0, 0]}
+                material={getTowerMaterial()}
+              >
+                <boxGeometry
+                  args={[BRACE_THICKNESS * 0.7, BRACE_THICKNESS * 0.7, DIAG_LEN]}
+                />
+              </mesh>
+            )}
           </group>
         ))}
 
