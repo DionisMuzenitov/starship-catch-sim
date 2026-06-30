@@ -14,6 +14,8 @@
     "playwright:install": "pnpm --filter @starship-catch-sim/web exec playwright install --with-deps chromium",
     "bench": "tsx tools/bench/physics-bench.ts",
     "eval:pid": "tsx tools/eval/pid-monte-carlo.ts",
+    "eval:all": "tsx tools/eval/run-eval.ts",
+    "plot": "tsx tools/eval/plot.ts",
     "lint": "eslint .",
     "typecheck": "pnpm -r run typecheck",
     "format": "prettier --write ."
