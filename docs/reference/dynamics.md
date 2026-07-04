@@ -72,8 +72,9 @@ Approximations, documented on purpose:
 - **Density/pressure stay exponential** (scale heights 8.5 / 7.4 km) — the
   ISA temperature rides alongside. Cd(M) needs Mach to ~±0.05 only, and the
   exponential density is within ~10 % of ISA below 50 km where drag matters.
-- Layer altitudes are geopotential; we treat them as geometric (< 0.5 %
-  error below 100 km).
+- Layer altitudes are geopotential; we treat them as geometric (< 1 %
+  altitude error below 60 km, ~1.5 % at 100 km — matches the code
+  comment in `atmosphere.ts`).
 
 ## Sources (accessed 2026-07-04)
 

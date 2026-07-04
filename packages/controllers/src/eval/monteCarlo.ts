@@ -21,6 +21,7 @@
 
 import {
   DEFAULT_TOWER_STATE,
+  Quat,
   Vec3,
   evaluateCatchOutcome,
   scenarioById,
@@ -235,6 +236,12 @@ function runOne(
   }
   const runtimeMs = nowMs() - startWall;
   const fuelUsedKg = Math.max(0, startPropellantKg - world.mass.propellantMass);
+  if (kind === "none") {
+    // Timed out at MAX_SIM_TIME_S without an outcome: report the FINAL
+    // world, not the initial one (SLS-48 — initial-state metrics were
+    // silently corrupting medianFinalPosErrM).
+    metrics = synthMetrics(world, scenario);
+  }
   return {
     seed,
     caught: kind === "caught",
@@ -244,6 +251,12 @@ function runOne(
     runtimeMs,
     fuelUsedKg,
   };
+}
+
+/** Tilt of body +Y from world up, in radians. */
+function tiltFromAttitude(world: World): number {
+  const up = Quat.rotateVec3(world.rigidBody.attitude, Vec3.of(0, 1, 0));
+  return Math.acos(Math.min(1, Math.max(-1, up.y)));
 }
 
 /** Terminal metrics for runs that never triggered the catch detector.
@@ -257,7 +270,7 @@ export function synthMetrics(world: World, scenario: Scenario): TerminalMetrics 
       world.rigidBody.velocity.x,
       world.rigidBody.velocity.z,
     ),
-    tiltRad: 0,
+    tiltRad: tiltFromAttitude(world),
     angularRateMagRadPerS: Math.hypot(
       world.rigidBody.angularVelocity.x,
       world.rigidBody.angularVelocity.y,

@@ -50,21 +50,36 @@ Formulation (per re-plan, following Açıkmese & Blackmore 2013):
   convex including the throttle floor).
 - **Dynamics:** r̈ = u + g + a_drag(v̄, ρ(h̄)) with drag linearized about
   the previous plan's trajectory (Cd(M) from SLS-45 enters through this
-  term). Discretized at N = 60 nodes; final time via golden-section search
-  on t_f outside the SOCP.
-- **Glide slope:** ‖r_xz − r_f,xz‖ ≤ tan(15°) · (r_y − 91) — a 15°-from-
-  vertical cone with apex at the slot centre r_f = (8.5, 91, 0).
-- **Tower keep-out:** linear half-space x ≥ 12 enforced for all nodes with
-  r_y < 250, releasing to the glide cone inside the final approach. Convex,
-  conservative (booster radius 4.5 m + margin), and cheap.
+  term). Discretized at N = 60 nodes; final time OUTSIDE the SOCP: a
+  6-point geometric sweep on cold solves, a 3-point (×0.92/1.0/1.08)
+  refinement around the previous t_f on warm re-plans, falling back to
+  the cold sweep when the hinted candidates are unusable.
+- **Glide slope:** ‖r_xz − r_f,xz‖ ≤ tan(15°) · (r_y − 91) + 10 m — a
+  15°-from-vertical cone apexed at the slot centre r_f = (8.5, 91, 0),
+  applied to the final quarter of the horizon (constraining the early,
+  far-out trajectory to a cone only hurts feasibility).
+- **Tower keep-out:** tilted convex plane x ≥ 8 + (3/55)·(r_y − 91) on
+  the same final-quarter nodes — ≥ 11 m at tower top (146 m), clearing
+  the 6 m face + 4.5 m booster radius, while keeping the terminal slot
+  (x = 8.5) feasible. An earlier "x ≥ 12 below 250 m" sketch was
+  superseded in implementation: it makes the terminal node infeasible.
 - **Thrust pointing:** u_y ≥ σ·cos(15°), matching the centre-engine gimbal
   cone.
-- **Terminal box:** matches the catch envelope — ‖r(t_f) − r_f‖ ≤ 10,
-  |v_y(t_f)| ≤ 5, ‖v_xz(t_f)‖ ≤ 2.
+- **Terminal box (soft):** tolerances match the catch envelope —
+  ‖r(t_f) − r_f‖ ≤ 10, |v_y(t_f)| ≤ 5, ‖v_xz(t_f)‖ ≤ 2, plus v_y ≤ 0 —
+  slack-relaxed with a steep (1e4) penalty so the SOCP is always
+  feasible; both the service's t_f search and the client treat terminal
+  slack > 5 as "no usable plan". The envelope's tilt (≤ 3°) and
+  angular-rate (≤ 5°/s) limits are NOT modelled — a 3-DOF plan carries
+  no attitude; the inner loop owns those.
+- **Fuel floor:** z(t_f) ≥ ln(dry mass + 2 % propellant reserve); the
+  plan may not burn fuel the tank doesn't have.
 - **Objective:** minimum fuel (∑ σ_k Δt); matches operational reality and
   makes the fuel-margin comparison against PID meaningful.
-- **Inner loop:** cascaded PID (ADR-006 gains) tracks (r*, v*) and the
-  attitude implied by u*/‖u*‖, at 250 Hz between 1 Hz re-plans.
+- **Inner loop:** feedforward u* plus a small PD correction on
+  (r*, v*) error, clamped to 3 m/s² (larger divergence is the re-plan's
+  job), feeding the ADR-006 attitude PIDs at 250 Hz. The full cascaded
+  PID flies as the FALLBACK whenever no usable plan exists.
 
 Solver chain: Python FastAPI service with CVXPY + Clarabel (SLS-26) —
 Clarabel is CVXPY's default open-source conic solver and handles the SOCP

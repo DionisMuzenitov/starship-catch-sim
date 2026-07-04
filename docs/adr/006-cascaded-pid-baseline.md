@@ -99,3 +99,24 @@ with recharts.
 - **No baseline; jump straight to MPC** — saves a sprint, but removes the
   reference point the M3/M4 narrative depends on. Rejected because the
   "PID struggles" plot is the whole reason MPC is interesting to show.
+
+## Corrections (2026-07-04, SLS-48 verification pass)
+
+Small drifts between this ADR's original text and the shipped code, kept
+here rather than silently rewritten:
+
+- The vy profile below the final-approach window is a linear ramp
+  `finalApproachVyMps · (h / finalApproachAltitudeM)` (soft touchdown),
+  not the 0 the `max(0, ·)` formula implied; `finalApproachVyMps` is a
+  tunable knob.
+- Ignition gates on *height above the catch target* (inclusive), not on
+  raw `position.y` — an 91 m difference.
+- Knob count: the gain record holds 50 scalars; the tuning panel exposes
+  30 of them (clamps aren't sliders). The "35 numbers" estimate was
+  neither.
+- The gimbal pre-clamp is the plant's ±0.262 rad limit (derived from the
+  vehicle's engines since SLS-48); an earlier hardcoded ±0.35 was the
+  gimbal *rate*, not the angle.
+- As of SLS-48 the catch target is the physical chopstick slot centre
+  (≈ (8.5, 91, 0), derived from tower geometry) — the original
+  (0, 91, 0) tower-centreline target was uncatchable.

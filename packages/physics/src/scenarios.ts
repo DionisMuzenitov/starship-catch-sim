@@ -50,6 +50,7 @@ import {
   type Vehicle,
   type World,
 } from "./world.js";
+import { chopstickCaptureVolume, DEFAULT_TOWER_STATE } from "./tower.js";
 
 // ---------------------------------------------------------------------------
 // Static vehicle config — used by every scenario in v1.
@@ -118,9 +119,14 @@ export type SuccessVerdict = {
   readonly reason: string;
 };
 
-// Tower catch-point altitude matches MechazillaTower's default arm
-// height (91 m) — keeps the scenario aligned with the rendered tower.
-const CATCH_POINT_WORLD = Vec3.of(0, 91, 0);
+// Catch point = the centre of the physical chopstick capture volume
+// (≈ (8.5, 91, 0)), derived from the tower geometry so it can never
+// drift from what the catch detector actually gates on. The previous
+// hand-written (0, 91, 0) sat on the tower CENTRELINE — outside the
+// capture volume and inside the tower truss AABB, so a controller
+// tracking it perfectly ended in `tower_collision`, never `caught`
+// (SLS-48 verification finding).
+const CATCH_POINT_WORLD = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
 
 const STANDARD_CATCH_ENVELOPE: CatchEnvelope = {
   targetPosition: CATCH_POINT_WORLD,
@@ -275,19 +281,26 @@ function makeInitialWorld(env: SimEnv): World {
 // Wind variants per difficulty
 // ---------------------------------------------------------------------------
 
-const calmWind: WindField = constantWind(Vec3.ZERO);
+// Wind fields are FACTORIES, not singletons: the Dryden turbulence field
+// is stateful (seeded PRNG + OU state + a time high-water mark), so a
+// shared instance freezes into a constant gust for any consumer whose
+// sim time is below another consumer's — repeat Monte-Carlo runs saw
+// order-dependent, non-reproducible stormy wind (SLS-48 finding). Every
+// scenario instantiation gets a fresh field; `scenarioById` rebuilds.
+const calmWind = (): WindField => constantWind(Vec3.ZERO);
 
 // Mild westerly that strengthens with altitude — gives the player a
 // gentle but real environmental disturbance.
-const standardWind: WindField = layeredWind([
-  { altitude: 0, wind: Vec3.of(5, 0, 0) },
-  { altitude: 10_000, wind: Vec3.of(12, 0, 0) },
-  { altitude: 30_000, wind: Vec3.of(20, 0, 0) },
-  { altitude: 65_000, wind: Vec3.of(20, 0, 0) },
-]);
+const standardWind = (): WindField =>
+  layeredWind([
+    { altitude: 0, wind: Vec3.of(5, 0, 0) },
+    { altitude: 10_000, wind: Vec3.of(12, 0, 0) },
+    { altitude: 30_000, wind: Vec3.of(20, 0, 0) },
+    { altitude: 65_000, wind: Vec3.of(20, 0, 0) },
+  ]);
 
 // Stormy: layered base + Dryden turbulence (sums via a small combinator).
-// Seeded so `R` reset always reproduces the same gust sequence.
+// Seeded, so every freshly built field reproduces the same gust sequence.
 function combinedWind(base: WindField, gust: WindField): WindField {
   return {
     at(position, time) {
@@ -296,19 +309,20 @@ function combinedWind(base: WindField, gust: WindField): WindField {
   };
 }
 
-const stormyWind: WindField = combinedWind(
-  layeredWind([
-    { altitude: 0, wind: Vec3.of(15, 0, 5) },
-    { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
-    { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
-    { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
-  ]),
-  drydenTurbulence({
-    sigma: Vec3.of(6, 1, 6),
-    tau: Vec3.of(2, 2, 2),
-    seed: 42,
-  }),
-);
+const stormyWind = (): WindField =>
+  combinedWind(
+    layeredWind([
+      { altitude: 0, wind: Vec3.of(15, 0, 5) },
+      { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
+      { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
+      { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
+    ]),
+    drydenTurbulence({
+      sigma: Vec3.of(6, 1, 6),
+      tau: Vec3.of(2, 2, 2),
+      seed: 42,
+    }),
+  );
 
 const G = 9.80665;
 
@@ -316,9 +330,9 @@ function buildScenario(
   id: string,
   name: string,
   difficulty: ScenarioDifficulty,
-  wind: WindField,
+  windFactory: () => WindField,
 ): Scenario {
-  const env: SimEnv = { wind, gravity: G };
+  const env: SimEnv = { wind: windFactory(), gravity: G };
   const initialWorld = makeInitialWorld(env);
   return {
     id,
@@ -412,23 +426,24 @@ function makeShipInitialWorld(): World {
   };
 }
 
-// Ship stormy wind: independent Dryden state so booster + ship scenarios
-// don't share PRNG output if a session switches between them.
-const stormyWindShip: WindField = combinedWind(
-  layeredWind([
-    { altitude: 0, wind: Vec3.of(15, 0, 5) },
-    { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
-    { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
-    { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
-  ]),
-  drydenTurbulence({
-    sigma: Vec3.of(6, 1, 6),
-    tau: Vec3.of(2, 2, 2),
-    seed: 73,
-  }),
-);
+// Ship stormy wind: independent Dryden seed so booster + ship scenarios
+// don't share gust sequences. A factory like the booster winds.
+const stormyWindShip = (): WindField =>
+  combinedWind(
+    layeredWind([
+      { altitude: 0, wind: Vec3.of(15, 0, 5) },
+      { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
+      { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
+      { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
+    ]),
+    drydenTurbulence({
+      sigma: Vec3.of(6, 1, 6),
+      tau: Vec3.of(2, 2, 2),
+      seed: 73,
+    }),
+  );
 
-const shipWindByDifficulty: Record<ScenarioDifficulty, WindField> = {
+const shipWindByDifficulty: Record<ScenarioDifficulty, () => WindField> = {
   calm: calmWind,
   standard: standardWind,
   stormy: stormyWindShip,
@@ -454,7 +469,7 @@ function buildShipScenario(
   name: string,
   difficulty: ScenarioDifficulty,
 ): Scenario {
-  const env: SimEnv = { wind: shipWindByDifficulty[difficulty], gravity: G };
+  const env: SimEnv = { wind: shipWindByDifficulty[difficulty](), gravity: G };
   const initialWorld = makeShipInitialWorld();
   return {
     id,
@@ -495,8 +510,36 @@ export const SCENARIOS: readonly Scenario[] = [
   ShipDescentStormy,
 ];
 
+/**
+ * Look up a scenario by id, returning a FRESHLY BUILT instance. Freshness
+ * matters: stormy scenarios carry stateful Dryden wind, and a shared
+ * instance would leak gust-PRNG state between runs (frozen gusts,
+ * order-dependent Monte-Carlo results — SLS-48). The exported singleton
+ * constants remain for static data access (ICs, envelopes) but sim runs
+ * should always go through this function.
+ */
 export function scenarioById(id: string): Scenario | undefined {
-  return SCENARIOS.find((s) => s.id === id);
+  switch (id) {
+    case "booster-descent-calm":
+      return buildScenario(id, "Booster Descent — Calm", "calm", calmWind);
+    case "booster-descent-standard":
+      return buildScenario(
+        id,
+        "Booster Descent — Standard",
+        "standard",
+        standardWind,
+      );
+    case "booster-descent-stormy":
+      return buildScenario(id, "Booster Descent — Stormy", "stormy", stormyWind);
+    case "ship-descent-calm":
+      return buildShipScenario(id, "Ship Descent — Calm", "calm");
+    case "ship-descent-standard":
+      return buildShipScenario(id, "Ship Descent — Standard", "standard");
+    case "ship-descent-stormy":
+      return buildShipScenario(id, "Ship Descent — Stormy", "stormy");
+    default:
+      return undefined;
+  }
 }
 
 /**
