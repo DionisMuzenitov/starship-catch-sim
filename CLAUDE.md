@@ -1,19 +1,81 @@
 # Starship Catch Simulator — Claude context
 
+Open-source 6-DOF browser sim of the Super Heavy booster catch. pnpm monorepo:
+Vite + React + R3F + TS strict; Vitest + fast-check + Playwright; physics core
+shared between TS and a numpy port (parity is load-bearing — SLS-28).
+
 ## Project tracker (Jira)
 
 - **Site:** `yanismuzenitov.atlassian.net`
-- **Project key:** `SLS`
+- **Project key:** `SLS` (default project — assume SLS unless told otherwise).
 - **Board:** https://yanismuzenitov.atlassian.net/jira/software/projects/SLS/boards/67
 
 When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net"`. All `mcp__claude_ai_Atlassian_Rovo__*` tools are pre-allowed in `.claude/settings.local.json` — do not ask for permission per call.
+
+## Project memory (reconstruct context from here, not chat history)
+
+- **SLS-43 "[PM] Command Center"**: description = current status snapshot;
+  comments = append-only decisions log. Skim it at the start of every session.
+- Confluence space **SLS**: knowledge base (vehicle reference), ADR narrative
+  mirrors. Canonical ADRs live in `docs/adr/`.
+- Risks live in SLS-43 (R1 physics-port drift, R6 asset licence contamination,
+  etc.).
 
 ## GitHub
 
 - **Repo:** https://github.com/DionisMuzenitov/starship-catch-sim (public)
 - **Owner:** `DionisMuzenitov` (note: differs in case from local Mac user `dionismuzenitov`)
 - `gh` CLI is installed and authenticated for this account with scopes `gist, read:org, repo, workflow`. Git uses `gh` as credential helper (`gh auth setup-git` already run).
+- For GitHub operations (issues, PRs, CI status) use the `gh` CLI — it is already authenticated.
 - Workflow: from SLS-5 onward, each ticket gets its own feature branch + PR. Direct commits to `main` are only for bootstrap.
+
+## Implementation protocol (research-first — applies to EVERY ticket)
+
+Before writing or changing any code for a ticket, you MUST:
+
+1. **INVESTIGATE.** Read the Jira ticket in full. Read the linked Confluence KB
+   pages and any `docs/reference/` + `docs/adr/` files it touches. If the
+   ticket concerns real Starship / Super Heavy behaviour (physics, engines,
+   aero, control, geometry), search the web for current authoritative sources
+   and ground your understanding in them. Do not rely on memory for vehicle
+   facts.
+2. **CRITIQUE.** State explicitly: is the ticket correct, complete, and
+   current? Call out anything wrong, missing, oversimplified, or stale. (Past
+   examples: constant-Cd drag ignored the transonic/supersonic regime; "all
+   engines gimbal" was wrong — only the inner 13 do.)
+3. **PROPOSE.** Give a short implementation plan: approach, key decisions and
+   trade-offs, test strategy, and what you will NOT do. Note any deviation
+   from the ticket and why.
+4. **CONFIRM.** Pause for the owner to approve the plan before building. Do
+   not skip this for non-trivial tickets.
+5. **BUILD.** Implement against the agreed plan. Keep shared physics constants
+   single-sourced (numpy ↔ TS port parity — SLS-28).
+6. **UPDATE DOCS.** Record what you learned + decisions in: a comment on the
+   Jira ticket, the relevant KB page, and (for architectural choices) a new
+   ADR in `docs/adr/`. Leave breadcrumbs for the next session.
+
+Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
+
+## Verification (non-negotiable)
+
+- After every meaningful code change, run typecheck + the tests related to the
+  changed files. A **PostToolUse hook** (`.claude/hooks/verify-change.sh`)
+  does this automatically after every `Edit`/`Write` on a `.ts`/`.tsx` file —
+  if it reports failures, fix them before moving on. Never end a session with
+  red tests.
+- New physics/control code needs property tests (fast-check) where invariants
+  exist, and must not break the numpy ↔ TS snapshot equivalence suite.
+
+## Git / Jira conventions (smart commits)
+
+- Branch per ticket: `sls-XX-short-slug` (from SLS-5 onward; direct commits to
+  `main` are only for bootstrap).
+- Reference the ticket in every commit message so Jira auto-links and
+  transitions, e.g.:
+  - `SLS-23 #in-progress cascaded PID skeleton`
+  - `SLS-23 #done gain-tuning panel + live charts. #comment tuned defaults per KB`
+- Never commit assets without licence provenance (ADR-005): CC0 / CC-BY only,
+  attribution recorded in `ASSETS.md`, reject NC / SA.
 
 ## Working agreements
 
@@ -26,24 +88,13 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
   …) prefer a single end-of-milestone review over per-ticket approvals:
   bring every ticket to "CI green, awaiting approval", then prepare one
   sandbox + checklist the user can walk through in one sitting.
-- **Research-first for real-world geometry, vehicle reference, or
-  physics constants.** Anything involving Starship / Super Heavy /
-  Raptor / Mechazilla / atmosphere / orbital mechanics: check the
-  Confluence KB first; if it's silent, web-search authoritative sources
-  (SpaceX press kits, presentations, reputable space journalism);
-  backfill the KB with what you learned (own words, source links + dates)
-  before or during the implementation PR. Don't guess real-world details.
 - **Substantive Jira completion comments.** After every merge, post a
   Jira comment summarising what shipped, deviations from the ticket,
   verification done, and the merged commit SHA — not just a bare PR
   link.
-- **Each ticket is its own feature branch + PR** (already stated above);
-  if a follow-up bug is spotted during review, file a new ticket rather
-  than amending the merged PR.
-
-## What this repo is
-
-Real-time browser simulation of SpaceX's Starship booster "Mechazilla" catch manoeuvre — 6-DOF rigid-body dynamics, grid-fin + engine-gimbal control, MPC strategies. pnpm workspace: `apps/web` (Three.js/React), `packages/physics`, `packages/controllers`, `services/mpc`. See `README.md` for milestones.
+- **Each ticket is its own feature branch + PR;** if a follow-up bug is
+  spotted during review, file a new ticket rather than amending the merged
+  PR.
 
 ## Knowledge base & reference material
 
@@ -62,6 +113,12 @@ Decisions about the code / architecture go in `docs/adr/` (not the KB).
 When you learn something reference-worthy from a video, paper, or the web, capture it
 in the Confluence KB (in our own words, with the source link and date) rather than
 letting it evaporate.
+
+## Research policy
+
+Web search is allowed and expected (see `.claude/settings.json` permissions).
+For vehicle facts: prefer primary / authoritative sources, cross-check numbers,
+and write findings into the Confluence KB or `docs/reference/` — sourced, dated.
 
 ## Working notes
 
