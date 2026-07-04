@@ -6,6 +6,7 @@ import { Vec3 } from "./math/vec3.js";
 import { simStep } from "./world.js";
 
 import {
+  BoosterDescentCalm,
   BoosterDescentStandard,
   BoosterDescentStormy,
   SCENARIOS,
@@ -14,6 +15,7 @@ import {
   evaluateCatch,
   scenarioById,
 } from "./scenarios.js";
+import { chopstickCaptureVolume, DEFAULT_TOWER_STATE } from "./tower.js";
 
 const DT = 0.05;
 const BOOSTER_IDS = [
@@ -224,6 +226,35 @@ describe("Wind plumbing — Calm vs Stormy", () => {
 
   it("ship stormy uses an independent Dryden state from the booster", () => {
     expect(ShipDescentStormy.env.wind).not.toBe(BoosterDescentStormy.env.wind);
+  });
+
+  it("scenarioById returns fresh wind state — sequential stormy runs reproduce (SLS-48)", () => {
+    // Regression: a shared Dryden singleton froze into a constant gust
+    // for any run whose sim time stayed below a previous run's high-water
+    // mark. Two SEQUENTIAL full runs from fresh scenarioById() instances
+    // must sample identical wind.
+    const sample = () => {
+      const s = scenarioById("booster-descent-stormy")!;
+      const out: number[] = [];
+      for (let t = 0; t <= 5; t += 0.5) {
+        const w = s.env.wind.at(Vec3.of(0, 1000, 0), t);
+        out.push(w.x, w.y, w.z);
+      }
+      return out;
+    };
+    const first = sample();
+    const second = sample();
+    expect(second).toEqual(first);
+    // And the gusts really vary over time (not frozen).
+    const xs = first.filter((_, i) => i % 3 === 0);
+    expect(new Set(xs.map((v) => v.toFixed(6))).size).toBeGreaterThan(1);
+  });
+
+  it("catch target sits at the physical chopstick slot centre (SLS-48)", () => {
+    const vol = chopstickCaptureVolume(DEFAULT_TOWER_STATE);
+    expect(BoosterDescentCalm.targetCatch.targetPosition).toEqual(vol.center);
+    // Sanity: the slot is on the +x arm side, not the tower centreline.
+    expect(vol.center.x).toBeGreaterThan(5);
   });
 });
 

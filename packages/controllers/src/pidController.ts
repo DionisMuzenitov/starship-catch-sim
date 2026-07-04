@@ -47,7 +47,9 @@ export type PIDControllerGains = {
   horizontalZ: PIDGains;
   attitudePitch: PIDGains;
   attitudeYaw: PIDGains;
-  /** Vertical-speed profile constant in `vy_setpoint = -k * sqrt(h)`. */
+  /** Vertical-speed profile constant in
+   *  `vy_setpoint = -k · √(h − finalApproachAltitudeM)` (above the final-
+   *  approach window; below it the setpoint ramps linearly to 0). */
   descentProfileK: number;
   /** Final-approach altitude (m above tower catch-point) where the profile
    *  flattens to a constant slow descent. */
@@ -140,6 +142,7 @@ const clamp = (v: number, lo: number, hi: number) =>
 export class PIDController implements Controller {
   private readonly finCount: number;
   private readonly flapCount: number;
+  private readonly maxGimbalRad: number;
   private readonly targetPosition: Vec3;
   private readonly altPid: PID;
   private readonly horizPidX: PID;
@@ -157,6 +160,13 @@ export class PIDController implements Controller {
   ) {
     this.finCount = vehicle.surfaces.filter((s) => s.kind === "grid_fin").length;
     this.flapCount = vehicle.surfaces.filter((s) => s.kind === "flap").length;
+    // Plant gimbal limit (±0.262 rad for Raptor) — pre-clamping at the
+    // real saturation point keeps the attitude PIDs' anti-windup honest.
+    // (An earlier hardcoded ±0.35 was the gimbal RATE, not the angle.)
+    this.maxGimbalRad = vehicle.engines.reduce(
+      (m, e) => Math.max(m, e.maxGimbal),
+      0,
+    );
     this.targetPosition = targetPosition;
     this.gainsRef = gainsRef;
     const g = gainsRef();
@@ -242,10 +252,14 @@ export class PIDController implements Controller {
       dt,
     );
 
-    // Plant clamps to engine's own maxGimbal (0.35 rad). Pre-clamp here so
-    // anti-windup unwinds correctly when the engine saturates.
-    const gimbalPitch = clamp(gimbalPitchCmd, -0.35, 0.35);
-    const gimbalYaw = clamp(gimbalYawCmd, -0.35, 0.35);
+    // Pre-clamp at the plant's actual gimbal limit so anti-windup
+    // unwinds exactly where the engine saturates.
+    const gimbalPitch = clamp(
+      gimbalPitchCmd,
+      -this.maxGimbalRad,
+      this.maxGimbalRad,
+    );
+    const gimbalYaw = clamp(gimbalYawCmd, -this.maxGimbalRad, this.maxGimbalRad);
 
     const observer = this.observer;
     if (observer !== null) {
@@ -307,7 +321,7 @@ export class PIDController implements Controller {
   /**
    * Map a [0..1] total-thrust command onto the three engine groups so the
    * activation ramps in a vehicle-plausible order: centre first (always
-   * available), inner ring at ~10 %, outer ring at ~40 %.
+   * available), inner ring joining at cmd 0.2, outer ring at cmd 0.5.
    */
   private allocateThrottle(
     cmd: number,
@@ -317,9 +331,8 @@ export class PIDController implements Controller {
       return { centre: 0, inner: 0, outer: 0, ship: 0 };
     }
     const x = clamp(cmd, 0, 1);
-    // Saturate centre first to ~50 % before lighting the inner ring; this
-    // mirrors the real Raptor activation ladder where the centre ring is
-    // throttle-capable to 40 %.
+    // Centre ramps 5× (saturating at cmd 0.2) before the inner ring
+    // joins — mirrors the real Raptor activation ladder.
     const centre = clamp(x * 5, 0, 1);
     const inner = clamp((x - 0.2) * 2.5, 0, 1);
     const outer = clamp((x - 0.5) * 2, 0, 1);

@@ -27,9 +27,9 @@ export const H_RHO = 8_500;
 export const H_P = 7_400;
 
 /**
- * Air density at a given altitude (m above sea level). Returns 0 (not NaN)
- * for negative altitudes — useful when a buggy controller momentarily
- * pushes the simulated position below the ground.
+ * Air density at a given altitude (m above sea level). Clamps to the
+ * sea-level value (not NaN) for negative altitudes — useful when a buggy
+ * controller momentarily pushes the simulated position below the ground.
  */
 export function densityAt(altitudeM: number): number {
   if (altitudeM < 0) return RHO0;

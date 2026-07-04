@@ -102,6 +102,11 @@ async function runOneAsync(
     0,
     startPropellantKg - world.mass.propellantMass,
   );
+  if (kind === "none") {
+    // Timed out without an outcome: report the FINAL world, not the
+    // initial one (SLS-48 — mirrors the fix in monteCarlo.ts).
+    metrics = synthMetrics(world, scenario);
+  }
   return {
     seed,
     caught: kind === "caught",

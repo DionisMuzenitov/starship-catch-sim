@@ -184,6 +184,73 @@ describe("MPCController", () => {
   });
 });
 
+describe("MPCController — floor-aware thrust allocation (SLS-48)", () => {
+  // Booster groups (sea-level thrust 2.05 MN/engine, floor 0.4):
+  //   centre (3): band [2.46, 6.15] MN
+  //   +inner (10): band [10.66, 26.65] MN
+  //   +outer (20): band [43.05, 67.65] MN
+  // Access the private method via a step() probe: inject a plan whose
+  // feedforward demands a known accel and inspect the engine groups.
+  async function groupsForAccel(aY: number) {
+    const scenario = boosterDescentScenario();
+    const n = 10;
+    const resp: MPCSolveResponse = {
+      status: "optimal",
+      tFS: 10,
+      solveTimeMs: 1,
+      fuelKg: 100,
+      terminalSlack: 0,
+      predictedPositions: Array.from({ length: n + 1 }, () => ({
+        ...scenario.initialWorld.rigidBody.position,
+      })),
+      predictedVelocities: Array.from({ length: n + 1 }, () => ({
+        ...scenario.initialWorld.rigidBody.velocity,
+      })),
+      thrustAccel: Array.from({ length: n }, () => ({ x: 0, y: aY, z: 0 })),
+      throttle: new Array(n).fill(0.5) as number[],
+    };
+    const ctl = new MPCController({
+      vehicle: scenario.vehicle,
+      targetPosition: scenario.targetCatch.targetPosition,
+      transport: async () => resp,
+      replanIntervalS: 1,
+    });
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    // Position/velocity match the plan exactly → zero PD correction.
+    return ctl.step(scenario.initialWorld, 1 / 250).engineGroups;
+  }
+
+  it("small demand lights ONLY the centre engines (never the inner ring)", async () => {
+    // 5 m/s² on ~527 t ≈ 2.6 MN — inside the centre band. The old
+    // proportional ladder lit the inner ring here, and the plant's
+    // per-engine floor then delivered ~4× the demand (tank drained in
+    // 18 s, MPC flew worse than PID).
+    const g = await groupsForAccel(5);
+    expect(g.centre).toBeGreaterThan(0);
+    expect(g.inner).toBe(0);
+    expect(g.outer).toBe(0);
+  });
+
+  it("demand just above the centre band stays centre-only at full (nearest endpoint)", async () => {
+    // 12 m/s² ≈ 6.3 MN: centre max is 6.15 MN, centre+inner floor is
+    // 10.66 MN → 6.15 is closer; do not light 10 engines for a 0.15 MN
+    // shortfall.
+    const g = await groupsForAccel(12);
+    expect(g.centre).toBe(1);
+    expect(g.inner).toBe(0);
+  });
+
+  it("large demand engages the inner ring above its floor", async () => {
+    // 40 m/s² ≈ 21.1 MN: inside the centre+inner band [10.66, 26.65].
+    const g = await groupsForAccel(40);
+    expect(g.centre).toBeGreaterThan(0.6);
+    expect(g.inner).toBeGreaterThan(0.6);
+    expect(g.outer).toBe(0);
+  });
+});
+
 describe("MPCController — plan interpolation", () => {
   it("commands descend-and-slow near the end of the plan", async () => {
     const transport = vi.fn(async () => cannedResponse());
