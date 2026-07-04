@@ -1,0 +1,14 @@
+# Boots the MPC guidance service. The web app runs via `pnpm dev` on the
+# host (vite); `pnpm dev:full` runs both without Docker. This compose file
+# exists for machines that prefer containers — functionally equivalent to
+# `pnpm mpc:serve`.
+services:
+  mpc:
+    build: ./services/mpc
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

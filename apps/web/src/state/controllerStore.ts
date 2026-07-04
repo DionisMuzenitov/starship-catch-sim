@@ -39,4 +39,4 @@ export const useControllerStore = create<ControllerState>((set) => ({
 }));
 
 /** Sentinel for controllers that are slotted in the UI but not yet built. */
-export const PLACEHOLDER_KINDS: ControllerKind[] = ["mpc", "rl"];
+export const PLACEHOLDER_KINDS: ControllerKind[] = ["rl"];

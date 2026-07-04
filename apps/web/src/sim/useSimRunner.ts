@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 
 import {
   ManualController,
+  MPCController,
   OverrideController,
   PIDController,
   createManualInputState,
@@ -31,6 +32,7 @@ import {
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
 import { useControllerStore } from "../state/controllerStore.js";
+import { useMpcStore } from "../state/mpcStore.js";
 import { usePidStore } from "../state/pidStore.js";
 import { useReplayStore } from "../state/replayStore.js";
 import { useScenarioStore } from "../state/scenarioStore.js";
@@ -83,6 +85,16 @@ export function useSimRunner(): UseSimRunner {
     const inputState = createManualInputState();
     const controllerKind = useControllerStore.getState().kind;
     const manual = new ManualController(scenario.vehicle, inputState);
+    const wrapWithOverride = (primary: Controller): Controller =>
+      new OverrideController({
+        primary,
+        manual,
+        isManualActive: () => isManualInputActive(inputState),
+        overrideDurationS: 2,
+        getMode: () => useControllerStore.getState().overrideMode,
+        onTransition: (active) =>
+          useControllerStore.getState().setOverrideActive(active),
+      });
     let controller: Controller;
     if (controllerKind === "pid") {
       const pid = new PIDController(
@@ -92,15 +104,22 @@ export function useSimRunner(): UseSimRunner {
       );
       usePidStore.getState().clearFrames();
       pid.setObserver((frame) => usePidStore.getState().pushFrame(frame));
-      controller = new OverrideController({
-        primary: pid,
-        manual,
-        isManualActive: () => isManualInputActive(inputState),
-        overrideDurationS: 2,
-        getMode: () => useControllerStore.getState().overrideMode,
-        onTransition: (active) =>
-          useControllerStore.getState().setOverrideActive(active),
+      controller = wrapWithOverride(pid);
+    } else if (controllerKind === "mpc") {
+      const mpc = new MPCController({
+        vehicle: scenario.vehicle,
+        targetPosition: scenario.targetCatch.targetPosition,
+        gainsRef: () => usePidStore.getState().gains,
+        serviceUrl:
+          (import.meta.env.VITE_MPC_URL as string | undefined) ??
+          "http://localhost:8100",
       });
+      useMpcStore.getState().setPlan(null);
+      mpc.setPlanObserver((plan) => {
+        useMpcStore.getState().setPlan(plan);
+        useMpcStore.getState().setUsingFallback(mpc.isUsingFallback());
+      });
+      controller = wrapWithOverride(mpc);
     } else {
       // Manual mode: ignore the override layer; clear the "YOU" flash.
       useControllerStore.getState().setOverrideActive(false);
