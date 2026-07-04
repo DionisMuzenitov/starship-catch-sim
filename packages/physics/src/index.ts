@@ -35,12 +35,15 @@ export {
   densityAt,
   pressureAt,
   pressureRatio,
+  temperatureAt,
+  speedOfSoundAt,
+  machNumber,
   RHO0,
   P0,
   H_RHO,
   H_P,
 } from "./atmosphere.js";
-export { bodyDragForce } from "./drag.js";
+export { bodyDragForce, cdAt } from "./drag.js";
 export {
   initialSurfaceState,
   surfaceForceTorque,
