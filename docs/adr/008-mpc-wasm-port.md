@@ -11,10 +11,13 @@ SLS-26). That is fine for local development (`pnpm dev:full`) but a hosted
 demo (M7 / SLS-31) would need either a paid always-on solver backend or a
 browser-native solver. The question: which WASM path, and when.
 
-The workload is fixed and small: one SOCP with N = 60 nodes, ~430 scalar
-variables, ~1 000 constraints, re-solved at 1 Hz with only parameter values
-changing (the DPP pattern from SLS-26 — the sparsity structure never
-changes between calls). Native Clarabel solves it in ~5–15 ms.
+The workload is fixed and small: one SOCP with N = 60 nodes — 669 scalar
+variables (r/v: 2×61×3, z: 61, u: 60×3, σ: 60, terminal slacks: 2) and
+~900 constraint rows in linear mode (~1 300 with SCvx trust-region rows).
+Each 1 Hz re-plan actually runs a handful of solves (t_f candidates ×
+SCvx iterations), all re-stamping the same DPP-parametric problem — the
+sparsity structure never changes between calls. Native Clarabel solves a
+single instance in ~5–15 ms.
 
 ## Options
 

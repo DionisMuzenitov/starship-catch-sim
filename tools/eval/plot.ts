@@ -37,7 +37,15 @@ function loadReports(dir: string): Report[] {
   for (const name of entries) {
     if (!name.endsWith(".json")) continue;
     const text = readFileSync(resolve(dir, name), "utf8");
-    reports.push(JSON.parse(text) as Report);
+    const parsed = JSON.parse(text) as Partial<Report>;
+    // eval/results/ also hosts other report shapes (e.g. mpc-bench
+    // solve-time JSONs, which have no `cells`) — skip anything that
+    // isn't a sweep report instead of crashing (SLS-48).
+    if (!Array.isArray(parsed.cells) || typeof parsed.controllerKey !== "string") {
+      console.warn(`plot: skipping ${name} (not a sweep report)`);
+      continue;
+    }
+    reports.push(parsed as Report);
   }
   return reports;
 }

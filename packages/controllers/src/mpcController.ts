@@ -157,8 +157,16 @@ export class MPCController implements Controller {
   private readonly attPidYaw: PID;
   private readonly maxThrustN: number;
   private readonly minThrustN: number;
-  private readonly fullStackThrustN: number;
   private readonly ispS: number;
+  private readonly maxGimbalRad: number;
+  /** Engine groups in activation order, with floor-aware thrust data. */
+  private readonly thrustGroups: {
+    group: keyof EngineGroupBag<number>;
+    /** Group total at full throttle (N). */
+    maxN: number;
+    /** Group total with every engine clamped at its floor (N). */
+    minN: number;
+  }[];
 
   private plan: MPCPlan | null = null;
   private lastRequestT = -Infinity;
@@ -198,13 +206,39 @@ export class MPCController implements Controller {
     this.maxThrustN = engines
       .slice(0, landingCount)
       .reduce((s, e) => s + e.thrustSea, 0);
-    this.fullStackThrustN = engines.reduce((s, e) => s + e.thrustSea, 0);
     this.minThrustN = minSet.reduce(
       (s, e) => s + e.minThrottle * e.thrustSea,
       0,
     );
     this.ispS =
       engines.reduce((s, e) => s + e.ispSea, 0) / Math.max(engines.length, 1);
+    this.maxGimbalRad = gimballed.reduce(
+      (m, e) => Math.max(m, e.maxGimbal),
+      0,
+    );
+
+    // Per-group thrust envelopes in activation order, respecting the
+    // plant's per-engine throttle floor: a LIT engine never produces
+    // less than minThrottle × thrustSea (thrust.ts clamps up), so
+    // allocation must reason in floor-aware bands, not proportions.
+    const order: (keyof EngineGroupBag<number>)[] = [
+      "centre",
+      "inner",
+      "outer",
+      "ship",
+    ];
+    this.thrustGroups = order
+      .map((group) => {
+        const members = engines.filter(
+          (_, i) => opts.vehicle.engineGroupOf[i] === group,
+        );
+        return {
+          group,
+          maxN: members.reduce((s, e) => s + e.thrustSea, 0),
+          minN: members.reduce((s, e) => s + e.minThrottle * e.thrustSea, 0),
+        };
+      })
+      .filter((g) => g.maxN > 0);
   }
 
   setPlanObserver(observer: MPCPlanObserver | null): void {
@@ -281,21 +315,18 @@ export class MPCController implements Controller {
 
     const aMag = Vec3.length(aCmd);
     const m = world.rigidBody.mass;
-    // Desired TOTAL thrust as a fraction of the full 33-engine stack, then
-    // inverted through the activation ladder. Scaling against the
-    // 13-engine SOCP envelope here would be a unit mismatch: the ladder
-    // maps cmd=1 to the whole stack, so plans demanding the SOCP max
-    // would light 2.5× the intended thrust (SLS-27 bench regression:
-    // full-stack burn drained the tank in 18 s).
-    const thrustFraction = clamp((aMag * m) / this.fullStackThrustN, 0, 1);
-    const throttle = this.allocateThrottle(
-      this.ladderCmdForThrustFraction(thrustFraction),
-    );
+    // Floor-aware engine allocation: lighting a group commits every one
+    // of its engines to at least the 40 % floor (the plant clamps lit
+    // engines UP), so the old proportional ladder over-delivered ~4× the
+    // planned thrust at small commands — the tank drained in 18 s and
+    // MPC flew worse than PID (SLS-48 finding). Choose the smallest
+    // engine set whose floor-aware band brackets the demand.
+    const throttle = this.allocateForThrust(aMag * m);
     const enginesOn: EngineGroupBag<boolean> = {
       centre: throttle.centre > 0,
       inner: throttle.inner > 0,
       outer: throttle.outer > 0,
-      ship: false,
+      ship: throttle.ship > 0,
     };
 
     // Tilt setpoints: desired thrust direction's horizontal components.
@@ -307,15 +338,18 @@ export class MPCController implements Controller {
       world.rigidBody.attitude,
       Vec3.of(0, 1, 0),
     );
+    // Pre-clamp at the PLANT's gimbal limit (±0.262 rad for Raptor —
+    // 0.35 rad/s is the slew RATE, a different number) so the attitude
+    // PIDs' anti-windup unwinds where the engine actually saturates.
     const gimbalPitch = clamp(
       this.attPidPitch.update(tiltSetpointZ, bodyUpWorld.z, dt),
-      -0.35,
-      0.35,
+      -this.maxGimbalRad,
+      this.maxGimbalRad,
     );
     const gimbalYaw = clamp(
       this.attPidYaw.update(tiltSetpointX, bodyUpWorld.x, dt),
-      -0.35,
-      0.35,
+      -this.maxGimbalRad,
+      this.maxGimbalRad,
     );
 
     const base = neutralControl(this.finCount, this.flapCount);
@@ -390,37 +424,55 @@ export class MPCController implements Controller {
   }
 
   /**
-   * Inverse of the activation ladder: the ladder command x that lights
-   * enough engines to produce `f` × full-stack thrust. The ladder's
-   * engines-lit curve is piecewise linear in x with breakpoints at
-   * x ∈ {0, 0.2, 0.5, 0.6, 1}: 0 → 3 → 10.5 → 17 → 33 engines
-   * (centre ramps ×5, inner joins at 0.2 ramping ×2.5, outer at 0.5
-   * ramping ×2). Invert per segment; clamp outside.
+   * Floor-aware engine allocation for a desired TOTAL thrust in newtons.
+   *
+   * The plant clamps every lit engine to its throttle floor (40 %), so
+   * the deliverable band of an engine set is [Σ floor·T, Σ T] — bands
+   * for successive sets overlap or gap, they are not proportional. Pick
+   * the smallest activation-order prefix whose band can reach the
+   * demand; when the demand falls in the gap between "previous set at
+   * max" and "next set at floor", pick whichever endpoint is closer.
+   * All lit groups run one shared throttle value.
    */
-  private ladderCmdForThrustFraction(f: number): number {
-    const target = clamp(f, 0, 1) * 33;
-    // [xStart, xEnd, enginesStart, enginesEnd] per ladder segment.
-    const segments: readonly (readonly [number, number, number, number])[] = [
-      [0, 0.2, 0, 3],
-      [0.2, 0.5, 3, 10.5],
-      [0.5, 0.6, 10.5, 17],
-      [0.6, 1, 17, 33],
-    ];
-    for (const [x0, x1, e0, e1] of segments) {
-      if (target <= e1) {
-        return x0 + ((target - e0) / (e1 - e0)) * (x1 - x0);
-      }
-    }
-    return 1;
-  }
+  private allocateForThrust(desiredN: number): EngineGroupBag<number> {
+    const off: EngineGroupBag<number> = {
+      centre: 0,
+      inner: 0,
+      outer: 0,
+      ship: 0,
+    };
+    if (desiredN <= 0 || this.thrustGroups.length === 0) return off;
 
-  /** Same activation ladder as the PID baseline (centre → inner → outer). */
-  private allocateThrottle(cmd: number): EngineGroupBag<number> {
-    if (cmd <= 0) return { centre: 0, inner: 0, outer: 0, ship: 0 };
-    const x = clamp(cmd, 0, 1);
-    const centre = clamp(x * 5, 0, 1);
-    const inner = clamp((x - 0.2) * 2.5, 0, 1);
-    const outer = clamp((x - 0.5) * 2, 0, 1);
-    return { centre, inner, outer, ship: 0 };
+    let bestCount = this.thrustGroups.length;
+    let cumMax = 0;
+    let cumMin = 0;
+    let prevMax = 0;
+    for (let i = 0; i < this.thrustGroups.length; i++) {
+      cumMax += this.thrustGroups[i]!.maxN;
+      cumMin += this.thrustGroups[i]!.minN;
+      if (desiredN <= cumMax) {
+        // Reachable with this prefix — unless we sit in the dead band
+        // below its floor and the previous prefix's max is closer.
+        bestCount =
+          desiredN < cumMin && prevMax > 0
+            ? Math.abs(desiredN - prevMax) <= Math.abs(desiredN - cumMin)
+              ? i
+              : i + 1
+            : i + 1;
+        break;
+      }
+      prevMax = cumMax;
+    }
+
+    let setMax = 0;
+    for (let i = 0; i < bestCount; i++) setMax += this.thrustGroups[i]!.maxN;
+    if (setMax <= 0) return off;
+    // Shared throttle across the lit set; the plant enforces the floor.
+    const tau = clamp(desiredN / setMax, 0, 1);
+    const out = { ...off };
+    for (let i = 0; i < bestCount; i++) {
+      out[this.thrustGroups[i]!.group] = tau;
+    }
+    return out;
   }
 }

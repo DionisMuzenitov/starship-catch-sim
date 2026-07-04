@@ -28,25 +28,34 @@ starship-catch-sim/
 │   └── web/              # Browser front-end (Three.js / React)
 ├── packages/
 │   ├── physics/          # 6-DOF dynamics, integrators, environment models
-│   └── controllers/      # PID, LQR, MPC controller implementations
+│   └── controllers/      # Manual, cascaded-PID and MPC controllers + eval harness
 ├── services/
-│   └── mpc/              # MPC solver micro-service
-├── docs/                 # Documentation & ADRs
+│   └── mpc/              # Convex-MPC guidance service (FastAPI + CVXPY/Clarabel)
+├── tools/                # Benchmarks + Monte-Carlo eval scripts
+├── docs/                 # Documentation, ADRs, reference data
 ├── pnpm-workspace.yaml
 └── package.json          # Root workspace scripts
 ```
 
+To run the web app together with the MPC guidance service:
+
+```bash
+pnpm dev:full             # vite dev server + uvicorn on :8100 (needs uv)
+```
+
 ## Milestones
 
-| Milestone | Description                        | Status  |
-| --------- | ---------------------------------- | ------- |
-| M0        | Monorepo scaffold & CI             | Current |
-| M1        | 1-DOF vertical landing sim         | Planned |
-| M2        | 3-DOF planar sim + basic viz       | Planned |
-| M3        | 6-DOF sim + MPC solver             | Planned |
-| M4        | Full 3-D visualisation + catch sim | Planned |
+| Milestone | Description                                                    | Status  |
+| --------- | -------------------------------------------------------------- | ------- |
+| M1        | Physics core: 6-DOF dynamics, atmosphere, Mach-dependent drag  | Done    |
+| M2        | 3-D visualisation: tower, HUD, cameras, replays                | Done    |
+| M3        | Sim runner, catch detection, manual flight                      | Done    |
+| M4        | Cascaded-PID baseline + tuning panel + Monte-Carlo evaluator    | Done    |
+| M5        | Convex MPC guidance (SOCP/SCvx service + client + benchmarks)   | Done    |
+| M6        | RL: gym env, numpy physics port, PPO training, browser inference| Planned |
+| M7        | Hosted demo, leaderboard, docs site, write-up                   | Planned |
 
-<!-- TODO: add demo gif once M2 is complete -->
+<!-- TODO: add demo gif once assets (SLS-44) land -->
 
 ## License
 
