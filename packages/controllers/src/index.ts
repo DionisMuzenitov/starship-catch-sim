@@ -27,3 +27,12 @@ export {
   type OverrideControllerOpts,
   type OverrideMode,
 } from "./overrideController.js";
+export {
+  MPCController,
+  type MPCControllerOpts,
+  type MPCPlan,
+  type MPCPlanObserver,
+  type MPCSolveRequest,
+  type MPCSolveResponse,
+  type MPCTransport,
+} from "./mpcController.js";

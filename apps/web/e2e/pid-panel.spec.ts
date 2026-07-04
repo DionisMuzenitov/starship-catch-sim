@@ -51,15 +51,40 @@ test("controller switcher toggles PID, tuning panel appears, charts mount", asyn
     page.locator('[data-testid="controller-override-temporary"]'),
   ).toHaveCount(0);
 
-  // MPC / RL options are present but disabled (placeholders for SLS-25+).
+  // MPC is live (SLS-26); RL stays a disabled placeholder (SLS-28+).
   const mpcOption = page.locator(
     '[data-testid="controller-switcher-select"] option[value="mpc"]',
   );
-  await expect(mpcOption).toBeDisabled();
+  await expect(mpcOption).toBeEnabled();
   const rlOption = page.locator(
     '[data-testid="controller-switcher-select"] option[value="rl"]',
   );
   await expect(rlOption).toBeDisabled();
 
   expect(errors, `unexpected console errors:\n${errors.join("\n")}`).toEqual([]);
+});
+
+test("MPC mode mounts and flies (PID fallback when service is absent)", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/");
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 10_000 });
+
+  await page
+    .locator('[data-testid="controller-switcher-select"]')
+    .selectOption("mpc");
+  // Scene re-mounts; the sim keeps running on the PID fallback even with
+  // no MPC service listening (the transport rejection is swallowed).
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.locator('[data-testid="controller-override-temporary"]'),
+  ).toBeVisible();
+  await page.waitForTimeout(1500); // at least one failed solve round-trip
+
+  // Note: console "Failed to load resource" network noise is expected
+  // here (no service on :8100) — only page *errors* fail the test.
+  expect(errors, `unexpected page errors:\n${errors.join("\n")}`).toEqual([]);
 });

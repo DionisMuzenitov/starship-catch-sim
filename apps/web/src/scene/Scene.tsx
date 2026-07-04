@@ -23,6 +23,7 @@ import { PostFX } from "./PostFX";
 import { Sky } from "./Sky";
 import { Sun } from "./Sun";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
+import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
 
 export function Scene() {
   useSimRunner();
@@ -53,6 +54,7 @@ export function Scene() {
         <CameraRig />
         <ImpactReticle />
         <DragTrajectoryOverlay />
+        <MpcPlanOverlay />
         <OrbitControls
           enabled={cameraMode === "free"}
           target={[0, 800, 0]}
