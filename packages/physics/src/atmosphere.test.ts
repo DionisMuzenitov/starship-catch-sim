@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   densityAt,
   H_RHO,
+  machNumber,
   P0,
   pressureAt,
   pressureRatio,
   RHO0,
+  speedOfSoundAt,
+  temperatureAt,
 } from "./atmosphere.js";
 
 describe("atmosphere", () => {
@@ -53,5 +56,46 @@ describe("atmosphere", () => {
   it("negative altitude clamps to sea-level values", () => {
     expect(densityAt(-100)).toBe(RHO0);
     expect(pressureAt(-100)).toBe(P0);
+  });
+});
+
+describe("temperature + speed of sound (SLS-45)", () => {
+  it("sea-level ISA temperature is 288.15 K", () => {
+    expect(temperatureAt(0)).toBeCloseTo(288.15, 6);
+  });
+
+  it("tropopause (11 km) is 216.65 K and isothermal to 20 km", () => {
+    expect(temperatureAt(11_000)).toBeCloseTo(216.65, 6);
+    expect(temperatureAt(15_000)).toBeCloseTo(216.65, 6);
+    expect(temperatureAt(20_000)).toBeCloseTo(216.65, 6);
+  });
+
+  it("stratopause (47–51 km) sits at 270.65 K", () => {
+    expect(temperatureAt(47_000)).toBeCloseTo(270.65, 6);
+    expect(temperatureAt(51_000)).toBeCloseTo(270.65, 6);
+  });
+
+  it("negative altitude clamps to sea level; model top clamps at 186.946 K", () => {
+    expect(temperatureAt(-500)).toBeCloseTo(288.15, 6);
+    expect(temperatureAt(84_852)).toBeCloseTo(186.946, 3);
+    expect(temperatureAt(120_000)).toBeCloseTo(186.946, 3);
+  });
+
+  it("speed of sound is ~340.3 m/s at sea level, ~295.1 m/s at 11 km", () => {
+    expect(speedOfSoundAt(0)).toBeCloseTo(340.3, 1);
+    expect(speedOfSoundAt(11_000)).toBeCloseTo(295.1, 1);
+  });
+
+  it("temperature is continuous across every layer boundary", () => {
+    for (const h of [11_000, 20_000, 32_000, 47_000, 51_000, 71_000]) {
+      expect(temperatureAt(h - 0.5)).toBeCloseTo(temperatureAt(h + 0.5), 2);
+    }
+  });
+
+  it("machNumber = speed / a(h)", () => {
+    const a = speedOfSoundAt(10_000);
+    expect(machNumber(a, 10_000)).toBeCloseTo(1, 9);
+    expect(machNumber(2 * a, 10_000)).toBeCloseTo(2, 9);
+    expect(machNumber(0, 10_000)).toBe(0);
   });
 });
