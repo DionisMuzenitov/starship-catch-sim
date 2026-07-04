@@ -93,6 +93,26 @@ def test_replan_with_hint_is_fast_and_optimal(solution) -> None:
     assert res.solve_time_ms < 500.0
 
 
+def test_fuel_budget_blocks_high_altitude_full_burn() -> None:
+    # From 63 km falling 278 m/s the only "solutions" are ~250 s full burns
+    # that would spend far more propellant than the ~300 t aboard. With the
+    # z[N] ≥ ln(dry+reserve) budget constraint these must come back either
+    # non-optimal or slack-soaked — never a clean plan (regression: the
+    # SLS-27 bench caught the controller tracking a 299 t-burn "optimal"
+    # plan that drained the tank at t≈30 s).
+    inp = SolveInput(
+        position=np.array([0.0, 63_091.0, 47_000.0]),
+        velocity=np.array([0.0, -278.0, -100.0]),
+        mass_kg=500_000.0,
+        vehicle=SUPER_HEAVY,
+    )
+    res = solve_pdg(inp)
+    assert res.status != "optimal" or res.terminal_slack > 5.0
+    if res.status == "optimal":
+        # Whatever comes back may not burn below the dry+reserve floor.
+        assert res.fuel_kg <= 500_000.0 - SUPER_HEAVY.dry_mass_kg + 1.0
+
+
 def test_infeasible_case_reports_not_optimal() -> None:
     # Below the slot moving down fast with almost no thrust: hopeless.
     inp = SolveInput(

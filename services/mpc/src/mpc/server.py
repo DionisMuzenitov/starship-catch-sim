@@ -12,7 +12,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from typing import Literal
+
 from .problem import SolveInput, SolveResult, VehicleParams, solve_pdg
+from .scvx import SCvxResult, solve_scvx
 
 app = FastAPI(title="SLS MPC guidance", version="0.1.0")
 
@@ -56,6 +59,10 @@ class SolveRequest(BaseModel):
     # Optional exogenous drag acceleration profile, one entry per horizon
     # interval (N=60). Missing/short profiles are zero-padded.
     dragAccel: list[Vec3Model] | None = None
+    # "linear": single lossless SOCP (SLS-26 behaviour, default).
+    # "scvx": successive convexification — iteratively re-linearizes the
+    # drag term about the previous trajectory (SLS-27).
+    mode: Literal["linear", "scvx"] = "linear"
 
 
 class SolveResponse(BaseModel):
@@ -68,6 +75,9 @@ class SolveResponse(BaseModel):
     predictedVelocities: list[Vec3Model]
     thrustAccel: list[Vec3Model]
     throttle: list[float]
+    # SCvx-only diagnostics; null for mode="linear".
+    iterations: int | None = None
+    converged: bool | None = None
 
 
 def _drag_matrix(entries: list[Vec3Model] | None, n: int) -> np.ndarray | None:
@@ -101,7 +111,16 @@ def solve(req: SolveRequest) -> SolveResponse:
         t_f_hint_s=req.tFHintS,
         drag_accel=_drag_matrix(req.dragAccel, N),
     )
-    res: SolveResult = solve_pdg(inp)
+    res: SolveResult | SCvxResult
+    iterations: int | None = None
+    converged: bool | None = None
+    if req.mode == "scvx":
+        scvx_res = solve_scvx(inp)
+        res = scvx_res
+        iterations = scvx_res.iterations
+        converged = scvx_res.converged
+    else:
+        res = solve_pdg(inp)
     return SolveResponse(
         status=res.status,
         tFS=res.t_f_s,
@@ -112,4 +131,6 @@ def solve(req: SolveRequest) -> SolveResponse:
         predictedVelocities=[Vec3Model.from_np(v) for v in res.velocities],
         thrustAccel=[Vec3Model.from_np(u) for u in res.thrust_accel],
         throttle=[float(t) for t in res.throttle],
+        iterations=iterations,
+        converged=converged,
     )
