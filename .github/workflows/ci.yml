@@ -55,6 +55,32 @@ jobs:
           path: eval/results/
           retention-days: 7
 
+  mpc:
+    name: MPC service (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/mpc/uv.lock
+
+      - name: Sync dependencies
+        working-directory: services/mpc
+        run: uv sync --frozen
+
+      - name: Ruff
+        working-directory: services/mpc
+        run: uv run ruff check .
+
+      - name: Pytest
+        working-directory: services/mpc
+        run: uv run pytest -q
+
   e2e:
     name: e2e (Playwright / Chromium)
     runs-on: ubuntu-latest
