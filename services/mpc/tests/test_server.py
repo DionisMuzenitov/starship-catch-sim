@@ -36,3 +36,32 @@ def test_solve_endpoint_returns_plan() -> None:
     # Terminal node lands at the slot.
     last = body["predictedPositions"][-1]
     assert abs(last["y"] - 91.0) < 15.0
+    # Linear mode carries no SCvx diagnostics.
+    assert body["iterations"] is None
+    assert body["converged"] is None
+
+
+def test_solve_endpoint_scvx_mode() -> None:
+    # −160 m/s vy: hot enough that the thrust floor is not binding once
+    # drag is modelled, so the SCvx fixed point reaches the slot (the
+    # −120 m/s IC converges ~60 m high — see tests/test_scvx.py).
+    payload = {
+        "position": {"x": 50.0, "y": 2091.0, "z": 300.0},
+        "velocity": {"x": -5.0, "y": -160.0, "z": -40.0},
+        "massKg": 240000.0,
+        "vehicle": {
+            "dryMassKg": 200000.0,
+            "maxThrustN": 29.9e6,
+            "minThrustN": 2.76e6,
+            "ispS": 340.0,
+        },
+        "mode": "scvx",
+    }
+    resp = client.post("/solve", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "optimal"
+    assert body["iterations"] >= 1
+    assert isinstance(body["converged"], bool)
+    last = body["predictedPositions"][-1]
+    assert abs(last["y"] - 91.0) < 15.0

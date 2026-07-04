@@ -38,3 +38,7 @@ playwright/.cache/
 
 # Claude Code per-user settings (kept local)
 .claude/settings.local.json
+
+# Eval outputs (CI uploads them as artifacts; not versioned)
+eval/results/
+eval/plots/
