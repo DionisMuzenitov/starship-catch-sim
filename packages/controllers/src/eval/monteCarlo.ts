@@ -35,10 +35,10 @@ import {
 
 import type { Controller } from "../types.js";
 
-const PHYSICS_DT = 1 / 250;
-const MAX_SIM_TIME_S = 600;
-const OUT_OF_BOUNDS_Y_M = -500;
-const OUT_OF_BOUNDS_HORIZONTAL_M = 200_000;
+export const PHYSICS_DT = 1 / 250;
+export const MAX_SIM_TIME_S = 600;
+export const OUT_OF_BOUNDS_Y_M = -500;
+export const OUT_OF_BOUNDS_HORIZONTAL_M = 200_000;
 
 export type MonteCarloEnvironment = {
   /** Multiplier applied to the scenario's wind field. 0 = no wind, 1 =
@@ -98,9 +98,9 @@ export function scaleWind(field: WindField, k: number): WindField {
 }
 
 /**
- * Seeded splitmix32 PRNG → uniform [0, 1).
+ * Seeded splitmix32 PRNG → uniform [0, 1). (Shared with monteCarloAsync.)
  */
-function makeRng(seed: number): () => number {
+export function makeRng(seed: number): () => number {
   let state = seed >>> 0;
   return () => {
     state = (state + 0x9e3779b9) >>> 0;
@@ -114,8 +114,9 @@ function makeRng(seed: number): () => number {
 
 /**
  * Box-Muller standard-normal sample. Consumes two uniforms per call.
+ * (Shared with monteCarloAsync.)
  */
-function gaussian(rng: () => number): number {
+export function gaussian(rng: () => number): number {
   let u1 = 0;
   let u2 = 0;
   while (u1 === 0) u1 = rng();
@@ -143,18 +144,35 @@ function distance(a: Vec3, b: Vec3): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-function nowMs(): number {
+/** Aggregate per-run results. (Shared with monteCarloAsync.) */
+export function summarizeRuns(runs: RunResult[]): MonteCarloSummary {
+  const caught = runs.filter((r) => r.caught).length;
+  return {
+    successRate: runs.length === 0 ? 0 : caught / runs.length,
+    medianFinalPosErrM: median(
+      runs.map((r) => r.terminalMetrics.distanceToTargetM),
+    ),
+    medianFuelKg: median(runs.map((r) => r.fuelUsedKg)),
+    p99RuntimeMs: percentile(
+      runs.map((r) => r.runtimeMs),
+      0.99,
+    ),
+  };
+}
+
+/** Monotonic-ish wall clock in ms. (Shared with monteCarloAsync.) */
+export function nowMs(): number {
   return typeof process !== "undefined" && process.hrtime?.bigint
     ? Number(process.hrtime.bigint()) / 1e6
     : performance.now();
 }
 
-function runOne(
-  scenario: Scenario,
-  controller: Controller,
-  env: SimEnv,
-  seed: number,
-): RunResult {
+/**
+ * Per-seed IC jitter — velocity ±5 % per axis, position ±20 m per axis on
+ * a seeded PRNG, identical across the sync and async runners so their
+ * results are directly comparable.
+ */
+export function jitterInitialWorld(scenario: Scenario, seed: number): World {
   const rng = makeRng(0x1234_0000 ^ seed);
   const initial = scenario.initialWorld;
   const v0 = initial.rigidBody.velocity;
@@ -169,7 +187,7 @@ function runOne(
     p0.y + 20 * gaussian(rng),
     p0.z + 20 * gaussian(rng),
   );
-  const startWorld: World = {
+  return {
     ...initial,
     rigidBody: {
       ...initial.rigidBody,
@@ -177,6 +195,15 @@ function runOne(
       velocity: jitterV,
     },
   };
+}
+
+function runOne(
+  scenario: Scenario,
+  controller: Controller,
+  env: SimEnv,
+  seed: number,
+): RunResult {
+  const startWorld = jitterInitialWorld(scenario, seed);
   const startPropellantKg = startWorld.mass.propellantMass;
   let world = startWorld;
   const maxTicks = Math.round(MAX_SIM_TIME_S / PHYSICS_DT);
@@ -219,7 +246,9 @@ function runOne(
   };
 }
 
-function synthMetrics(world: World, scenario: Scenario): TerminalMetrics {
+/** Terminal metrics for runs that never triggered the catch detector.
+ * (Shared with monteCarloAsync.) */
+export function synthMetrics(world: World, scenario: Scenario): TerminalMetrics {
   return {
     position: world.rigidBody.position,
     velocity: world.rigidBody.velocity,
@@ -265,14 +294,12 @@ export function runMonteCarlo(config: MonteCarloConfig): MonteCarloResult {
     const controller = config.controllerFactory(scenario);
     runs.push(runOne(scenario, controller, env, seeds[i]!));
   }
-  const caught = runs.filter((r) => r.caught).length;
-  const summary: MonteCarloSummary = {
-    successRate: runs.length === 0 ? 0 : caught / runs.length,
-    medianFinalPosErrM: median(runs.map((r) => r.terminalMetrics.distanceToTargetM)),
-    medianFuelKg: median(runs.map((r) => r.fuelUsedKg)),
-    p99RuntimeMs: percentile(runs.map((r) => r.runtimeMs), 0.99),
+  return {
+    scenarioId: config.scenarioId,
+    windScale,
+    runs,
+    summary: summarizeRuns(runs),
   };
-  return { scenarioId: config.scenarioId, windScale, runs, summary };
 }
 
 /**

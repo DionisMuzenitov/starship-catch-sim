@@ -118,6 +118,8 @@ class _ParametricPDG:
         self.p_r0 = cp.Parameter(3, name="r0")
         self.p_v0 = cp.Parameter(3, name="v0")
         self.p_z0 = cp.Parameter(name="z0")
+        # Minimum final log-mass: ln(dry mass + reserve).
+        self.p_z_min = cp.Parameter(name="z_min")
         # Mass-normalized thrust bounds per node: ρ/m̄_k (Açıkmese
         # first-order linearization, computed host-side).
         self.p_sigma_lo = cp.Parameter(n, nonneg=True, name="sigma_lo")
@@ -166,6 +168,12 @@ class _ParametricPDG:
             cp.abs(self.v[n, 1]) <= TERMINAL_VY_TOL_MPS + self.s_vel,
             cp.norm(self.v[n, [0, 2]]) <= TERMINAL_VH_TOL_MPS + self.s_vel,
             self.v[n, 1] <= 0,
+            # Fuel budget: the plan may not burn below dry mass (+ reserve).
+            # Without this the min-fuel objective merely discourages — and a
+            # high-altitude "optimal" plan can spend 300 t the tank doesn't
+            # have (found by the SLS-27 bench: the tracked plan drained the
+            # vehicle at t≈30 s and free-fell 70 km off target).
+            self.z[n] >= self.p_z_min,
         ]
 
         # Min fuel = max final mass ≙ min Σσ·dt, plus slack penalties.
@@ -173,6 +181,10 @@ class _ParametricPDG:
             self.p_dt * cp.sum(self.sigma)
             + TERMINAL_SLACK_WEIGHT * (self.s_pos + self.s_vel)
         )
+        # Kept on the instance so subclasses (SCvx trust-region variant in
+        # scvx.py) can extend the constraint set and rebuild the problem.
+        self.base_constraints = cons
+        self.objective = objective
         self.problem = cp.Problem(objective, cons)
 
     def stamp_and_solve(self, inp: SolveInput, t_f: float) -> SolveResult:
@@ -198,6 +210,9 @@ class _ParametricPDG:
         self.p_r0.value = inp.position
         self.p_v0.value = inp.velocity
         self.p_z0.value = float(np.log(m0))
+        # 2 % of the available propellant held as reserve; never above m0.
+        reserve = 0.02 * max(m0 - veh.dry_mass_kg, 0.0)
+        self.p_z_min.value = float(np.log(min(veh.dry_mass_kg + reserve, m0)))
         self.p_sigma_lo.value = veh.min_thrust_n / m_ref
         self.p_sigma_hi.value = veh.max_thrust_n / m_ref
         self.p_dt_acc_ext.value = dt * acc_ext
@@ -249,15 +264,12 @@ def _t_f_bounds(inp: SolveInput) -> tuple[float, float]:
     return lo, hi
 
 
-def solve_pdg(inp: SolveInput) -> SolveResult:
-    """Solve the descent, sweeping/refining t_f outside the SOCP."""
-    if inp.t_f_hint_s is not None and inp.t_f_hint_s > 1.0:
-        # Warm re-plan: local 3-point refinement around the hint.
-        candidates = [inp.t_f_hint_s * f for f in (0.92, 1.0, 1.08)]
-    else:
-        lo, hi = _t_f_bounds(inp)
-        candidates = list(np.geomspace(lo, hi, 6))
+# A plan whose terminal box needed more slack than this is not a usable
+# descent solution (mirrors the client-side gate in mpcController.ts).
+USABLE_TERMINAL_SLACK = 5.0
 
+
+def _sweep(inp: SolveInput, candidates: list[float]) -> tuple[SolveResult, float]:
     best: SolveResult = SolveResult(status="infeasible")
     total_ms = 0.0
     for t_f in candidates:
@@ -270,5 +282,30 @@ def solve_pdg(inp: SolveInput) -> SolveResult:
             )
             if better:
                 best = res
+    return best, total_ms
+
+
+def solve_pdg(inp: SolveInput) -> SolveResult:
+    """Solve the descent, sweeping/refining t_f outside the SOCP."""
+    total_ms = 0.0
+    best: SolveResult = SolveResult(status="infeasible")
+    if inp.t_f_hint_s is not None and inp.t_f_hint_s > 1.0:
+        # Warm re-plan: local 3-point refinement around the hint.
+        best, ms = _sweep(inp, [inp.t_f_hint_s * f for f in (0.92, 1.0, 1.08)])
+        total_ms += ms
+    # Cold sweep when there is no hint — or when the hinted solves came
+    # back unusable (a stale hint must not trap the search: the client
+    # would otherwise keep tracking an old plan while every re-plan around
+    # the dead hint fails).
+    if best.status != "optimal" or best.terminal_slack > USABLE_TERMINAL_SLACK:
+        lo, hi = _t_f_bounds(inp)
+        cold, ms = _sweep(inp, list(np.geomspace(lo, hi, 6)))
+        total_ms += ms
+        if cold.status == "optimal" and (
+            best.status != "optimal"
+            or cold.fuel_kg + TERMINAL_SLACK_WEIGHT * cold.terminal_slack
+            < best.fuel_kg + TERMINAL_SLACK_WEIGHT * best.terminal_slack
+        ):
+            best = cold
     best.solve_time_ms = total_ms
     return best

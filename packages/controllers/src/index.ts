@@ -23,6 +23,10 @@ export {
   type RunResult,
 } from "./eval/monteCarlo.js";
 export {
+  runMonteCarloAsync,
+  type MonteCarloAsyncConfig,
+} from "./eval/monteCarloAsync.js";
+export {
   OverrideController,
   type OverrideControllerOpts,
   type OverrideMode,

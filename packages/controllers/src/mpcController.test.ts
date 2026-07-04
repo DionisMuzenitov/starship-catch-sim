@@ -93,6 +93,24 @@ describe("MPCController", () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects slack-soaked plans (optimal status but unreachable target)", async () => {
+    // The service's always-feasible relaxation reports `optimal` from any
+    // IC — a huge terminalSlack means "no real solution". Tracking such a
+    // plan is worse than the PID fallback (found by the SLS-27 bench:
+    // 70 km terminal error vs PID's 21 km).
+    const transport = vi.fn(async () => ({
+      ...cannedResponse(),
+      terminalSlack: 870,
+    }));
+    const { ctl, scenario } = makeController(transport);
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    ctl.step(scenario.initialWorld, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(true);
+    expect(ctl.getPlan()).toBeNull();
+  });
+
   it("keeps flying PID when the solver reports non-optimal", async () => {
     const transport = vi.fn(async () => ({
       ...cannedResponse(),
