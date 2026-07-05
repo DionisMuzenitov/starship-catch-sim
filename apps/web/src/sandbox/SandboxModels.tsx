@@ -13,7 +13,7 @@ import {
   type SurfaceState,
 } from "@starship-catch-sim/physics";
 
-import { BoosterModel, StarshipModel } from "../models";
+import { VehicleModel } from "../models/glb";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
 import { DebugHud, DebugSampler, type DebugSample } from "../scene/DebugOverlay";
 import { Fog } from "../scene/Fog";
@@ -92,14 +92,16 @@ export function SandboxModels() {
         <Sun />
         <Sky />
         <Ground />
-        <BoosterModel
+        <VehicleModel
+          isShip={false}
           position={BOOSTER_POS}
           attitude={IDENTITY_QUAT}
           engineStates={boosterEngineStates}
           surfaceStates={finStates}
           altitudeFactor={controls.altitudeFactor}
         />
-        <StarshipModel
+        <VehicleModel
+          isShip
           position={SHIP_POS}
           attitude={IDENTITY_QUAT}
           engineStates={shipEngineStates}

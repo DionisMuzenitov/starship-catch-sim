@@ -52,9 +52,12 @@ test("record → save → load → playback round-trip", async ({ page }) => {
     .locator('[data-testid="scenario-load-replay-input"]')
     .setInputFiles(savedPath!);
 
-  // Player surfaces are present.
+  // Player surfaces are present. Budget raised from 5 s (SLS-44): the
+  // reloaded page decodes the ~2.2 MB Draco vehicle GLB (synchronous WASM
+  // main-thread work) at the same moment the replay loads, which can
+  // briefly delay the React flush that mounts the player.
   const player = page.locator('[data-testid="replay-player"]');
-  await expect(player).toBeVisible({ timeout: 5_000 });
+  await expect(player).toBeVisible({ timeout: 20_000 });
   await expect(
     page.locator('[data-testid="replay-outcome"]'),
   ).toBeVisible();
