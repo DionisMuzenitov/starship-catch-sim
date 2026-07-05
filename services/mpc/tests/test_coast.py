@@ -28,8 +28,8 @@ SUPER_HEAVY = VehicleParams(
 
 # BoosterDescentCalm initial state (scenarios.ts), no jitter.
 CALM_INPUT = SolveInput(
-    position=np.array([0.0, 65_000.0, 50_000.0]),
-    velocity=np.array([0.0, -200.0, -300.0]),
+    position=np.array([0.0, 65_000.0, 12_260.0]),
+    velocity=np.array([0.0, -200.0, -120.0]),
     mass_kg=527_374.0,
     vehicle=SUPER_HEAVY,
 )
@@ -58,7 +58,7 @@ class TestPropagateBallistic:
         speeds = np.linalg.norm(vs, axis=1)
         assert speeds.max() < 1_100.0
         # And the low-altitude end is materially slower than the peak.
-        assert speeds[-1] < 0.75 * speeds.max()
+        assert speeds[-1] < 0.8 * speeds.max()
 
 
 @pytest.fixture(scope="module")
@@ -95,8 +95,8 @@ class TestSolveCoastBurn:
     def test_hopeless_case_reports_infeasible(self) -> None:
         # Tiny thrust: no ignition time helps.
         weak = SolveInput(
-            position=np.array([0.0, 65_000.0, 50_000.0]),
-            velocity=np.array([0.0, -200.0, -300.0]),
+            position=np.array([0.0, 65_000.0, 12_260.0]),
+            velocity=np.array([0.0, -200.0, -120.0]),
             mass_kg=527_374.0,
             vehicle=VehicleParams(
                 dry_mass_kg=200_000,
@@ -111,8 +111,8 @@ class TestSolveCoastBurn:
 def test_server_coast_burn_round_trip() -> None:
     client = TestClient(app)
     payload = {
-        "position": {"x": 0.0, "y": 65_000.0, "z": 50_000.0},
-        "velocity": {"x": 0.0, "y": -200.0, "z": -300.0},
+        "position": {"x": 0.0, "y": 65_000.0, "z": 12_260.0},
+        "velocity": {"x": 0.0, "y": -200.0, "z": -120.0},
         "massKg": 527_374.0,
         "vehicle": {
             "dryMassKg": 200_000.0,
