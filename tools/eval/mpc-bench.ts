@@ -58,13 +58,19 @@ type BenchSolveResponse = MPCSolveResponse & {
 type Args = {
   quick: boolean;
   url: string;
+  /** Seeds per (controller, wind) cell; overrides the mode default.
+   *  The SLS-47 gate is 30 seeds: `pnpm bench:mpc --seeds 30`. */
+  seeds: number | null;
 };
 
 function parseArgs(argv: string[]): Args {
   const urlIdx = argv.indexOf("--url");
+  const seedsIdx = argv.indexOf("--seeds");
+  const seedsRaw = seedsIdx >= 0 ? Number(argv[seedsIdx + 1]) : NaN;
   return {
     quick: argv.includes("--quick"),
     url: urlIdx >= 0 && argv[urlIdx + 1] ? argv[urlIdx + 1]! : DEFAULT_URL,
+    seeds: Number.isInteger(seedsRaw) && seedsRaw > 0 ? seedsRaw : null,
   };
 }
 
@@ -369,7 +375,7 @@ async function main(): Promise<void> {
 
   const replans = args.quick ? 10 : 30;
   const windScales = args.quick ? [0, 1] : [0, 1, 2];
-  const seeds = args.quick ? 2 : 5;
+  const seeds = args.seeds ?? (args.quick ? 2 : 5);
 
   // --- a) solve time ---
   console.log(`\n[a] solve-time distribution (${replans} warm re-plans, N=60)`);
