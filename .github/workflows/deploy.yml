@@ -1,0 +1,81 @@
+name: Deploy demo (GitHub Pages)
+
+# Publishes the static `apps/web` build to GitHub Pages on every push to
+# main (post-merge), plus manual re-runs. The bundle is client-side only;
+# the MPC guidance service is declared absent (VITE_MPC_URL="") so the app
+# flies its PID fallback and shows a banner instead of failing — SLS-49.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow one concurrent deploy; let an in-progress run finish (don't cancel
+# a publish midway).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build static bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Build web app
+        # Project Pages serve under /<repo>/; the trailing slash keeps Vite
+        # from warning and asset URLs correct. Empty VITE_MPC_URL disables
+        # MPC networking (flies PID + banner). `pages` step is a dependency
+        # (it enables Pages) even though we hardcode the known repo path.
+        env:
+          VITE_BASE_PATH: /starship-catch-sim/
+          VITE_MPC_URL: ""
+        run: pnpm --filter @starship-catch-sim/web build
+
+      - name: SPA fallback (serve index.html for unknown paths)
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
 import { ControllerSwitcher } from "../menu/ControllerSwitcher";
+import { MpcServiceBanner } from "../menu/MpcServiceBanner";
 import { PidTuningPanel } from "../menu/PidTuningPanel";
 import { ScenarioPicker } from "../menu/ScenarioPicker";
 import { ReplayDriver } from "../replay/ReplayDriver";
@@ -68,6 +69,7 @@ export function Scene() {
       <DebugHud sample={sample} />
       <ScenarioPicker />
       <ControllerSwitcher />
+      <MpcServiceBanner />
       <PidTuningPanel />
       <Hud />
       <ReplayDriver />
