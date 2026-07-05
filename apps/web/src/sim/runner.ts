@@ -301,7 +301,13 @@ export class SimRunner {
       this.callbacks.onRender(this.world);
       return;
     }
-    const realDt = Math.min(0.1, (timeMs - this.lastTimeMs) / 1000);
+    // Spiral-of-death guard: cap the per-frame real dt. This also bounds
+    // how far the sim can advance per frame, so below ~1/cap FPS the sim
+    // clock lags the ×scale wall rate (slow-motion). Raised from 0.1→0.2
+    // (SLS-44) so heavier GLB scenes on weak/headless renderers keep
+    // real-time fidelity down to ~5 FPS instead of ~10; the accumulator
+    // still substeps at the fixed PHYSICS_DT, so physics stays stable.
+    const realDt = Math.min(0.2, (timeMs - this.lastTimeMs) / 1000);
     this.lastTimeMs = timeMs;
     this.advance(realDt);
     const alpha = this.accumulator / PHYSICS_DT;
