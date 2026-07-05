@@ -43,6 +43,11 @@ Before writing or changing any code for a ticket, you MUST:
    current? Call out anything wrong, missing, oversimplified, or stale. (Past
    examples: constant-Cd drag ignored the transonic/supersonic regime; "all
    engines gimbal" was wrong — only the inner 13 do.)
+   For ADR-bearing tickets, red-team the design against the ticket's
+   quantitative acceptance gate before locking the ADR: can this formulation
+   physically meet the gate? (Past example: ADR-007's 3-DOF planner could
+   never close a metres-scale catch through seconds-scale attitude lag —
+   predictable at design time, found at bench time.)
 3. **PROPOSE.** Give a short implementation plan: approach, key decisions and
    trade-offs, test strategy, and what you will NOT do. Note any deviation
    from the ticket and why.
@@ -53,6 +58,11 @@ Before writing or changing any code for a ticket, you MUST:
 6. **UPDATE DOCS.** Record what you learned + decisions in: a comment on the
    Jira ticket, the relevant KB page, and (for architectural choices) a new
    ADR in `docs/adr/`. Leave breadcrumbs for the next session.
+7. **CLOSE THE LOOP.** Refresh the SLS-43 description snapshot (phase,
+   done/total counts, next, blockers) and append a run-report comment with a
+   metrics block: wall-clock duration, tickets touched, PRs opened/merged,
+   test-count delta, cost/tokens if known. A stale snapshot is this
+   project's worst recorded process failure — do not skip this step.
 
 Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 
@@ -95,6 +105,16 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 - **Each ticket is its own feature branch + PR;** if a follow-up bug is
   spotted during review, file a new ticket rather than amending the merged
   PR.
+- **Milestone-done = outcome gate met.** Closing a milestone's tickets does
+  not close the milestone. Each milestone's quantitative gate is recorded in
+  the SLS-43 snapshot (e.g. M5: ≥50 % catch rate on the MC bench); a
+  milestone with green tickets and a red gate is still open.
+- **Organic tickets.** Before filing a new ticket from the build seat,
+  search the board for an existing one covering the scope (SLS-46 duplicated
+  SLS-22 this way). Label build-seat self-filed tickets `organic`; the PM
+  seat triages that label each session.
+- **Human-blocked work is labelled `awaiting-owner`** so PM sessions can
+  start from that filter instead of rediscovering the bottleneck.
 
 ## Knowledge base & reference material
 
