@@ -31,6 +31,7 @@ import {
   installPointerBindings,
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
+import { MPC_SERVICE_DISABLED, MPC_SERVICE_URL } from "./mpcService.js";
 import { useControllerStore } from "../state/controllerStore.js";
 import { useMpcStore } from "../state/mpcStore.js";
 import { usePidStore } from "../state/pidStore.js";
@@ -106,14 +107,19 @@ export function useSimRunner(): UseSimRunner {
       pid.setObserver((frame) => usePidStore.getState().pushFrame(frame));
       controller = wrapWithOverride(pid);
     } else if (controllerKind === "mpc") {
+      // On builds with no guidance service (the public static demo), inject
+      // a transport that rejects WITHOUT touching the network — the browser
+      // never logs a connection error, and the MPCController flies its PID
+      // fallback (SLS-49). Otherwise POST to the resolved service URL.
       const mpc = new MPCController({
         vehicle: scenario.vehicle,
         targetPosition: scenario.targetCatch.targetPosition,
         gainsRef: () => usePidStore.getState().gains,
-        serviceUrl:
-          (import.meta.env.VITE_MPC_URL as string | undefined) ??
-          "http://localhost:8100",
+        ...(MPC_SERVICE_DISABLED
+          ? { transport: () => Promise.reject(new Error("mpc-service-disabled")) }
+          : { serviceUrl: MPC_SERVICE_URL ?? undefined }),
       });
+      useMpcStore.getState().setServiceDisabled(MPC_SERVICE_DISABLED);
       useMpcStore.getState().setPlan(null);
       mpc.setPlanObserver((plan) => {
         useMpcStore.getState().setPlan(plan);

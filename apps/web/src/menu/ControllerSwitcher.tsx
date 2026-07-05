@@ -8,6 +8,7 @@
  * runner rebuilds with the new controller and the current flight resets.
  */
 
+import { MPC_SERVICE_DISABLED } from "../sim/mpcService";
 import {
   PLACEHOLDER_KINDS,
   useControllerStore,
@@ -64,6 +65,9 @@ export function ControllerSwitcher() {
           >
             {k.label}
             {PLACEHOLDER_KINDS.includes(k.kind) ? " (soon)" : ""}
+            {/* On the public demo MPC has no guidance service; it stays
+                selectable (flies PID + shows a banner) but is marked. */}
+            {k.kind === "mpc" && MPC_SERVICE_DISABLED ? " (local)" : ""}
           </option>
         ))}
       </select>
