@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from typing import Literal
 
+from .coast import CoastBurnResult, solve_coast_burn
 from .problem import SolveInput, SolveResult, VehicleParams, solve_pdg
 from .scvx import SCvxResult, solve_scvx
 
@@ -56,13 +57,16 @@ class SolveRequest(BaseModel):
     massKg: float = Field(gt=0)
     vehicle: VehicleModel
     tFHintS: float | None = None
+    # Remaining-coast hint for coast+burn re-plans (SLS-47).
+    coastHintS: float | None = None
     # Optional exogenous drag acceleration profile, one entry per horizon
     # interval (N=60). Missing/short profiles are zero-padded.
     dragAccel: list[Vec3Model] | None = None
     # "linear": single lossless SOCP (SLS-26 behaviour, default).
     # "scvx": successive convexification — iteratively re-linearizes the
     # drag term about the previous trajectory (SLS-27).
-    mode: Literal["linear", "scvx"] = "linear"
+    # "coast+burn": ballistic-coast ignition search + SCvx burn (SLS-47).
+    mode: Literal["linear", "scvx", "coast+burn"] = "linear"
 
 
 class SolveResponse(BaseModel):
@@ -78,6 +82,12 @@ class SolveResponse(BaseModel):
     # SCvx-only diagnostics; null for mode="linear".
     iterations: int | None = None
     converged: bool | None = None
+    # coast+burn only (SLS-47): seconds from the REQUEST state until the
+    # planned ignition, plus the decimated ballistic coast trajectory
+    # (last sample = ignition state = burn node 0). Null otherwise.
+    ignitionTimeS: float | None = None
+    coastPositions: list[Vec3Model] | None = None
+    coastVelocities: list[Vec3Model] | None = None
 
 
 def _drag_matrix(entries: list[Vec3Model] | None, n: int) -> np.ndarray | None:
@@ -110,11 +120,27 @@ def solve(req: SolveRequest) -> SolveResponse:
         ),
         t_f_hint_s=req.tFHintS,
         drag_accel=_drag_matrix(req.dragAccel, N),
+        coast_hint_s=req.coastHintS,
     )
     res: SolveResult | SCvxResult
     iterations: int | None = None
     converged: bool | None = None
-    if req.mode == "scvx":
+    ignition_time_s: float | None = None
+    coast_positions: list[Vec3Model] | None = None
+    coast_velocities: list[Vec3Model] | None = None
+    solve_ms_total: float | None = None
+    if req.mode == "coast+burn":
+        cb: CoastBurnResult = solve_coast_burn(inp)
+        res = cb.burn
+        res.status = cb.status  # infeasible coast search overrides
+        solve_ms_total = cb.solve_time_ms
+        if cb.status == "optimal":
+            ignition_time_s = cb.ignition_time_s
+            coast_positions = [Vec3Model.from_np(p) for p in cb.coast_positions]
+            coast_velocities = [Vec3Model.from_np(v) for v in cb.coast_velocities]
+            iterations = cb.burn.iterations
+            converged = cb.burn.converged
+    elif req.mode == "scvx":
         scvx_res = solve_scvx(inp)
         res = scvx_res
         iterations = scvx_res.iterations
@@ -124,7 +150,7 @@ def solve(req: SolveRequest) -> SolveResponse:
     return SolveResponse(
         status=res.status,
         tFS=res.t_f_s,
-        solveTimeMs=res.solve_time_ms,
+        solveTimeMs=solve_ms_total if solve_ms_total is not None else res.solve_time_ms,
         fuelKg=res.fuel_kg,
         terminalSlack=res.terminal_slack,
         predictedPositions=[Vec3Model.from_np(p) for p in res.positions],
@@ -133,4 +159,7 @@ def solve(req: SolveRequest) -> SolveResponse:
         throttle=[float(t) for t in res.throttle],
         iterations=iterations,
         converged=converged,
+        ignitionTimeS=ignition_time_s,
+        coastPositions=coast_positions,
+        coastVelocities=coast_velocities,
     )

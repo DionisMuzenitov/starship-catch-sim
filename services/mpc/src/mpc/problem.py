@@ -65,6 +65,11 @@ class VehicleParams:
     max_thrust_n: float  # total, all engines that participate in descent
     min_thrust_n: float  # throttle floor × engines that stay lit
     isp_s: float
+    # Body drag data for the coast propagator (SLS-47). Defaults match the
+    # Super Heavy preset (packages/physics/src/scenarios.ts): radius 4.5 m,
+    # subsonic plateau Cd 0.7.
+    ref_area_m2: float = float(np.pi * 4.5 * 4.5)
+    cd_subsonic: float = 0.7
 
 
 @dataclass
@@ -75,6 +80,9 @@ class SolveInput:
     vehicle: VehicleParams
     t_f_hint_s: float | None = None
     drag_accel: np.ndarray | None = None  # (N, 3) exogenous, m/s²
+    # Remaining-coast hint (SLS-47): re-plans search only a narrow window
+    # around the client's committed ignition epoch so it cannot churn.
+    coast_hint_s: float | None = None
 
 
 @dataclass

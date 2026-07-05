@@ -22,13 +22,17 @@ function makeController(transport: (req: MPCSolveRequest) => Promise<MPCSolveRes
   return { ctl, scenario };
 }
 
-/** A canned optimal 10 s plan that just descends vertically to the slot. */
+/**
+ * A canned optimal 10 s burn plan anchored at the SCENARIO's initial
+ * state (0, 65 km, 50 km) — plans must start where the vehicle is, or
+ * the divergence-abort safety net (SLS-47) rightly rejects them.
+ */
 function cannedResponse(): MPCSolveResponse {
   const n = 10;
   const positions = Array.from({ length: n + 1 }, (_, k) => ({
-    x: 8.5,
-    y: 1091 - (1000 * k) / n,
-    z: 0,
+    x: 0,
+    y: 65_000 - (1000 * k) / n,
+    z: 50_000,
   }));
   const velocities = Array.from({ length: n + 1 }, () => ({
     x: 0,
@@ -184,6 +188,128 @@ describe("MPCController", () => {
   });
 });
 
+describe("MPCController — coast+burn tracking (SLS-47)", () => {
+  /** Plan: 20 s ballistic coast, then the canned 10 s burn. */
+  function coastBurnResponse(): MPCSolveResponse {
+    return {
+      ...cannedResponse(),
+      ignitionTimeS: 20,
+      coastPositions: [
+        { x: 0, y: 3091, z: 1000 },
+        { x: 4, y: 2091, z: 500 },
+        { x: 8.5, y: 1091, z: 0 },
+      ],
+      coastVelocities: [
+        { x: 0, y: -100, z: -50 },
+        { x: 0, y: -100, z: -50 },
+        { x: 0, y: -100, z: -50 },
+      ],
+    };
+  }
+
+  async function armedController() {
+    const transport = vi.fn(async () => coastBurnResponse());
+    const { ctl, scenario } = makeController(transport);
+    ctl.step(scenario.initialWorld, 1 / 250); // fires request at t=0
+    await Promise.resolve();
+    await Promise.resolve();
+    return { ctl, scenario, transport };
+  }
+
+  it("keeps engines OFF and holds attitude during the coast", async () => {
+    const { ctl, scenario } = await armedController();
+    const input = ctl.step({ ...scenario.initialWorld, t: 5 }, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false); // plan active, coasting
+    expect(input.enginesOn).toEqual({
+      centre: false,
+      inner: false,
+      outer: false,
+      ship: false,
+    });
+    expect(input.engineGroups.centre).toBe(0);
+    // Fins deployed for aero damping; gimbal commands finite.
+    expect(input.fins.every((f) => f === 0.25)).toBe(true);
+    expect(Number.isFinite(input.gimbalPitch)).toBe(true);
+  });
+
+  it("ignites when the burn clock starts", async () => {
+    const { ctl, scenario } = await armedController();
+    const input = ctl.step({ ...scenario.initialWorld, t: 21 }, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false);
+    expect(input.enginesOn.centre).toBe(true);
+    expect(input.engineGroups.centre).toBeGreaterThan(0);
+  });
+
+  it("staleness is anchored at ignition, not plan receipt", async () => {
+    const { ctl, scenario } = await armedController();
+    // 15 s into the plan: WAY past STALE_PLAN_MAX_S=10 since receipt,
+    // but still coasting (ignition at 20 s) — plan must stay active.
+    ctl.step({ ...scenario.initialWorld, t: 15 }, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false);
+    // 20+10+1 s: burn ran 11 s without a refresh — now stale.
+    ctl.step({ ...scenario.initialWorld, t: 31 }, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(true);
+  });
+
+  it("re-plans lazily during coast and freezes just before ignition", async () => {
+    const { ctl, scenario, transport } = await armedController();
+    // Step through the coast at 250 Hz from t=0.5 to t=19.9.
+    for (let t = 0.5; t < 19.9; t += 1 / 250) {
+      ctl.step({ ...scenario.initialWorld, t }, 1 / 250);
+      // Let any fired request settle immediately so inFlight can't
+      // suppress subsequent cadence checks.
+      await Promise.resolve();
+    }
+    // Initial request at t=0, then every ~3 s until the 1 s pre-ignition
+    // freeze (~t=19): expect roughly 20/3 ≈ 7 total, certainly < the
+    // ~20 a 1 Hz cadence would produce and > 3.
+    expect(transport.mock.calls.length).toBeGreaterThan(3);
+    expect(transport.mock.calls.length).toBeLessThan(10);
+  });
+
+  it("aborts a committed burn only on divergence, not on failed re-plans", async () => {
+    const { ctl, scenario } = await armedController();
+    // Burning at t=21, exactly on plan → committed, no fallback.
+    const w = scenario.initialWorld;
+    ctl.step(
+      {
+        ...w,
+        t: 21,
+        rigidBody: {
+          ...w.rigidBody,
+          position: Vec3.of(0, 64_900, 50_000),
+        },
+      },
+      1 / 250,
+    );
+    expect(ctl.isUsingFallback()).toBe(false);
+    // Reality 5 km away from the plan → the feedforward is fiction; abort.
+    ctl.step(
+      {
+        ...w,
+        t: 22,
+        rigidBody: {
+          ...w.rigidBody,
+          position: Vec3.of(0, 60_000, 50_000),
+        },
+      },
+      1 / 250,
+    );
+    expect(ctl.isUsingFallback()).toBe(true);
+  });
+
+  it("plain burn plans (no ignitionTimeS) behave exactly as before", async () => {
+    const transport = vi.fn(async () => cannedResponse());
+    const { ctl, scenario } = makeController(transport);
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    const input = ctl.step(scenario.initialWorld, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false);
+    expect(input.enginesOn.centre).toBe(true); // burn starts immediately
+  });
+});
+
 describe("MPCController — floor-aware thrust allocation (SLS-48)", () => {
   // Booster groups (sea-level thrust 2.05 MN/engine, floor 0.4):
   //   centre (3): band [2.46, 6.15] MN
@@ -266,7 +392,7 @@ describe("MPCController — plan interpolation", () => {
       t: 5,
       rigidBody: {
         ...w0.rigidBody,
-        position: Vec3.of(8.5, 591, 0),
+        position: Vec3.of(0, 64_500, 50_000),
         velocity: Vec3.of(0, -100, 0),
       },
     };
