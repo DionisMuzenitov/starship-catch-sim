@@ -282,7 +282,7 @@ const DOCK_MAX_ALT_M = 400;
 /** Dock "centred" gate: descend through the slot only inside this — the
  *  catch envelope is 10 m / 2 m/s, so sinking uncentred is a strike. */
 const DOCK_CENTRED_LAT_M = 6;
-const DOCK_CENTRED_VLAT_MPS = 1.5;
+const DOCK_CENTRED_VLAT_MPS = 1.2;
 
 /** Uncentred descent cap (m/s): creep down while centring far above the
  *  slot, hold (0) once close. Only when hovering is physically possible. */
@@ -300,8 +300,13 @@ const DOCK_CLIMB_BACK_MPS = 1;
  *  Limiting the setpoint's rate below the lag breaks the cycle; the
  *  smaller cap trades authority (0.6 m/s²) for smoothness, plenty
  *  against a ≤ 2 m/s residual. */
-const DOCK_TILT_MAX_RAD = 0.06;
-const DOCK_TILT_SLEW_RAD_PER_S = 0.03;
+/** Precision-regime authority sets the residual lateral wobble almost
+ *  linearly (probe: 0.06 rad → vLat residual up to 2.33 m/s, a hair over
+ *  the 2 m/s envelope; 0.04 → ~1.5 ✓ but the attitude loop overshoots
+ *  the setpoint ~45 % and 0.04 commanded → 3.3° actual, over the 3°
+ *  envelope. 0.03 commanded ≈ 2.5° worst-case actual clears both. */
+const DOCK_TILT_MAX_RAD = 0.03;
+const DOCK_TILT_SLEW_RAD_PER_S = 0.02;
 
 /** Two-regime dock tilt: while the handoff is still hot (burn residue —
  *  probe: vz ≈ −25 m/s entering the dock), the precision limits above
@@ -320,6 +325,14 @@ const DOCK_FAR_LAT_SPEED_MPS = 5;
  *  below. Ripple at the floor's ~4 m/s² is centimetres. */
 const DOCK_FLOAT_BAND_MPS = 0.75;
 
+/** Extra rate damping inside the dock. Each float-pulse thrust
+ *  transient re-excites the attitude loop; at RATE_DAMP=1.2 it rings to
+ *  ±3.0–3.4° — sampled at capture entry, that's a coin-flip against the
+ *  3° envelope (probe round 4: three near-misses, all "tilt 3.0–3.4°").
+ *  (Softening kp/kd instead loosened setpoint tracking and made the
+ *  vehicle drift into the tower — probe round 5.) */
+const DOCK_RATE_DAMP = 2.5;
+
 /** Dock approach aim is biased AWAY from the tower in +x (m). The truss
  *  collision box reaches x = +6 and the slot centre sits at x = 8.5 —
  *  a 2.5 m corridor that the dock's residual ±3–4 m wander crosses
@@ -327,7 +340,7 @@ const DOCK_FLOAT_BAND_MPS = 0.75;
  *  lateral error). Aiming at x ≈ 10.5 doubles the truss margin while
  *  staying well inside the capture volume (x ∈ [5, 12]) and the 10 m
  *  3-D catch envelope. */
-const DOCK_APPROACH_X_BIAS_M = 2.0;
+const DOCK_APPROACH_X_BIAS_M = 1.25;
 
 /** Hover is possible only while floor thrust ≤ this fraction of weight. */
 const HOVER_MARGIN = 0.98;
@@ -360,8 +373,11 @@ export function dockVerticalTarget(
   const centred =
     latErrM < DOCK_CENTRED_LAT_M && latSpeedMps < DOCK_CENTRED_VLAT_MPS;
   if (dyAboveSlotM < -2) {
-    // Sank below the slot: climb back while we physically can.
-    return hoverable ? DOCK_CLIMB_BACK_MPS : 0;
+    // Sank below the slot: climb back. Works light or heavy — a floored
+    // lit engine set out-lifts a light stack by construction, and the
+    // float pulses regulate the rate (probe: a "hold at 0" here let a
+    // light vehicle sag 90 m to the ground over 3 minutes).
+    return DOCK_CLIMB_BACK_MPS;
   }
   if (centred || !hoverable) {
     // Committed descent (the pre-SLS-47 law): floor at 0.5 m/s so the
@@ -420,6 +436,7 @@ function attitudeCommands(
   pidYaw: PID,
   dt: number,
   maxRad: number,
+  rateDamp: number = RATE_DAMP,
 ): { pitch: number; yaw: number } {
   if (bodyUp.y < UPY_PID_THRESHOLD) {
     // Geometric righting toward the (near-vertical) target direction.
@@ -429,8 +446,8 @@ function attitudeCommands(
     pidPitch.reset();
     pidYaw.reset();
     return {
-      pitch: clamp(-RIGHTING_GAIN * axis.x + RATE_DAMP * wBody.x, -maxRad, maxRad),
-      yaw: clamp(-RIGHTING_GAIN * axis.z + RATE_DAMP * wBody.z, -maxRad, maxRad),
+      pitch: clamp(-RIGHTING_GAIN * axis.x + rateDamp * wBody.x, -maxRad, maxRad),
+      yaw: clamp(-RIGHTING_GAIN * axis.z + rateDamp * wBody.z, -maxRad, maxRad),
     };
   }
   // Axis-asymmetric polarity (derived + probe-verified): actuator cmd+
@@ -438,12 +455,12 @@ function attitudeCommands(
   // so the pitch PID output must be negated and the yaw output must NOT.
   return {
     pitch: clamp(
-      -pidPitch.update(tiltZ, bodyUp.z, dt) + RATE_DAMP * wBody.x,
+      -pidPitch.update(tiltZ, bodyUp.z, dt) + rateDamp * wBody.x,
       -maxRad,
       maxRad,
     ),
     yaw: clamp(
-      pidYaw.update(tiltX, bodyUp.x, dt) + RATE_DAMP * wBody.z,
+      pidYaw.update(tiltX, bodyUp.x, dt) + rateDamp * wBody.z,
       -maxRad,
       maxRad,
     ),
@@ -1178,6 +1195,7 @@ export class MPCController implements Controller {
       this.attPidYaw,
       dt,
       this.maxGimbalRad,
+      DOCK_RATE_DAMP,
     );
     const base = neutralControl(this.finCount, this.flapCount);
     return {

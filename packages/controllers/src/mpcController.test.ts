@@ -476,9 +476,11 @@ describe("SLS-47 terminal robustness laws", () => {
       expect(vy).toBeLessThanOrEqual(-0.5);
     });
 
-    it("climbs back after sinking below the slot (hoverable)", () => {
+    it("climbs back after sinking below the slot (light or heavy)", () => {
       expect(dockVerticalTarget(-20, 15, 0.5, true)).toBeGreaterThan(0);
-      expect(dockVerticalTarget(-20, 15, 0.5, false)).toBe(0);
+      // Light too: floored lit engines out-lift a light stack, and the
+      // float pulses regulate the climb rate.
+      expect(dockVerticalTarget(-20, 15, 0.5, false)).toBeGreaterThan(0);
     });
   });
 
