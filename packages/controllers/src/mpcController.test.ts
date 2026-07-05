@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   MPCController,
+  dockVerticalTarget,
+  shouldFloat,
   type MPCSolveRequest,
   type MPCSolveResponse,
 } from "./mpcController.js";
@@ -154,16 +156,42 @@ describe("MPCController", () => {
     expect(ctl.isUsingFallback()).toBe(true);
   });
 
-  it("expired plan (t past tF) falls back to PID", async () => {
+  it("expired plan (t past tF, at plan-end altitude) falls back to PID", async () => {
     const transport = vi.fn(async () => cannedResponse());
     const { ctl, scenario } = makeController(transport);
     const w0 = scenario.initialWorld;
     ctl.step(w0, 1 / 250);
     await Promise.resolve();
     await Promise.resolve();
-    // 20 s later — the 10 s plan has expired.
-    ctl.step({ ...w0, t: 20 }, 1 / 250);
+    // 20 s later — the 10 s plan clock has expired AND the vehicle is at
+    // the plan's end altitude (SLS-47: expiry counts only once the
+    // vehicle is actually down at the plan end — the altitude-indexed
+    // tracker/float pulses can leave the clock expired mid-profile).
+    ctl.step(
+      {
+        ...w0,
+        t: 20,
+        rigidBody: {
+          ...w0.rigidBody,
+          position: Vec3.of(0, 64_050, 12_260),
+        },
+      },
+      1 / 250,
+    );
     expect(ctl.isUsingFallback()).toBe(true);
+  });
+
+  it("expired clock HIGH above plan end keeps tracking (no PID handoff)", async () => {
+    const transport = vi.fn(async () => cannedResponse());
+    const { ctl, scenario } = makeController(transport);
+    const w0 = scenario.initialWorld;
+    ctl.step(w0, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    // Clock expired but the vehicle is still ~1 km above the plan's end
+    // altitude (within the 4 km divergence net) — keep flying the burn.
+    ctl.step({ ...w0, t: 20 }, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false);
   });
 
   it("sends a sane vehicle envelope in the request", async () => {
@@ -247,8 +275,21 @@ describe("MPCController — coast+burn tracking (SLS-47)", () => {
     // but still coasting (ignition at 20 s) — plan must stay active.
     ctl.step({ ...scenario.initialWorld, t: 15 }, 1 / 250);
     expect(ctl.isUsingFallback()).toBe(false);
-    // 20+10+1 s: burn ran 11 s without a refresh — now stale.
-    ctl.step({ ...scenario.initialWorld, t: 31 }, 1 / 250);
+    // 20+10+1 s AND at plan-end altitude: burn clock done — hand off.
+    // (SLS-47: clock expiry alone no longer exhausts a plan; the vehicle
+    // must also be down at the plan's end altitude.)
+    const w0 = scenario.initialWorld;
+    ctl.step(
+      {
+        ...w0,
+        t: 31,
+        rigidBody: {
+          ...w0.rigidBody,
+          position: Vec3.of(0, 64_050, 12_260),
+        },
+      },
+      1 / 250,
+    );
     expect(ctl.isUsingFallback()).toBe(true);
   });
 
@@ -403,5 +444,64 @@ describe("MPCController — plan interpolation", () => {
     // throttle ladder puts that all on the centre group.
     expect(input.engineGroups.centre).toBeGreaterThan(0.3);
     expect(input.engineGroups.outer).toBe(0);
+  });
+});
+
+describe("SLS-47 terminal robustness laws", () => {
+  describe("dockVerticalTarget", () => {
+    it("holds height while uncentred near the slot (hoverable)", () => {
+      // 30 m up, 40 m lateral error: sinking through would be a strike.
+      expect(dockVerticalTarget(30, 40, 0.5, true)).toBe(0);
+    });
+
+    it("treats excess lateral SPEED as uncentred too", () => {
+      // Position fine (3 m) but 4 m/s sideways — envelope is 2 m/s.
+      expect(dockVerticalTarget(30, 3, 4, true)).toBe(0);
+    });
+
+    it("creeps down slowly while uncentred but high above the slot", () => {
+      const vy = dockVerticalTarget(300, 40, 0.5, true);
+      expect(vy).toBeLessThan(0);
+      expect(vy).toBeGreaterThanOrEqual(-2); // uncentred cap
+    });
+
+    it("descends committedly once centred", () => {
+      const vy = dockVerticalTarget(30, 3, 0.5, true);
+      expect(vy).toBeLessThanOrEqual(-0.5);
+    });
+
+    it("keeps descending when hovering is impossible (floor > weight)", () => {
+      // Uncentred but not hoverable: holding is not physically on offer.
+      const vy = dockVerticalTarget(30, 40, 0.5, false);
+      expect(vy).toBeLessThanOrEqual(-0.5);
+    });
+
+    it("climbs back after sinking below the slot (hoverable)", () => {
+      expect(dockVerticalTarget(-20, 15, 0.5, true)).toBeGreaterThan(0);
+      expect(dockVerticalTarget(-20, 15, 0.5, false)).toBe(0);
+    });
+  });
+
+  describe("shouldFloat", () => {
+    const FLOOR = 2.76e6;
+
+    it("enters when demand is floored and the fall is nearly arrested", () => {
+      expect(shouldFloat(1.5e6, FLOOR, -3, 800, false)).toBe(true);
+    });
+
+    it("stays latched until the vehicle falls fast again (hysteresis)", () => {
+      expect(shouldFloat(1.5e6, FLOOR, -10, 800, true)).toBe(true); // between bands
+      expect(shouldFloat(1.5e6, FLOOR, -10, 800, false)).toBe(false); // no fresh entry
+      expect(shouldFloat(1.5e6, FLOOR, -20, 800, true)).toBe(false); // exit
+    });
+
+    it("never floats when the engines can deliver the demand", () => {
+      expect(shouldFloat(5e6, FLOOR, -3, 800, false)).toBe(false);
+    });
+
+    it("never floats inside the dock band", () => {
+      expect(shouldFloat(1.5e6, FLOOR, -3, 400, false)).toBe(false);
+      expect(shouldFloat(1.5e6, FLOOR, -3, 400, true)).toBe(false);
+    });
   });
 });
