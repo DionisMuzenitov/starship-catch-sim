@@ -11,13 +11,22 @@ import type { MPCPlan } from "@starship-catch-sim/controllers";
 export type MPCState = {
   plan: MPCPlan | null;
   usingFallback: boolean;
+  /**
+   * True when MPC is selected but the guidance service is declared absent
+   * (static-host build, `VITE_MPC_URL=""`). Drives the degradation banner;
+   * the controller flies PID with no network calls (SLS-49).
+   */
+  serviceDisabled: boolean;
   setPlan: (plan: MPCPlan | null) => void;
   setUsingFallback: (usingFallback: boolean) => void;
+  setServiceDisabled: (serviceDisabled: boolean) => void;
 };
 
 export const useMpcStore = create<MPCState>((set) => ({
   plan: null,
   usingFallback: true,
+  serviceDisabled: false,
   setPlan: (plan) => set({ plan }),
   setUsingFallback: (usingFallback) => set({ usingFallback }),
+  setServiceDisabled: (serviceDisabled) => set({ serviceDisabled }),
 }));

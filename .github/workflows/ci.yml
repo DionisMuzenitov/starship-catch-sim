@@ -120,6 +120,10 @@ jobs:
         run: pnpm playwright:install
 
       - name: Build web app
+        # Match the public deploy config (no guidance service) so the e2e
+        # suite validates the MPC graceful-degradation path — SLS-49.
+        env:
+          VITE_MPC_URL: ""
         run: pnpm --filter @starship-catch-sim/web build
 
       - name: Run Playwright smoke tests
