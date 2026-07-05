@@ -14,6 +14,8 @@ export default tseslint.config(
       "**/out/**",
       "**/.vite/**",
       "**/coverage/**",
+      // Static public assets, incl. the vendored (minified) Draco decoder.
+      "apps/web/public/**",
     ],
   },
   js.configs.recommended,
