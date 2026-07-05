@@ -51,9 +51,12 @@ pnpm dev:full             # vite dev server + uvicorn on :8100 (needs uv)
 | M2        | 3-D visualisation: tower, HUD, cameras, replays                | Done    |
 | M3        | Sim runner, catch detection, manual flight                      | Done    |
 | M4        | Cascaded-PID baseline + tuning panel + Monte-Carlo evaluator    | Done    |
-| M5        | Convex MPC guidance (SOCP/SCvx service + client + benchmarks)   | Done    |
+| M5        | Convex MPC guidance (SOCP/SCvx service + client + benchmarks)   | Done¹   |
 | M6        | RL: gym env, numpy physics port, PPO training, browser inference| Planned |
 | M7        | Hosted demo, leaderboard, docs site, write-up                   | Planned |
+
+¹ MPC infrastructure is shipped and verified; the catch-capability exit
+gate (coast-phase ignition planning) is tracked in SLS-47.
 
 <!-- TODO: add demo gif once assets (SLS-44) land -->
 
