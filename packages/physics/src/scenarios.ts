@@ -212,16 +212,23 @@ export type Scenario = {
   readonly successCriteria: (world: World) => SuccessVerdict;
 };
 
-const INITIAL_POSITION = Vec3.of(0, 65_000, 50_000);
 /**
- * Velocity reinterpreted from SLS-20's literal `(-300, -200, 0)`. The
- * original moves the booster *west* (-X), away from the +Z=50 km start;
- * it never returns to the pad at the origin. Reinterpreted as
- * `(0, -200, -300)` — 200 m/s descent + 300 m/s south toward the
- * tower — so the trajectory actually leads home. Magnitude (≈ 360 m/s)
- * unchanged.
+ * Post-boostback initial state (SLS-49 realism pass). Real Super Heavy's
+ * boostback burn leaves the BALLISTIC impact point aimed almost at the
+ * catch site — grid fins only trim the fall (≈ km-scale authority), and
+ * the landing burn is a short terminal act. The previous IC
+ * ((0, 65 km, 50 km) at (0, −200, −300)) had its ballistic impact
+ * ~25 km short of the tower, forcing guidance into unrealistic
+ * multi-minute powered diverts (SLS-47 findings).
+ *
+ * These numbers were solved against the sim's own drag model: from
+ * 65 km at (0, −200, −120) and 12.26 km downrange, the engines-off
+ * impact lands ≈ 800 m past the tower in +z — a deliberate small
+ * offset (real flights also aim slightly off for safety) inside the
+ * measured fin-steering authority (~1–2 km over the fall).
  */
-const INITIAL_VELOCITY = Vec3.of(0, -200, -300);
+const INITIAL_POSITION = Vec3.of(0, 65_000, 12_260);
+const INITIAL_VELOCITY = Vec3.of(0, -200, -120);
 
 /** Attitude pointing retrograde: body +Y aligns with the anti-velocity
  * unit vector. */

@@ -32,7 +32,7 @@ function cannedResponse(): MPCSolveResponse {
   const positions = Array.from({ length: n + 1 }, (_, k) => ({
     x: 0,
     y: 65_000 - (1000 * k) / n,
-    z: 50_000,
+    z: 12_260,
   }));
   const velocities = Array.from({ length: n + 1 }, () => ({
     x: 0,
@@ -227,8 +227,9 @@ describe("MPCController — coast+burn tracking (SLS-47)", () => {
       ship: false,
     });
     expect(input.engineGroups.centre).toBe(0);
-    // Fins deployed for aero damping; gimbal commands finite.
-    expect(input.fins.every((f) => f === 0.25)).toBe(true);
+    // Differential fins live for attitude control (SLS-49); all finite.
+    expect(input.fins).toHaveLength(4);
+    expect(input.fins.every((f) => Number.isFinite(f))).toBe(true);
     expect(Number.isFinite(input.gimbalPitch)).toBe(true);
   });
 
@@ -277,7 +278,7 @@ describe("MPCController — coast+burn tracking (SLS-47)", () => {
         t: 21,
         rigidBody: {
           ...w.rigidBody,
-          position: Vec3.of(0, 64_900, 50_000),
+          position: Vec3.of(0, 64_900, 12_260),
         },
       },
       1 / 250,
@@ -290,7 +291,7 @@ describe("MPCController — coast+burn tracking (SLS-47)", () => {
         t: 22,
         rigidBody: {
           ...w.rigidBody,
-          position: Vec3.of(0, 60_000, 50_000),
+          position: Vec3.of(0, 60_000, 12_260),
         },
       },
       1 / 250,
@@ -392,7 +393,7 @@ describe("MPCController — plan interpolation", () => {
       t: 5,
       rigidBody: {
         ...w0.rigidBody,
-        position: Vec3.of(0, 64_500, 50_000),
+        position: Vec3.of(0, 64_500, 12_260),
         velocity: Vec3.of(0, -100, 0),
       },
     };
