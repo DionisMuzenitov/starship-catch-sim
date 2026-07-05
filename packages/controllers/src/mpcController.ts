@@ -48,12 +48,16 @@ export type MPCSolveRequest = {
     ispS: number;
   };
   tFHintS?: number;
+  /** Remaining committed coast (s) — coast+burn re-plans refine the
+   *  ignition epoch inside a narrow window instead of re-opening it. */
+  coastHintS?: number;
   /**
-   * "scvx" makes the service iterate drag relinearization (SLS-27) —
-   * zero-drag "linear" plans through the transonic regime are unflyable
-   * (the SLS-27 bench measured 55 km terminal error tracking them).
+   * "scvx" iterates drag relinearization (SLS-27); "coast+burn" adds the
+   * ballistic-coast ignition search (SLS-47) — the default, since
+   * burn-only plans are infeasible from high altitude (thrust floor) and
+   * zero-drag "linear" plans are unflyable through the transonic regime.
    */
-  mode?: "linear" | "scvx";
+  mode?: "linear" | "scvx" | "coast+burn";
 };
 
 export type MPCSolveResponse = {
@@ -66,6 +70,11 @@ export type MPCSolveResponse = {
   predictedVelocities: { x: number; y: number; z: number }[];
   thrustAccel: { x: number; y: number; z: number }[];
   throttle: number[];
+  /** coast+burn only (SLS-47): seconds from the request state to planned
+   *  ignition; the coast arrays end at the ignition state (= burn node 0). */
+  ignitionTimeS?: number | null;
+  coastPositions?: { x: number; y: number; z: number }[] | null;
+  coastVelocities?: { x: number; y: number; z: number }[] | null;
 };
 
 export type MPCTransport = (req: MPCSolveRequest) => Promise<MPCSolveResponse>;
@@ -74,8 +83,14 @@ export type MPCTransport = (req: MPCSolveRequest) => Promise<MPCSolveResponse>;
 export type MPCPlan = {
   /** World sim time when the plan's node 0 applies. */
   t0: number;
+  /** BURN duration (s). The full plan spans ignitionTimeS + tF. */
   tF: number;
   dtNode: number;
+  /** Coast duration before the burn (0 for burn-only plans). */
+  ignitionTimeS: number;
+  /** Ballistic coast samples, ending at the ignition state (overlay). */
+  coastPositions: Vec3[];
+  /** Burn trajectory from the ignition state. */
   positions: Vec3[];
   velocities: Vec3[];
   thrustAccel: Vec3[];
@@ -91,8 +106,10 @@ export type MPCControllerOpts = {
   /** Injectable transport; default POSTs to `serviceUrl`. */
   transport?: MPCTransport;
   serviceUrl?: string;
-  /** Re-plan cadence in sim seconds (ADR-007 baseline: 1 Hz). */
+  /** Re-plan cadence in sim seconds during the BURN (ADR-007: 1 Hz). */
   replanIntervalS?: number;
+  /** Solver mode; default "coast+burn" (SLS-47). */
+  mode?: "linear" | "scvx" | "coast+burn";
   /** Gains for the PID fallback + shared attitude inner loop. */
   gainsRef?: () => PIDControllerGains;
 };
@@ -110,13 +127,40 @@ const DEFAULT_SERVICE_URL = "http://localhost:8100";
  */
 const MAX_USABLE_TERMINAL_SLACK = 5;
 
+/** Re-plan cadence while coasting (SLS-47) — the trajectory is passive,
+ *  so 1 Hz would waste solver time; the coast+burn search costs ~1 s. */
+const COAST_REPLAN_INTERVAL_S = 3;
+
+/** Freeze re-planning this close to ignition so the ignition time can't
+ *  churn right at the coast→burn mode switch. */
+const COAST_FREEZE_BEFORE_IGNITION_S = 1;
+
 /**
- * Drop a plan that hasn't been superseded within this many seconds. A
- * stale plan means every re-plan since has failed or been rejected — the
- * world has drifted from what the plan assumed, and the PID fallback is
- * safer than tracking a fiction.
+ * Abort a COMMITTED burn only when reality has drifted this far from the
+ * plan — the feedforward is then fiction and the PID fallback is safer.
+ * Healthy tracked burns stay within tens of metres; time-based staleness
+ * (the old rule) dropped healthy burns to PID whenever re-plans failed,
+ * wasting the committed trajectory at T-minus-seconds.
  */
-const STALE_PLAN_MAX_S = 10;
+const BURN_ABORT_DIVERGENCE_M = 4_000;
+
+/**
+ * Alignment window (s) before ignition: the centre engines run at their
+ * floor purely for GIMBAL AUTHORITY — with engines off a coasting booster
+ * cannot reorient (gimbal torque needs thrust; grid fins are negligible
+ * above ~30 km), so it would reach ignition still retrograde and dump
+ * 80 %+ of the ignition impulse sideways (measured: vz −300 → −40 while
+ * the plan wanted −367). ~3 t of propellant, inside the plan's 2 %
+ * reserve.
+ */
+const IGNITION_ALIGN_S = 5;
+
+/**
+ * Event-triggered burn re-planning: request a fresh plan only when
+ * tracking drift exceeds this. Time-based 1 Hz re-plans kept re-anchoring
+ * the plan clock to node 0, replaying the ignition impulse indefinitely.
+ */
+const BURN_REPLAN_DRIFT_M = 600;
 
 /** Tracking-correction gains (on top of plan feedforward). */
 const TRACK_KP = 0.05;
@@ -151,6 +195,7 @@ export class MPCController implements Controller {
   private readonly flapCount: number;
   private readonly transport: MPCTransport;
   private readonly replanIntervalS: number;
+  private readonly mode: "linear" | "scvx" | "coast+burn";
   private readonly gainsRef: () => PIDControllerGains;
   private readonly fallback: PIDController;
   private readonly attPidPitch: PID;
@@ -169,6 +214,9 @@ export class MPCController implements Controller {
   }[];
 
   private plan: MPCPlan | null = null;
+  /** Latest sim time seen by step() — the acceptance-time clock for
+   *  in-flight responses (their closures hold the REQUEST-time world). */
+  private lastWorldT = 0;
   private lastRequestT = -Infinity;
   private inFlight = false;
   private observer: MPCPlanObserver | null = null;
@@ -185,6 +233,7 @@ export class MPCController implements Controller {
     this.transport =
       opts.transport ?? fetchTransport(opts.serviceUrl ?? DEFAULT_SERVICE_URL);
     this.replanIntervalS = opts.replanIntervalS ?? 1.0;
+    this.mode = opts.mode ?? "coast+burn";
     this.gainsRef = opts.gainsRef ?? (() => DEFAULT_PID_GAINS);
     this.fallback = new PIDController(
       opts.vehicle,
@@ -255,6 +304,7 @@ export class MPCController implements Controller {
 
   reset(): void {
     this.plan = null;
+    this.lastWorldT = 0;
     this.lastRequestT = -Infinity;
     this.usingFallback = true;
     this.fallback.reset();
@@ -264,23 +314,91 @@ export class MPCController implements Controller {
   }
 
   step(world: World, dt: number): ControlInput {
+    this.lastWorldT = world.t;
     this.maybeRequestPlan(world);
 
     const plan = this.plan;
     const tInPlan = plan === null ? Infinity : world.t - plan.t0;
-    if (
-      plan === null ||
-      tInPlan < 0 ||
-      tInPlan >= plan.tF ||
-      tInPlan > STALE_PLAN_MAX_S
-    ) {
+    // Burn-relative clock: negative during the coast (which is passive
+    // and stays valid for its whole duration).
+    const tBurn = plan === null ? Infinity : tInPlan - plan.ignitionTimeS;
+    if (plan === null || tInPlan < 0 || tBurn >= plan.tF) {
       this.usingFallback = true;
       return this.fallback.step(world, dt);
     }
+    // Once burning, COMMIT to the plan even if re-plans fail — a landing
+    // burn tracked to touchdown beats a mid-burn PID handoff. The safety
+    // net is divergence, not time: abort only if reality has drifted so
+    // far from the plan that the feedforward is fiction (the SLS-48
+    // failure mode this replaces was time-based staleness, which
+    // dropped healthy committed burns to PID at T-minus-seconds).
+    if (tBurn >= 0) {
+      const kAbort = Math.min(
+        Math.floor(tBurn / plan.dtNode),
+        plan.positions.length - 1,
+      );
+      const drift = Vec3.length(
+        Vec3.sub(plan.positions[kAbort]!, world.rigidBody.position),
+      );
+      if (drift > BURN_ABORT_DIVERGENCE_M) {
+        this.usingFallback = true;
+        return this.fallback.step(world, dt);
+      }
+    }
     this.usingFallback = false;
 
-    // --- Plan lookup (zero-order hold on controls, lerp on states). ---
-    const kf = tInPlan / plan.dtNode;
+    if (tBurn < 0) {
+      // --- Coast phase. The ballistic plan needs no positional tracking
+      // (nothing to actuate with, engines off) — but attitude matters:
+      // the burn's initial thrust direction must be waiting at ignition.
+      // Tilt setpoints target the plan's first burn node; in the final
+      // IGNITION_ALIGN_S the centre engines run at their floor so the
+      // gimbal actually has authority to perform that swing. ---
+      const g = this.gainsRef();
+      this.attPidPitch.gains = g.attitudePitch;
+      this.attPidYaw.gains = g.attitudeYaw;
+      const u0 = plan.thrustAccel[0]!;
+      const u0Mag = Vec3.length(u0);
+      const burnDir = u0Mag > 1e-6 ? Vec3.scale(u0, 1 / u0Mag) : Vec3.of(0, 1, 0);
+      const tiltX = clamp(burnDir.x, -g.maxTiltRad, g.maxTiltRad);
+      const tiltZ = clamp(burnDir.z, -g.maxTiltRad, g.maxTiltRad);
+      const bodyUpWorld = Quat.rotateVec3(
+        world.rigidBody.attitude,
+        Vec3.of(0, 1, 0),
+      );
+      const gimbalPitch = clamp(
+        this.attPidPitch.update(tiltZ, bodyUpWorld.z, dt),
+        -this.maxGimbalRad,
+        this.maxGimbalRad,
+      );
+      const gimbalYaw = clamp(
+        this.attPidYaw.update(tiltX, bodyUpWorld.x, dt),
+        -this.maxGimbalRad,
+        this.maxGimbalRad,
+      );
+      const aligning = -tBurn <= IGNITION_ALIGN_S;
+      const centre = aligning
+        ? this.allocateForThrust(this.minThrustN).centre
+        : 0;
+      const base = neutralControl(this.finCount, this.flapCount);
+      return {
+        ...base,
+        engineGroups: { centre, inner: 0, outer: 0, ship: 0 },
+        enginesOn: {
+          centre: aligning && centre > 0,
+          inner: false,
+          outer: false,
+          ship: false,
+        },
+        gimbalPitch,
+        gimbalYaw,
+        fins: new Array(this.finCount).fill(0.25) as number[],
+        flaps: new Array(this.flapCount).fill(0) as number[],
+      };
+    }
+
+    // --- Burn phase: plan lookup (ZOH on controls, lerp on states). ---
+    const kf = tBurn / plan.dtNode;
     const k = Math.min(Math.floor(kf), plan.thrustAccel.length - 1);
     const frac = clamp(kf - k, 0, 1);
     const rStar = Vec3.lerp(
@@ -370,7 +488,39 @@ export class MPCController implements Controller {
 
   private maybeRequestPlan(world: World): void {
     if (this.inFlight) return;
-    if (world.t - this.lastRequestT < this.replanIntervalS) return;
+    // During a planned coast, re-plan lazily (the trajectory is passive)
+    // and freeze entirely in the final second before ignition so the
+    // ignition time can't churn right at the mode switch. Once BURNING,
+    // commit: re-plans are burn-only (mode "scvx") from the current
+    // state — a landing burn is never shut down to go back to coasting.
+    let interval = this.replanIntervalS;
+    let requestMode = this.mode;
+    let coastHintS: number | undefined;
+    const plan = this.plan;
+    if (plan !== null) {
+      const ignitionIn = plan.ignitionTimeS - (world.t - plan.t0);
+      if (ignitionIn > 0) {
+        if (ignitionIn < COAST_FREEZE_BEFORE_IGNITION_S) return;
+        interval = COAST_REPLAN_INTERVAL_S;
+        coastHintS = ignitionIn;
+      } else {
+        // Burning: event-triggered re-planning only. A fresh plan means a
+        // fresh ignition impulse at node 0 — re-anchoring every second
+        // replayed that impulse indefinitely. Re-plan only when tracking
+        // drift says the current feedforward is no longer credible.
+        const tBurn = -ignitionIn;
+        const k = Math.min(
+          Math.floor(tBurn / plan.dtNode),
+          plan.positions.length - 1,
+        );
+        const drift = Vec3.length(
+          Vec3.sub(plan.positions[k]!, world.rigidBody.position),
+        );
+        if (drift < BURN_REPLAN_DRIFT_M) return;
+        if (this.mode === "coast+burn") requestMode = "scvx";
+      }
+    }
+    if (world.t - this.lastRequestT < interval) return;
     this.lastRequestT = world.t;
     this.inFlight = true;
 
@@ -384,11 +534,14 @@ export class MPCController implements Controller {
         minThrustN: this.minThrustN,
         ispS: this.ispS,
       },
-      mode: "scvx",
+      mode: requestMode,
     };
-    const plan = this.plan;
-    if (plan !== null) {
-      const remaining = plan.tF - (world.t - plan.t0);
+    if (coastHintS !== undefined) req.coastHintS = coastHintS;
+    if (requestMode !== "coast+burn" && plan !== null) {
+      // Burn-only modes benefit from a t_f hint; the coast+burn search
+      // sweeps ignition time anyway and manages its own burn hints.
+      const remaining =
+        plan.ignitionTimeS + plan.tF - (world.t - plan.t0);
       if (remaining > 1) req.tFHintS = remaining;
     }
     const t0 = world.t;
@@ -403,12 +556,26 @@ export class MPCController implements Controller {
         ) {
           return; // keep the previous plan / fallback
         }
+        // In-flight race guard: a coast+burn answer requested during the
+        // coast can land after ignition has already happened — accepting
+        // its fresh coast would shut the burn down. Discard it. (Uses the
+        // acceptance-time clock; `world` here is the request-time state.)
+        const cur = this.plan;
+        if (
+          cur !== null &&
+          this.lastWorldT - cur.t0 >= cur.ignitionTimeS &&
+          (resp.ignitionTimeS ?? 0) > 0.5
+        ) {
+          return;
+        }
         const toVec3 = (p: { x: number; y: number; z: number }) =>
           Vec3.of(p.x, p.y, p.z);
         const next: MPCPlan = {
           t0,
           tF: resp.tFS,
           dtNode: resp.tFS / resp.thrustAccel.length,
+          ignitionTimeS: resp.ignitionTimeS ?? 0,
+          coastPositions: (resp.coastPositions ?? []).map(toVec3),
           positions: resp.predictedPositions.map(toVec3),
           velocities: resp.predictedVelocities.map(toVec3),
           thrustAccel: resp.thrustAccel.map(toVec3),
