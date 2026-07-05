@@ -55,9 +55,9 @@ describe("scenarios — exported set", () => {
     expect(boosters).toHaveLength(3);
     for (const s of boosters) {
       const r = s.initialWorld.rigidBody.position;
-      expect(r).toEqual(Vec3.of(0, 65_000, 50_000));
+      expect(r).toEqual(Vec3.of(0, 65_000, 12_260));
       const v = s.initialWorld.rigidBody.velocity;
-      expect(v).toEqual(Vec3.of(0, -200, -300));
+      expect(v).toEqual(Vec3.of(0, -200, -120));
       const propMass = s.initialWorld.mass.propellantMass;
       const cap = tankCapacity(s.initialWorld.mass);
       expect(propMass / cap).toBeGreaterThan(0.08);
@@ -122,8 +122,8 @@ describe("scenarios — exported set", () => {
       z: 2 * (q.y * q.z + q.w * q.x),
     };
     expect(bodyUpWorld.x).toBeCloseTo(0, 3);
-    expect(bodyUpWorld.y).toBeCloseTo(0.5547, 3);
-    expect(bodyUpWorld.z).toBeCloseTo(0.8321, 3);
+    expect(bodyUpWorld.y).toBeCloseTo(0.8575, 3);
+    expect(bodyUpWorld.z).toBeCloseTo(0.5145, 3);
   });
 });
 

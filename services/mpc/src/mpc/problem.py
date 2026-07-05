@@ -39,7 +39,7 @@ N = 60
 
 G = 9.80665
 SLOT_CENTRE = np.array([8.5, 91.0, 0.0])
-GLIDE_HALF_ANGLE_RAD = np.deg2rad(15.0)
+GLIDE_HALF_ANGLE_RAD = np.deg2rad(8.0)
 POINTING_HALF_ANGLE_RAD = np.deg2rad(15.0)
 TERMINAL_POS_TOL_M = 10.0
 TERMINAL_VY_TOL_MPS = 5.0
@@ -50,7 +50,7 @@ TERMINAL_VH_TOL_MPS = 2.0
 # clears the 6 m face + 4.5 m booster radius.
 KEEPOUT_X0 = 8.0
 KEEPOUT_SLOPE = (11.0 - KEEPOUT_X0) / (146.0 - 91.0)
-KEEPOUT_FROM_NODE = 3 * N // 4
+KEEPOUT_FROM_NODE = N // 2
 
 # Terminal-slack penalty: an infeasible MPC step is worse than a slightly
 # violated terminal box (ticket note), so the box is soft with a steep cost.

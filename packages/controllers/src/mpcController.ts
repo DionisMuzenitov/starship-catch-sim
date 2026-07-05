@@ -18,9 +18,13 @@
 import {
   Quat,
   Vec3,
+  constantWind,
+  densityAt,
   neutralControl,
+  simStep,
   type ControlInput,
   type EngineGroupBag,
+  type SimEnv,
   type Vehicle,
   type World,
 } from "@starship-catch-sim/physics";
@@ -162,6 +166,166 @@ const IGNITION_ALIGN_S = 5;
  */
 const BURN_REPLAN_DRIFT_M = 600;
 
+// ---------------------------------------------------------------------------
+// Fin-steered descent (SLS-49): during the fall, the booster trims its
+// ballistic impact point with body tilt (angle of attack) — grid fins +
+// the tilted airflow produce ~0.3–0.5 m/s² of lateral authority in the
+// dense layers, worth ~1–2 km of impact correction over a full fall.
+// This mirrors the real vehicle: boostback aims the fall near the pad,
+// fins trim, engines only light for the short terminal burn.
+// ---------------------------------------------------------------------------
+
+/** Re-predict the ballistic impact point this often (sim s). */
+const IMPACT_PREDICT_INTERVAL_S = 2;
+
+/** Steering gain: tilt (rad) per metre of predicted impact error. */
+const STEER_GAIN_RAD_PER_M = 0.00022;
+
+/** Max steering tilt (~10°; fin stall margin is 25°). */
+const STEER_TILT_MAX_RAD = 0.175;
+
+/** Ignore impact errors below this — the terminal burn cleans up. */
+const STEER_DEADBAND_M = 25;
+
+/**
+ * Attitude control is gated on dynamic pressure during the coast: with
+ * engines off, fins are the only actuator and above ~30 km they have no
+ * authority — running the PIDs there just winds up integrators that
+ * slam the vehicle when the fins finally bite (the fin-geometry fix
+ * removed the old model's accidental passive weathervane stability).
+ */
+const COAST_MIN_Q_PA = 2_000;
+
+/**
+ * Steering tilt setpoints from a predicted impact error. MEASURED sim
+ * sign convention: leaning bodyUp toward +z accelerates the vehicle
+ * toward −z (the canted-drag/fin force opposes the lean), so to move
+ * the impact point −z (error e_z > 0) we lean +z: tilt = +k·e.
+ */
+export function impactSteeringTilt(
+  errorX: number,
+  errorZ: number,
+): { tiltX: number; tiltZ: number } {
+  const mag = Math.hypot(errorX, errorZ);
+  if (mag < STEER_DEADBAND_M) return { tiltX: 0, tiltZ: 0 };
+  return {
+    tiltX: clamp(STEER_GAIN_RAD_PER_M * errorX, -STEER_TILT_MAX_RAD, STEER_TILT_MAX_RAD),
+    tiltZ: clamp(STEER_GAIN_RAD_PER_M * errorZ, -STEER_TILT_MAX_RAD, STEER_TILT_MAX_RAD),
+  };
+}
+
+/**
+ * Differential grid-fin mixer (SLS-49). Measured single-fin torque signs
+ * in axial flow (fins order [+x, +z, −x, −z], positive deflection):
+ * fin0 → −ωx, fin2 → +ωx, fin1 → −ωz, fin3 → +ωz (collective → roll).
+ * MEASURED gimbal convention: pitchCmd > 0 → −ωx, yawCmd > 0 → −ωz
+ * (both axes). Fins must produce the SAME torque direction as the
+ * gimbal for the same command (an earlier assumed-sign mixer had them
+ * fighting — attitude followed the fins at high q and the gimbal at
+ * low q, limit-cycling between them):
+ *   pitchCmd > 0 → fin0 +δ, fin2 −δ;  yawCmd > 0 → fin1 +δ, fin3 −δ.
+ * Commands are gimbal-scaled radians; fins get a 1.33× range scale-up
+ * (fin max 0.349 rad vs gimbal 0.262).
+ */
+const FIN_PER_GIMBAL = 1.33;
+
+/**
+ * Explicit angular-rate damping (rad of command per rad/s of body rate),
+ * applied to gimbal + fins alike. The attitude PIDs' filtered
+ * derivative-on-measurement is tuned for small errors; in the terminal
+ * flare (low q, varying thrust) the loop limit-cycled rail-to-rail
+ * (measured upZ swinging ±1 with ±lateral thrust pulses). Rate feedback
+ * kills the cycle. Signs follow the measured actuator convention
+ * (cmd+ → ω− on both axes): damping term = +K·ω per axis.
+ */
+const RATE_DAMP = 1.2;
+
+/**
+ * Large-angle geometric righting (SLS-49). The component PIDs control
+ * bodyUp.x/z toward small setpoints — a formulation that is BLIND to
+ * inversion: a nose-down vehicle has upX = upZ ≈ 0 and reads as
+ * "on target". With the real fin model the coast is neutrally stable,
+ * so slow flips happen — and thrust then fires DOWNWARD (measured:
+ * vy −148 → −257 under full 13-engine thrust). Below UPY_PID_THRESHOLD
+ * the controller switches to the geometric law: desired rotation axis
+ * = bodyUp × targetDir; command = −K·axis (actuator cmd+ → ω−) plus
+ * rate damping.
+ */
+const UPY_PID_THRESHOLD = 0.7;
+
+/**
+ * Terminal DOCK phase (SLS-49): when the burn plan's clock runs out with
+ * the vehicle slow and near the slot (the plan ends at the catch box,
+ * not inside the arms), a gravity-compensated hover-descent flies the
+ * final metres — the real vehicle's "translate into the chopsticks"
+ * act. Without it, plan expiry handed a perfect 80 m hover to the PID
+ * fallback, which flies a whole descent profile and destroys it.
+ */
+const DOCK_MAX_LATERAL_M = 300;
+const DOCK_MAX_ALT_M = 400;
+
+/** Engage the dock at this height above the slot during a burn — the
+ *  altitude-indexed tracker reaches the ground before the plan CLOCK
+ *  expires, so clock-based engagement never fires. */
+const DOCK_ENGAGE_ALT_M = 500;
+const DOCK_DESCENT_GAIN = 0.12;
+const DOCK_DESCENT_MAX_MPS = 8;
+const DOCK_LAT_KP = 0.08;
+const DOCK_LAT_KD = 0.55;
+const DOCK_LAT_ACC_MAX = 2.0;
+const G_MPS2 = 9.80665;
+const RIGHTING_GAIN = 2.5;
+
+function attitudeCommands(
+  bodyUp: Vec3,
+  tiltX: number,
+  tiltZ: number,
+  wBody: Vec3,
+  pidPitch: PID,
+  pidYaw: PID,
+  dt: number,
+  maxRad: number,
+): { pitch: number; yaw: number } {
+  if (bodyUp.y < UPY_PID_THRESHOLD) {
+    // Geometric righting toward the (near-vertical) target direction.
+    const ty = Math.sqrt(Math.max(0, 1 - tiltX * tiltX - tiltZ * tiltZ));
+    const target = Vec3.of(tiltX, ty, tiltZ);
+    const axis = Vec3.cross(bodyUp, target);
+    pidPitch.reset();
+    pidYaw.reset();
+    return {
+      pitch: clamp(-RIGHTING_GAIN * axis.x + RATE_DAMP * wBody.x, -maxRad, maxRad),
+      yaw: clamp(-RIGHTING_GAIN * axis.z + RATE_DAMP * wBody.z, -maxRad, maxRad),
+    };
+  }
+  // Axis-asymmetric polarity (derived + probe-verified): actuator cmd+
+  // gives ω− on both axes, but d(upZ)/dt = +ωx while d(upX)/dt = −ωz —
+  // so the pitch PID output must be negated and the yaw output must NOT.
+  return {
+    pitch: clamp(
+      -pidPitch.update(tiltZ, bodyUp.z, dt) + RATE_DAMP * wBody.x,
+      -maxRad,
+      maxRad,
+    ),
+    yaw: clamp(
+      pidYaw.update(tiltX, bodyUp.x, dt) + RATE_DAMP * wBody.z,
+      -maxRad,
+      maxRad,
+    ),
+  };
+}
+export function mixFins(pitchCmd: number, yawCmd: number): number[] {
+  const p = pitchCmd * FIN_PER_GIMBAL;
+  const y = yawCmd * FIN_PER_GIMBAL;
+  return [p, y, -p, -y];
+}
+
+/** Below this height above the target, cap the demanded tilt (rad) —
+ *  attitude authority (∝ dynamic pressure and throttle) collapses in the
+ *  terminal flare and large demands overshoot into a tip-over. */
+const TERMINAL_TILT_ALT_M = 600;
+const TERMINAL_TILT_MAX_RAD = 0.09;
+
 /** Tracking-correction gains (on top of plan feedforward). */
 const TRACK_KP = 0.05;
 const TRACK_KD = 0.3;
@@ -174,6 +338,13 @@ const TRACK_KD = 0.3;
  * (SLS-27 bench: tank drained in 18 s, 55 km terminal error).
  */
 const TRACK_CORRECTION_MAX = 3;
+
+/**
+ * Vertical correction clamp (m/s²) — separate from the lateral clamp:
+ * vertical thrust corrections don't fight the attitude loop, and they
+ * are what closes deceleration shortfalls before the ground arrives.
+ */
+const TRACK_CORRECTION_VERT_MAX = 15;
 
 const clamp = (v: number, lo: number, hi: number) =>
   v < lo ? lo : v > hi ? hi : v;
@@ -218,12 +389,25 @@ export class MPCController implements Controller {
    *  in-flight responses (their closures hold the REQUEST-time world). */
   private lastWorldT = 0;
   private lastRequestT = -Infinity;
+  /** Fin-steering state: cached impact prediction (SLS-49). */
+  private lastImpactPredictT = -Infinity;
+  private impactError: { x: number; z: number } = { x: 0, z: 0 };
+  private readonly rolloutEnv: SimEnv = {
+    wind: constantWind(Vec3.ZERO),
+    gravity: 9.80665,
+  };
+  private readonly vehicle: Vehicle;
+  private readonly targetPosition: Vec3;
   private inFlight = false;
   private observer: MPCPlanObserver | null = null;
   /** Exposed for the HUD: true while the PID fallback is steering. */
   private usingFallback = true;
+  /** Terminal dock phase latch (SLS-49). */
+  private dockMode = false;
 
   constructor(opts: MPCControllerOpts) {
+    this.vehicle = opts.vehicle;
+    this.targetPosition = opts.targetPosition;
     this.finCount = opts.vehicle.surfaces.filter(
       (s) => s.kind === "grid_fin",
     ).length;
@@ -304,6 +488,7 @@ export class MPCController implements Controller {
 
   reset(): void {
     this.plan = null;
+    this.dockMode = false;
     this.lastWorldT = 0;
     this.lastRequestT = -Infinity;
     this.usingFallback = true;
@@ -322,7 +507,26 @@ export class MPCController implements Controller {
     // Burn-relative clock: negative during the coast (which is passive
     // and stays valid for its whole duration).
     const tBurn = plan === null ? Infinity : tInPlan - plan.ignitionTimeS;
-    if (plan === null || tInPlan < 0 || tBurn >= plan.tF) {
+    if (this.dockMode || (plan !== null && tInPlan >= 0 && tBurn >= plan.tF)) {
+      // Plan clock exhausted — dock if we are close and slow, else PID.
+      const pos = world.rigidBody.position;
+      const dx = this.targetPosition.x - pos.x;
+      const dz = this.targetPosition.z - pos.z;
+      const dy = pos.y - this.targetPosition.y;
+      if (
+        this.dockMode ||
+        (Math.hypot(dx, dz) < DOCK_MAX_LATERAL_M &&
+          dy > -5 &&
+          dy < DOCK_MAX_ALT_M)
+      ) {
+        this.dockMode = true;
+        this.usingFallback = false;
+        return this.dockStep(world, dt);
+      }
+      this.usingFallback = true;
+      return this.fallback.step(world, dt);
+    }
+    if (plan === null || tInPlan < 0) {
       this.usingFallback = true;
       return this.fallback.step(world, dt);
     }
@@ -348,34 +552,63 @@ export class MPCController implements Controller {
     this.usingFallback = false;
 
     if (tBurn < 0) {
-      // --- Coast phase. The ballistic plan needs no positional tracking
-      // (nothing to actuate with, engines off) — but attitude matters:
-      // the burn's initial thrust direction must be waiting at ignition.
-      // Tilt setpoints target the plan's first burn node; in the final
-      // IGNITION_ALIGN_S the centre engines run at their floor so the
-      // gimbal actually has authority to perform that swing. ---
+      // --- Coast phase (SLS-47/49). Engines off; the fall is steered by
+      // body tilt (fins + canted airflow) toward the ballistic aim point,
+      // like the real vehicle. In the final IGNITION_ALIGN_S the target
+      // switches to the burn's initial thrust direction and the centre
+      // engines run at their floor so the gimbal has swing authority. ---
       const g = this.gainsRef();
       this.attPidPitch.gains = g.attitudePitch;
       this.attPidYaw.gains = g.attitudeYaw;
-      const u0 = plan.thrustAccel[0]!;
-      const u0Mag = Vec3.length(u0);
-      const burnDir = u0Mag > 1e-6 ? Vec3.scale(u0, 1 / u0Mag) : Vec3.of(0, 1, 0);
-      const tiltX = clamp(burnDir.x, -g.maxTiltRad, g.maxTiltRad);
-      const tiltZ = clamp(burnDir.z, -g.maxTiltRad, g.maxTiltRad);
+      const aligningNow = -tBurn <= IGNITION_ALIGN_S;
+      let tiltX: number;
+      let tiltZ: number;
+      if (aligningNow) {
+        const u0 = plan.thrustAccel[0]!;
+        const u0Mag = Vec3.length(u0);
+        const burnDir =
+          u0Mag > 1e-6 ? Vec3.scale(u0, 1 / u0Mag) : Vec3.of(0, 1, 0);
+        tiltX = clamp(burnDir.x, -g.maxTiltRad, g.maxTiltRad);
+        tiltZ = clamp(burnDir.z, -g.maxTiltRad, g.maxTiltRad);
+      } else {
+        // Impact-point trim: forward-roll the fall (engines off, no wind
+        // assumption) every couple of seconds and lean into the error.
+        if (world.t - this.lastImpactPredictT >= IMPACT_PREDICT_INTERVAL_S) {
+          this.lastImpactPredictT = world.t;
+          this.impactError = this.predictImpactError(world);
+        }
+        const steer = impactSteeringTilt(this.impactError.x, this.impactError.z);
+        tiltX = steer.tiltX;
+        tiltZ = steer.tiltZ;
+      }
       const bodyUpWorld = Quat.rotateVec3(
         world.rigidBody.attitude,
         Vec3.of(0, 1, 0),
       );
-      const gimbalPitch = clamp(
-        this.attPidPitch.update(tiltZ, bodyUpWorld.z, dt),
-        -this.maxGimbalRad,
-        this.maxGimbalRad,
-      );
-      const gimbalYaw = clamp(
-        this.attPidYaw.update(tiltX, bodyUpWorld.x, dt),
-        -this.maxGimbalRad,
-        this.maxGimbalRad,
-      );
+      const speed = Vec3.length(world.rigidBody.velocity);
+      const qPa =
+        0.5 * densityAt(world.rigidBody.position.y) * speed * speed;
+      let gimbalPitch = 0;
+      let gimbalYaw = 0;
+      if (qPa >= COAST_MIN_Q_PA || aligningNow) {
+        const wB = world.rigidBody.angularVelocity;
+        const cmds = attitudeCommands(
+          bodyUpWorld,
+          tiltX,
+          tiltZ,
+          wB,
+          this.attPidPitch,
+          this.attPidYaw,
+          dt,
+          this.maxGimbalRad,
+        );
+        gimbalPitch = cmds.pitch;
+        gimbalYaw = cmds.yaw;
+      } else {
+        // No authority up here — keep the PIDs quiescent (no windup).
+        this.attPidPitch.reset();
+        this.attPidYaw.reset();
+      }
       const aligning = -tBurn <= IGNITION_ALIGN_S;
       const centre = aligning
         ? this.allocateForThrust(this.minThrustN).centre
@@ -392,15 +625,46 @@ export class MPCController implements Controller {
         },
         gimbalPitch,
         gimbalYaw,
-        fins: new Array(this.finCount).fill(0.25) as number[],
+        fins: mixFins(gimbalPitch, gimbalYaw).slice(0, this.finCount),
         flaps: new Array(this.flapCount).fill(0) as number[],
       };
     }
 
-    // --- Burn phase: plan lookup (ZOH on controls, lerp on states). ---
-    const kf = tBurn / plan.dtNode;
-    const k = Math.min(Math.floor(kf), plan.thrustAccel.length - 1);
-    const frac = clamp(kf - k, 0, 1);
+    // Dock engagement by ALTITUDE (see DOCK_ENGAGE_ALT_M).
+    {
+      const dxE = this.targetPosition.x - world.rigidBody.position.x;
+      const dzE = this.targetPosition.z - world.rigidBody.position.z;
+      const dyE = world.rigidBody.position.y - this.targetPosition.y;
+      if (dyE < DOCK_ENGAGE_ALT_M && Math.hypot(dxE, dzE) < DOCK_MAX_LATERAL_M) {
+        this.dockMode = true;
+        this.usingFallback = false;
+        return this.dockStep(world, dt);
+      }
+    }
+
+    // --- Burn phase: ALTITUDE-indexed plan lookup (SLS-49). Time-indexed
+    // tracking under-braked whenever the vehicle fell ahead of the plan
+    // clock (the feedforward stayed on an earlier, gentler node while the
+    // ground approached) — indexing by current altitude keeps the
+    // deceleration profile phased to reality. Falls back to the time
+    // index if the plan's altitude profile is locally non-monotone. ---
+    const pos = world.rigidBody.position;
+    const vel = world.rigidBody.velocity;
+    let k = Math.min(Math.floor(tBurn / plan.dtNode), plan.thrustAccel.length - 1);
+    let frac = clamp(tBurn / plan.dtNode - k, 0, 1);
+    if (plan.positions[0]!.y > plan.positions[plan.positions.length - 1]!.y) {
+      let ka = 0;
+      while (
+        ka < plan.positions.length - 2 &&
+        plan.positions[ka + 1]!.y > pos.y
+      ) {
+        ka++;
+      }
+      const yHi = plan.positions[ka]!.y;
+      const yLo = plan.positions[Math.min(ka + 1, plan.positions.length - 1)]!.y;
+      k = Math.min(ka, plan.thrustAccel.length - 1);
+      frac = yHi > yLo ? clamp((yHi - pos.y) / (yHi - yLo), 0, 1) : 0;
+    }
     const rStar = Vec3.lerp(
       plan.positions[k]!,
       plan.positions[Math.min(k + 1, plan.positions.length - 1)]!,
@@ -413,17 +677,22 @@ export class MPCController implements Controller {
     );
     const uStar = plan.thrustAccel[k]!;
 
-    // --- Feedforward + PD tracking correction → commanded thrust accel ---
-    const pos = world.rigidBody.position;
-    const vel = world.rigidBody.velocity;
-    let correction = Vec3.add(
+    // --- Feedforward + PD tracking correction → commanded thrust accel.
+    // Axis-split clamp: vertical correction doesn't fight the attitude
+    // loop (thrust is near-vertical), so it may be strong — it is what
+    // closes deceleration shortfalls. Lateral stays soft (attitude lag). ---
+    const rawCorr = Vec3.add(
       Vec3.scale(Vec3.sub(rStar, pos), TRACK_KP),
       Vec3.scale(Vec3.sub(vStar, vel), TRACK_KD),
     );
-    const corrMag = Vec3.length(correction);
-    if (corrMag > TRACK_CORRECTION_MAX) {
-      correction = Vec3.scale(correction, TRACK_CORRECTION_MAX / corrMag);
-    }
+    const latMag = Math.hypot(rawCorr.x, rawCorr.z);
+    const latScale =
+      latMag > TRACK_CORRECTION_MAX ? TRACK_CORRECTION_MAX / latMag : 1;
+    const correction = Vec3.of(
+      rawCorr.x * latScale,
+      clamp(rawCorr.y, -TRACK_CORRECTION_VERT_MAX, TRACK_CORRECTION_VERT_MAX),
+      rawCorr.z * latScale,
+    );
     const aCmd = Vec3.add(uStar, correction);
 
     // --- Convert to throttle + attitude setpoints ---
@@ -439,7 +708,16 @@ export class MPCController implements Controller {
     // planned thrust at small commands — the tank drained in 18 s and
     // MPC flew worse than PID (SLS-48 finding). Choose the smallest
     // engine set whose floor-aware band brackets the demand.
-    const throttle = this.allocateForThrust(aMag * m);
+    // A landing burn never shuts down (real profile: 13 → 3 engines,
+    // never 0): floor the demand at the centre engines' minimum. When
+    // the vehicle runs slightly slow vs plan the surplus lift simply
+    // slows the descent further, and the ALTITUDE-indexed tracker waits
+    // — self-correcting. (Without this, negative vertical corrections
+    // cut the engines mid-burn; the vehicle free-fell 1 km and the
+    // terminal flare could not recover — SLS-49 probe.)
+    const throttle = this.allocateForThrust(
+      Math.max(aMag * m, this.minThrustN),
+    );
     const enginesOn: EngineGroupBag<boolean> = {
       centre: throttle.centre > 0,
       inner: throttle.inner > 0,
@@ -448,9 +726,17 @@ export class MPCController implements Controller {
     };
 
     // Tilt setpoints: desired thrust direction's horizontal components.
+    // Terminal demand cap (SLS-49): below TERMINAL_TILT_ALT_M the attitude
+    // authority collapses with dynamic pressure and throttle — capping the
+    // demanded tilt keeps the loop from overshooting into a tip-over; the
+    // tightened glide cone makes the plan finish its lateral work higher.
+    const tiltLimit =
+      pos.y - this.targetPosition.y < TERMINAL_TILT_ALT_M
+        ? TERMINAL_TILT_MAX_RAD
+        : g.maxTiltRad;
     const dir = aMag > 1e-6 ? Vec3.scale(aCmd, 1 / aMag) : Vec3.of(0, 1, 0);
-    const tiltSetpointX = clamp(dir.x, -g.maxTiltRad, g.maxTiltRad);
-    const tiltSetpointZ = clamp(dir.z, -g.maxTiltRad, g.maxTiltRad);
+    const tiltSetpointX = clamp(dir.x, -tiltLimit, tiltLimit);
+    const tiltSetpointZ = clamp(dir.z, -tiltLimit, tiltLimit);
 
     const bodyUpWorld = Quat.rotateVec3(
       world.rigidBody.attitude,
@@ -459,16 +745,20 @@ export class MPCController implements Controller {
     // Pre-clamp at the PLANT's gimbal limit (±0.262 rad for Raptor —
     // 0.35 rad/s is the slew RATE, a different number) so the attitude
     // PIDs' anti-windup unwinds where the engine actually saturates.
-    const gimbalPitch = clamp(
-      this.attPidPitch.update(tiltSetpointZ, bodyUpWorld.z, dt),
-      -this.maxGimbalRad,
+    // Negated-PID convention + inversion-safe righting: see
+    // attitudeCommands().
+    const cmds = attitudeCommands(
+      bodyUpWorld,
+      tiltSetpointX,
+      tiltSetpointZ,
+      world.rigidBody.angularVelocity,
+      this.attPidPitch,
+      this.attPidYaw,
+      dt,
       this.maxGimbalRad,
     );
-    const gimbalYaw = clamp(
-      this.attPidYaw.update(tiltSetpointX, bodyUpWorld.x, dt),
-      -this.maxGimbalRad,
-      this.maxGimbalRad,
-    );
+    const gimbalPitch = cmds.pitch;
+    const gimbalYaw = cmds.yaw;
 
     const base = neutralControl(this.finCount, this.flapCount);
     return {
@@ -477,9 +767,7 @@ export class MPCController implements Controller {
       enginesOn,
       gimbalPitch,
       gimbalYaw,
-      fins: new Array(this.finCount).fill(
-        pos.y - 91 < 50_000 ? 0.25 : 0,
-      ) as number[],
+      fins: mixFins(gimbalPitch, gimbalYaw).slice(0, this.finCount),
       flaps: new Array(this.flapCount).fill(0) as number[],
     };
   }
@@ -588,6 +876,87 @@ export class MPCController implements Controller {
       .catch(() => {
         this.inFlight = false; // service unreachable → PID keeps flying
       });
+  }
+
+  /** Gravity-compensated hover-descent into the catch slot (SLS-49). */
+  private dockStep(world: World, dt: number): ControlInput {
+    const g = this.gainsRef();
+    const pos = world.rigidBody.position;
+    const vel = world.rigidBody.velocity;
+    const dy = Math.max(0, pos.y - this.targetPosition.y);
+    const vyTarget = -clamp(DOCK_DESCENT_GAIN * dy, 0.5, DOCK_DESCENT_MAX_MPS);
+    const ax = clamp(
+      DOCK_LAT_KP * (this.targetPosition.x - pos.x) - DOCK_LAT_KD * vel.x,
+      -DOCK_LAT_ACC_MAX,
+      DOCK_LAT_ACC_MAX,
+    );
+    const az = clamp(
+      DOCK_LAT_KP * (this.targetPosition.z - pos.z) - DOCK_LAT_KD * vel.z,
+      -DOCK_LAT_ACC_MAX,
+      DOCK_LAT_ACC_MAX,
+    );
+    const ay = G_MPS2 + clamp(0.9 * (vyTarget - vel.y), -6, 28);
+    const aCmd = Vec3.of(ax, ay, az);
+    const aMag = Vec3.length(aCmd);
+    const throttle = this.allocateForThrust(
+      Math.max(aMag * world.rigidBody.mass, this.minThrustN),
+    );
+    const enginesOn: EngineGroupBag<boolean> = {
+      centre: throttle.centre > 0,
+      inner: throttle.inner > 0,
+      outer: throttle.outer > 0,
+      ship: throttle.ship > 0,
+    };
+    const dir = aMag > 1e-6 ? Vec3.scale(aCmd, 1 / aMag) : Vec3.of(0, 1, 0);
+    const tiltX = clamp(dir.x, -TERMINAL_TILT_MAX_RAD, TERMINAL_TILT_MAX_RAD);
+    const tiltZ = clamp(dir.z, -TERMINAL_TILT_MAX_RAD, TERMINAL_TILT_MAX_RAD);
+    const bodyUpWorld = Quat.rotateVec3(
+      world.rigidBody.attitude,
+      Vec3.of(0, 1, 0),
+    );
+    this.attPidPitch.gains = g.attitudePitch;
+    this.attPidYaw.gains = g.attitudeYaw;
+    const cmds = attitudeCommands(
+      bodyUpWorld,
+      tiltX,
+      tiltZ,
+      world.rigidBody.angularVelocity,
+      this.attPidPitch,
+      this.attPidYaw,
+      dt,
+      this.maxGimbalRad,
+    );
+    const base = neutralControl(this.finCount, this.flapCount);
+    return {
+      ...base,
+      engineGroups: throttle,
+      enginesOn,
+      gimbalPitch: cmds.pitch,
+      gimbalYaw: cmds.yaw,
+      fins: mixFins(cmds.pitch, cmds.yaw).slice(0, this.finCount),
+      flaps: new Array(this.flapCount).fill(0) as number[],
+    };
+  }
+
+  /**
+   * Predicted ballistic impact error (SLS-49): forward-roll the world
+   * engines-off (fins deployed, no wind assumed) to the catch altitude
+   * and compare the impact point against the aim point. Coarse dt is
+   * plenty — the steering loop only needs the error to tens of metres,
+   * and prediction bias is absorbed by feedback.
+   */
+  private predictImpactError(world: World): { x: number; z: number } {
+    const ctl: ControlInput = neutralControl(this.finCount, this.flapCount);
+    let w = world;
+    const dt = 0.25;
+    const floorY = this.targetPosition.y;
+    for (let i = 0; i < 1600 && w.rigidBody.position.y > floorY; i++) {
+      w = simStep(w, this.vehicle, ctl, dt, this.rolloutEnv);
+    }
+    return {
+      x: w.rigidBody.position.x - this.targetPosition.x,
+      z: w.rigidBody.position.z - this.targetPosition.z,
+    };
   }
 
   /**

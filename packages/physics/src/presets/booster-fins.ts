@@ -30,13 +30,25 @@ const MAX_DEFL_RATE = 0.5; // rad/s
 const ALPHA_STALL = 0.436; // ~25°
 const TAU = 0.05; // s — fast hydraulic gimbal
 
-const UP_AXIS = Vec3.of(0, 1, 0);
-
+// SLS-49 geometry fix: real grid fins hinge about their RADIAL mounting
+// strut and tilt into the axial airflow — that is where their control
+// torque comes from. The previous model (hinge about body +Y, radial
+// normal) was aerodynamically inert to deflection in axial flow: the
+// normal stayed perpendicular to the airstream at every deflection, so
+// controllers had zero fin authority and max-q aero torque overpowered
+// the engine gimbal (measured: attitude runaway to ~85° mid-burn).
+//
+// Zero-deflection normal is TANGENTIAL (ŷ × r̂): the fin plane contains
+// the body axis and the radial strut. Deflecting about the radial hinge
+// tilts the normal toward ±body-Y, giving the axial flow an angle of
+// attack and the fin a tangential lift force high above the CoM —
+// pitch/yaw control torque, like the real vehicle.
 const fin = (mountDirX: number, mountDirZ: number): Surface => ({
   kind: "grid_fin",
   mount: Vec3.of(mountDirX * R_BODY, Y_MOUNT, mountDirZ * R_BODY),
-  hingeAxisBody: UP_AXIS,
-  zeroDeflectionNormalBody: Vec3.of(mountDirX, 0, mountDirZ),
+  hingeAxisBody: Vec3.of(mountDirX, 0, mountDirZ),
+  // ŷ × r̂ = (0,1,0) × (mx,0,mz) = (mz, 0, −mx)
+  zeroDeflectionNormalBody: Vec3.of(mountDirZ, 0, -mountDirX),
   area: FIN_AREA,
   clAlpha: CL_ALPHA,
   cd0: CD0,
