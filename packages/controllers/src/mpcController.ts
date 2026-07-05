@@ -286,11 +286,48 @@ const DOCK_CENTRED_VLAT_MPS = 1.5;
 
 /** Uncentred descent cap (m/s): creep down while centring far above the
  *  slot, hold (0) once close. Only when hovering is physically possible. */
-const DOCK_UNCENTRED_DESCENT_MAX_MPS = 2;
+const DOCK_UNCENTRED_DESCENT_MAX_MPS = 4;
 const DOCK_HOLD_BAND_M = 50;
 
 /** Climb-back rate (m/s) after sinking below slot height uncentred. */
 const DOCK_CLIMB_BACK_MPS = 1;
+
+/** Dock tilt setpoints are SLEW-LIMITED (rad, rad/s): the raw lateral
+ *  PD flips its command sign faster than the attitude loop's
+ *  seconds-scale lag, and the attitude swings rail-to-rail — a ±5 m/s
+ *  lateral limit cycle that holds the vehicle just outside the 2 m/s
+ *  envelope forever (probe: lat 5 m / vLat 2.3 m/s, strike at 29 m).
+ *  Limiting the setpoint's rate below the lag breaks the cycle; the
+ *  smaller cap trades authority (0.6 m/s²) for smoothness, plenty
+ *  against a ≤ 2 m/s residual. */
+const DOCK_TILT_MAX_RAD = 0.06;
+const DOCK_TILT_SLEW_RAD_PER_S = 0.03;
+
+/** Two-regime dock tilt: while the handoff is still hot (burn residue —
+ *  probe: vz ≈ −25 m/s entering the dock), the precision limits above
+ *  turn the approach into a ±800 m, 160 s pendulum that drains the tank
+ *  hovering. Far from the envelope the cycle risk is irrelevant — use
+ *  double the authority and slew; the precision limits engage close in. */
+const DOCK_TILT_MAX_FAR_RAD = 0.12;
+const DOCK_TILT_SLEW_FAR_RAD_PER_S = 0.06;
+const DOCK_FAR_LAT_ERR_M = 30;
+const DOCK_FAR_LAT_SPEED_MPS = 5;
+
+/** Dock float band (m/s): once the stack is too light to hover (floor
+ *  thrust > weight), lit engines can only climb — the probe's runaway
+ *  ascent to 100+ km. Descent is delivered by engine PULSES: cut when
+ *  vy rises this far above the target, relight when it falls this far
+ *  below. Ripple at the floor's ~4 m/s² is centimetres. */
+const DOCK_FLOAT_BAND_MPS = 0.75;
+
+/** Dock approach aim is biased AWAY from the tower in +x (m). The truss
+ *  collision box reaches x = +6 and the slot centre sits at x = 8.5 —
+ *  a 2.5 m corridor that the dock's residual ±3–4 m wander crosses
+ *  (probe: every "near miss" was a strike at y 100–146 with single-digit
+ *  lateral error). Aiming at x ≈ 10.5 doubles the truss margin while
+ *  staying well inside the capture volume (x ∈ [5, 12]) and the 10 m
+ *  3-D catch envelope. */
+const DOCK_APPROACH_X_BIAS_M = 2.0;
 
 /** Hover is possible only while floor thrust ≤ this fraction of weight. */
 const HOVER_MARGIN = 0.98;
@@ -362,12 +399,15 @@ export function shouldFloat(
 const DOCK_ENGAGE_ALT_M = 500;
 const DOCK_DESCENT_GAIN = 0.12;
 const DOCK_DESCENT_MAX_MPS = 8;
-/** Lateral loop stiffened for SLS-47: the old 0.08/0.55/2.0 left a
- *  10–70 m wander with 3–7 m/s lateral speed at slot height — outside
- *  the 10 m / 2 m/s catch envelope on both counts. */
-const DOCK_LAT_KP = 0.15;
-const DOCK_LAT_KD = 0.9;
-const DOCK_LAT_ACC_MAX = 2.5;
+/** Lateral loop DE-tuned for SLS-47: the tilt→attitude path has a
+ *  seconds-scale lag, and both the original 0.08/0.55 and a stiffened
+ *  0.15/0.9 limit-cycled around it (probe: ±10 m at ~5 m/s, ω≈0.5 rad/s
+ *  — right at the lag crossover; the envelope needs < 2 m/s). Bandwidth
+ *  must sit BELOW the lag: ω_n≈0.22 rad/s, ζ≈1.3. Convergence from
+ *  50 m takes ~30 s — the hold-until-centred vertical law buys it. */
+const DOCK_LAT_KP = 0.05;
+const DOCK_LAT_KD = 0.6;
+const DOCK_LAT_ACC_MAX = 2.0;
 const G_MPS2 = 9.80665;
 const RIGHTING_GAIN = 2.5;
 
@@ -501,6 +541,9 @@ export class MPCController implements Controller {
   private dockMode = false;
   /** Engines-off float latch during the burn (SLS-47, failure B). */
   private floating = false;
+  /** Slew-limited dock tilt setpoints (SLS-47, dock limit cycle). */
+  private dockTiltX = 0;
+  private dockTiltZ = 0;
 
   constructor(opts: MPCControllerOpts) {
     this.vehicle = opts.vehicle;
@@ -587,6 +630,8 @@ export class MPCController implements Controller {
     this.plan = null;
     this.dockMode = false;
     this.floating = false;
+    this.dockTiltX = 0;
+    this.dockTiltZ = 0;
     this.lastWorldT = 0;
     this.lastRequestT = -Infinity;
     this.usingFallback = true;
@@ -804,7 +849,18 @@ export class MPCController implements Controller {
       clamp(rawCorr.y, -TRACK_CORRECTION_VERT_MAX, TRACK_CORRECTION_VERT_MAX),
       rawCorr.z * latScale,
     );
-    const aCmd = Vec3.add(uStar, correction);
+    let aCmd = Vec3.add(uStar, correction);
+    // SLS-47 (failure B, root cause): a min-fuel plan's tail is bang-bang
+    // max braking, and the ALTITUDE-indexed lookup maps an
+    // already-too-slow vehicle onto exactly those nodes — feedforward
+    // ~28 m/s² that the ±15 correction cannot cancel, driving vy through
+    // zero into a full-thrust climb (probe: −164 → +74 m/s at 800 m).
+    // When the vehicle is already descending slower than the plan calls
+    // for at this altitude, cap the commanded vertical acceleration just
+    // below gravity so it can only ease back down toward the profile.
+    if (vel.y > vStar.y && aCmd.y > G_MPS2 - 0.5) {
+      aCmd = Vec3.of(aCmd.x, G_MPS2 - 0.5, aCmd.z);
+    }
 
     // --- Convert to throttle + attitude setpoints ---
     const g = this.gainsRef();
@@ -1048,35 +1104,46 @@ export class MPCController implements Controller {
    *  height while off-centre when hovering is physically possible, and
    *  climb back after sinking below the slot uncentred. */
   private dockStep(world: World, dt: number): ControlInput {
-    this.floating = false;
     const g = this.gainsRef();
     const pos = world.rigidBody.position;
     const vel = world.rigidBody.velocity;
+    // Aim biased away from the tower truss (see DOCK_APPROACH_X_BIAS_M);
+    // still inside the capture volume, so the catch registers there.
+    const aimX = this.targetPosition.x + DOCK_APPROACH_X_BIAS_M;
+    const aimZ = this.targetPosition.z;
     const dy = pos.y - this.targetPosition.y;
+    const latErr = Math.hypot(aimX - pos.x, aimZ - pos.z);
+    const latSpeed = Math.hypot(vel.x, vel.z);
     const hoverable =
       this.minThrustN <= HOVER_MARGIN * G_MPS2 * world.rigidBody.mass;
-    const vyTarget = dockVerticalTarget(
-      dy,
-      Math.hypot(this.targetPosition.x - pos.x, this.targetPosition.z - pos.z),
-      Math.hypot(vel.x, vel.z),
-      hoverable,
-    );
+    const vyTarget = dockVerticalTarget(dy, latErr, latSpeed, hoverable);
+    // Float pulses (see DOCK_FLOAT_BAND_MPS): the only way DOWN for a
+    // stack the engine floor out-lifts. Hysteresis around the vy target.
+    if (hoverable) {
+      this.floating = false;
+    } else if (this.floating) {
+      if (vel.y < vyTarget - DOCK_FLOAT_BAND_MPS) this.floating = false;
+    } else if (vel.y > vyTarget + DOCK_FLOAT_BAND_MPS) {
+      this.floating = true;
+    }
     const ax = clamp(
-      DOCK_LAT_KP * (this.targetPosition.x - pos.x) - DOCK_LAT_KD * vel.x,
+      DOCK_LAT_KP * (aimX - pos.x) - DOCK_LAT_KD * vel.x,
       -DOCK_LAT_ACC_MAX,
       DOCK_LAT_ACC_MAX,
     );
     const az = clamp(
-      DOCK_LAT_KP * (this.targetPosition.z - pos.z) - DOCK_LAT_KD * vel.z,
+      DOCK_LAT_KP * (aimZ - pos.z) - DOCK_LAT_KD * vel.z,
       -DOCK_LAT_ACC_MAX,
       DOCK_LAT_ACC_MAX,
     );
     const ay = G_MPS2 + clamp(0.9 * (vyTarget - vel.y), -6, 28);
     const aCmd = Vec3.of(ax, ay, az);
     const aMag = Vec3.length(aCmd);
-    const throttle = this.allocateForThrust(
-      Math.max(aMag * world.rigidBody.mass, this.minThrustN),
-    );
+    const throttle = this.floating
+      ? { centre: 0, inner: 0, outer: 0, ship: 0 }
+      : this.allocateForThrust(
+          Math.max(aMag * world.rigidBody.mass, this.minThrustN),
+        );
     const enginesOn: EngineGroupBag<boolean> = {
       centre: throttle.centre > 0,
       inner: throttle.inner > 0,
@@ -1084,8 +1151,18 @@ export class MPCController implements Controller {
       ship: throttle.ship > 0,
     };
     const dir = aMag > 1e-6 ? Vec3.scale(aCmd, 1 / aMag) : Vec3.of(0, 1, 0);
-    const tiltX = clamp(dir.x, -TERMINAL_TILT_MAX_RAD, TERMINAL_TILT_MAX_RAD);
-    const tiltZ = clamp(dir.z, -TERMINAL_TILT_MAX_RAD, TERMINAL_TILT_MAX_RAD);
+    // Slew-limited tilt setpoints (see DOCK_TILT_SLEW_RAD_PER_S and the
+    // far/near regimes): the attitude loop is never asked to chase a
+    // command reversing faster than its own lag.
+    const far =
+      latErr > DOCK_FAR_LAT_ERR_M || latSpeed > DOCK_FAR_LAT_SPEED_MPS;
+    const tiltCap = far ? DOCK_TILT_MAX_FAR_RAD : DOCK_TILT_MAX_RAD;
+    const wantX = clamp(dir.x, -tiltCap, tiltCap);
+    const wantZ = clamp(dir.z, -tiltCap, tiltCap);
+    const slew =
+      (far ? DOCK_TILT_SLEW_FAR_RAD_PER_S : DOCK_TILT_SLEW_RAD_PER_S) * dt;
+    this.dockTiltX += clamp(wantX - this.dockTiltX, -slew, slew);
+    this.dockTiltZ += clamp(wantZ - this.dockTiltZ, -slew, slew);
     const bodyUpWorld = Quat.rotateVec3(
       world.rigidBody.attitude,
       Vec3.of(0, 1, 0),
@@ -1094,8 +1171,8 @@ export class MPCController implements Controller {
     this.attPidYaw.gains = g.attitudeYaw;
     const cmds = attitudeCommands(
       bodyUpWorld,
-      tiltX,
-      tiltZ,
+      this.dockTiltX,
+      this.dockTiltZ,
       world.rigidBody.angularVelocity,
       this.attPidPitch,
       this.attPidYaw,

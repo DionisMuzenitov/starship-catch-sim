@@ -462,7 +462,7 @@ describe("SLS-47 terminal robustness laws", () => {
     it("creeps down slowly while uncentred but high above the slot", () => {
       const vy = dockVerticalTarget(300, 40, 0.5, true);
       expect(vy).toBeLessThan(0);
-      expect(vy).toBeGreaterThanOrEqual(-2); // uncentred cap
+      expect(vy).toBeGreaterThanOrEqual(-4); // uncentred cap
     });
 
     it("descends committedly once centred", () => {
