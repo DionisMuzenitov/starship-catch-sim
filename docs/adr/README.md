@@ -47,3 +47,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 007 | [Convex MPC guidance — 3-DOF SOCP + PID inner loop](007-convex-mpc-guidance.md) | Accepted |
 | 008 | [MPC in the browser — WASM port plan](008-mpc-wasm-port.md)            | Accepted |
 | 009 | [Coast-phase ignition planning (coast+burn)](009-coast-burn-guidance.md) | Accepted |
+| 010 | [Terminal-dock control laws for dispersion robustness](010-terminal-dock-dispersion-robustness.md) | Accepted |
