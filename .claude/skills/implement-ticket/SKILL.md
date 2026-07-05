@@ -18,16 +18,23 @@ Follow the research-first protocol from CLAUDE.md. Concretely, BEFORE any code:
    on memory for vehicle facts.
 4. Report back: what the ticket gets right, what is wrong/missing/stale, and
    your implementation plan (approach, trade-offs, test strategy, what you
-   will NOT do).
+   will NOT do). If the plan locks an ADR, include a red-team paragraph:
+   why this design can physically meet the ticket's acceptance gate.
 5. STOP and wait for explicit approval before building.
 
 After approval:
 
 6. Create branch `sls-XX-short-slug`. Build against the agreed plan. Keep
-   physics constants single-sourced (numpy ↔ TS parity, SLS-28).
+   physics constants single-sourced (numpy ↔ TS parity, SLS-28). If you need
+   a new ticket mid-build, search the board for an existing one first, and
+   label anything you file `organic`.
 7. Verify: typecheck + related tests green (the PostToolUse hook enforces
    this), full suite before finishing.
 8. Commit with smart-commit syntax (`$ARGUMENTS #in-progress …`,
    final: `$ARGUMENTS #done …`).
 9. Update docs: comment on the ticket (what was learned/decided), KB page if
    vehicle knowledge changed, new ADR for architectural choices.
+10. Close the loop on SLS-43: append a run-report comment with a metrics
+    block (duration, tickets touched, PRs opened/merged, test-count delta,
+    cost if known) and refresh the description snapshot if board state
+    changed (counts, phase, blockers).
