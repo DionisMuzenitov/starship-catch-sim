@@ -9,7 +9,7 @@
 
 import { StarshipEngines } from "@starship-catch-sim/physics";
 
-import { BoosterModel, StarshipModel } from "../models";
+import { VehicleModel } from "../models/glb";
 import { useSimStore } from "../state/simStore.js";
 
 export function BoosterFlight() {
@@ -19,9 +19,9 @@ export function BoosterFlight() {
     Math.max(0, world.rigidBody.position.y / 100_000),
   );
   const isShip = world.engineStates.length === StarshipEngines.length;
-  const Model = isShip ? StarshipModel : BoosterModel;
   return (
-    <Model
+    <VehicleModel
+      isShip={isShip}
       position={world.rigidBody.position}
       attitude={world.rigidBody.attitude}
       engineStates={world.engineStates}

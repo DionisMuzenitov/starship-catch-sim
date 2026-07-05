@@ -5,3 +5,4 @@ out
 coverage
 .vite
 pnpm-lock.yaml
+apps/web/public/
