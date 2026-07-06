@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # R1 (SLS-28): the numpy port + MPC service consume constants generated
+      # from the TS physics core. Fail if a constant changed but the generated
+      # rl_consts.json was not regenerated + committed.
+      - name: Physics constants single-sourced (R1)
+        run: pnpm gen:consts:check
+
       - name: Lint
         run: pnpm lint
 
@@ -43,6 +49,13 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # SLS-28 / R1: the golden parity fixtures are generated from the TS
+      # physics. Regenerate and fail on any diff, so a TS *equation* change
+      # can't silently leave the numpy port validating against stale goldens.
+      # (Constant drift is caught earlier by `gen:consts:check`.)
+      - name: Parity fixtures freshness check
+        run: pnpm gen:parity-fixtures:check
 
       - name: Eval matrix (quick)
         run: pnpm eval:all --quick
@@ -79,6 +92,34 @@ jobs:
 
       - name: Pytest
         working-directory: services/mpc
+        run: uv run pytest -q
+
+  rl:
+    name: RL env + numpy parity (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/rl/uv.lock
+
+      - name: Sync dependencies
+        working-directory: services/rl
+        run: uv sync --frozen
+
+      - name: Ruff
+        working-directory: services/rl
+        run: uv run ruff check .
+
+      # Runs the numpy↔TS snapshot-equivalence suite (< 1e-4 over 1 s) against
+      # the committed golden fixtures + the reward-sign tests (SLS-28 / R1).
+      - name: Pytest
+        working-directory: services/rl
         run: uv run pytest -q
 
   e2e:

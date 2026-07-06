@@ -3,43 +3,28 @@
 This is a numpy port of the exact model the simulator integrates so the
 SCvx drag-relinearization sees the same forces the sim will apply:
 
-- ``packages/physics/src/atmosphere.ts`` — exponential density
-  (RHO0 = 1.225, H_RHO = 8500) + ISA layer temperatures for the speed of
-  sound.
+- ``packages/physics/src/atmosphere.ts`` — exponential density + ISA layer
+  temperatures for the speed of sound.
 - ``packages/physics/src/drag.ts`` — Mach-dependent Cd multiplier table
   (``CD_MACH_TABLE``) with smoothstep interpolation on a subsonic plateau.
 
-KEEP THE TABLES VERBATIM IN SYNC with the TS source. Any change to the TS
-breakpoints must be mirrored here (and vice versa) — numpy↔TS parity is
-tracked as R1 / SLS-28.
+SLS-28 / R1: the atmosphere + drag tables are no longer hand-copied — they are
+loaded from the generated single-source ``rl_consts.json`` (see
+``physics_consts.py``), so they cannot drift from the TS source. A CI check
+(``pnpm gen:consts:check``) fails if the JSON is stale.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-# --- atmosphere.ts ---------------------------------------------------------
-
-RHO0 = 1.225
-"""Sea-level air density (kg/m³)."""
-
-H_RHO = 8_500.0
-"""Scale height for density (m)."""
-
-GAMMA_AIR = 1.4
-R_AIR = 287.05
-
-# ISA layers: [base altitude m, base temperature K, lapse rate K/m].
-# Verbatim from packages/physics/src/atmosphere.ts (ISA_LAYERS).
-ISA_LAYERS: tuple[tuple[float, float, float], ...] = (
-    (0.0, 288.15, -0.0065),
-    (11_000.0, 216.65, 0.0),
-    (20_000.0, 216.65, 0.001),
-    (32_000.0, 228.65, 0.0028),
-    (47_000.0, 270.65, 0.0),
-    (51_000.0, 270.65, -0.0028),
-    (71_000.0, 214.65, -0.002),
-    (84_852.0, 186.946, 0.0),
+from .physics_consts import (
+    CD_MACH_TABLE,
+    GAMMA_AIR,
+    H_RHO,
+    ISA_LAYERS,
+    R_AIR,
+    RHO0,
 )
 
 
@@ -74,19 +59,8 @@ def mach_number(speed_mps: float, altitude_m: float) -> float:
 
 
 # --- drag.ts ---------------------------------------------------------------
-
-# [Mach, Cd multiplier on the subsonic plateau] — Mach-ascending.
-# Verbatim from packages/physics/src/drag.ts (CD_MACH_TABLE).
-CD_MACH_TABLE: tuple[tuple[float, float], ...] = (
-    (0.0, 1.0),
-    (0.6, 1.0),
-    (0.9, 1.25),
-    (1.1, 1.55),
-    (1.5, 1.8),
-    (2.0, 1.78),
-    (3.0, 1.6),
-    (5.0, 1.5),
-)
+# CD_MACH_TABLE is imported from physics_consts (single-sourced from the TS
+# drag.ts via rl_consts.json) — see module docstring (SLS-28 / R1).
 
 
 def _smoothstep(t: float) -> float:

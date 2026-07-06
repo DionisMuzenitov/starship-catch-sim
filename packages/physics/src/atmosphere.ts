@@ -66,18 +66,22 @@ export function pressureRatio(altitudeM: number): number {
 // - a = sqrt(γ·R·T), γ = 1.4, R = 287.05 J/(kg·K) for dry air.
 // ---------------------------------------------------------------------------
 
-/** Ratio of specific heats for dry air. */
-const GAMMA_AIR = 1.4;
+/** Ratio of specific heats for dry air. Exported so the RL numpy port's
+ * constants generator can single-source it (SLS-28 / R1). */
+export const GAMMA_AIR = 1.4;
 
 /** Specific gas constant for dry air (J/(kg·K)). */
-const R_AIR = 287.05;
+export const R_AIR = 287.05;
 
 /**
  * ISA layers up to 86 km (geopotential): [base altitude m, base temperature
  * K, lapse rate K/m]. Above the last base the temperature is held constant —
  * fine for our purposes; the booster never exceeds ~70 km.
+ *
+ * Exported for the RL constants generator (SLS-28 / R1) — the numpy port
+ * consumes these verbatim via the generated JSON rather than a hand copy.
  */
-const ISA_LAYERS: readonly (readonly [number, number, number])[] = [
+export const ISA_LAYERS: readonly (readonly [number, number, number])[] = [
   [0, 288.15, -0.0065],
   [11_000, 216.65, 0],
   [20_000, 216.65, 0.001],
