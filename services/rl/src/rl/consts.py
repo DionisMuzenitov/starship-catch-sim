@@ -115,6 +115,9 @@ class Scenario:
     horizontal_speed_tol_mps: float
     attitude_tilt_tol_rad: float
     angular_rate_tol_rad_per_s: float
+    # Raw wind spec from the generated JSON (kind/layers/dryden) — consumed by
+    # rl.wind_np.build_wind (SLS-29). Distribution mirror, not parity-gated.
+    wind_spec: dict | None = None
 
 
 def _v(a) -> np.ndarray:
@@ -228,6 +231,7 @@ def _scenario(d: dict) -> Scenario:
         horizontal_speed_tol_mps=float(tc["horizontalSpeedTolMps"]),
         attitude_tilt_tol_rad=float(tc["attitudeTiltTolRad"]),
         angular_rate_tol_rad_per_s=float(tc["angularRateTolRadPerS"]),
+        wind_spec=d["env"]["wind"],
     )
 
 

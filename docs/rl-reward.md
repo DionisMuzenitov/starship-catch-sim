@@ -29,6 +29,33 @@ shaped MDP equals that of the sparse MDP. We get dense gradient without moving
 the optimum. `γ` here MUST equal the training discount (SLS-29) for the
 invariance to hold exactly.
 
+**γ must match the episode timescale (SLS-29 finding — the procrastination
+exploit).** At 25 Hz control, γ=0.99 gives a ~4 s effective horizon
+(γ^480 ≈ 0.008). The trained policy discovered that *delaying* the −100
+terminal until step ~480 (by flying up and away until the escape bound)
+makes the penalty vanish from the discounted objective — diagnostic rollouts
+showed every episode ending `escaped` at ~2.3 km, ascending, tumbling.
+Equally, a catch bonus 300 steps ahead was invisible from the episode start.
+A first fix (γ=0.999) only moved the crossover: escaping at step 500 still
+beat crashing at step 140 in discounted terms. The final setting is
+**γ = 1.0 (undiscounted episodic)** — delaying a terminal gains exactly
+nothing, and the shaping telescopes exactly.
+
+**Null action = null actuation.** The original `(a+1)/2` throttle decode put
+the newborn policy at 50 % throttle (TWR ≈ 2.6) — born as an unstabilised
+inverted pendulum, tumbling in every rollout. Actions ≤ 0 now mean engines
+OFF; freefall (aerodynamically stable) is the policy's origin and thrust is
+opt-in.
+
+**The vertical shaping term tracks a descent profile, not |vy|.** Rewarding
+|vy|→0 unconditionally paid the policy to thrust into an ascent: the
+transient reward lands inside GAE's credit window while the doom 400 steps
+later does not. Φ now penalises `|vy − vy_ref(alt)|` with
+`vy_ref = −clip(0.06·alt_above, 2, 90)` — ascending is immediately
+expensive, freefalling past the profile is too, and the funnel points at
+the catch. Φ also carries tilt (W=3/rad) and angular-rate (W=3/(rad/s))
+terms — the earliest anti-tumble signals.
+
 ### The potential Φ(s)
 
 `Φ` is higher (less negative) the closer the vehicle is to a catchable state:
@@ -40,24 +67,41 @@ invariance to hold exactly.
         + W_TILT·tilt_from_upright )        # attitude error
 ```
 
-Defaults (`env.py`): `W_POS=1e-3` /m, `W_VSPEED=5e-3` /(m/s), `W_HSPEED=5e-3`
-/(m/s), `W_TILT=0.2` /rad. These normalise the four terms to comparable scale
-over a descent from 65 km (distance term ~65 at the top, speed terms ~1, tilt
-term <1), so no single term dominates the early shaping gradient.
+Defaults (`env.py`): `W_POS=5e-3` /m, `W_VSPEED=2.5e-2` /(m/s),
+`W_HSPEED=2.5e-2` /(m/s), `W_TILT=1.0` /rad. **Scale matters** (SLS-29
+smoke-run finding): at the original ×5-smaller weights the telescoped shaping
+contributed ~±3 per episode against a −100 terminal, and PPO saw a flat
+return for 150k steps. The current scale makes shaping O(10–50) per episode —
+commensurate with, but still below, the terminal. Scaling Φ is always safe:
+potential-based shaping is policy-invariant for *any* Φ.
 
-### Terminal rewards (sparse)
+### Terminal rewards (sparse, graded on failure)
 
 | Outcome | Reward | Rationale |
 |---|---|---|
 | `caught` | **+R_CATCH** (100) | inside the capture volume AND within the scenario envelope (position/vy/vh/tilt/rate). The goal. |
-| `crash` | −R_FAIL (100) | ground impact (y ≤ 0). |
-| `tower_collision` | −R_FAIL | inside the tower structure AABB, not caught. |
-| `near_miss` | −R_FAIL | inside the capture volume but envelope violated (too fast / tilted). Terminal so the agent can't loiter in the volume farming shaping. |
-| `fuel_exhausted` | −R_FAIL | propellant hit zero — no authority left. |
+| any failure | −R_FAIL + R_MISS_BONUS·e^(−miss/4) ∈ (−100, −40] | graded by terminal closeness-to-catchable (see below). |
 | timeout | 0 (truncated) | not a Markov terminal; bootstrap value as usual. |
 
-Terminal magnitudes dwarf per-step shaping so the sparse signal dominates the
-return once the agent is near the tower.
+Failure outcomes (`crash`, `tower_collision`, `near_miss`, `fuel_exhausted`)
+share the graded formula. `miss` is the envelope-normalised distance from
+catchable — `Σ max(0, error/tolerance − 1)` over position, vertical speed,
+horizontal speed, and tilt — so `miss = 0` means "violated nothing but the
+capture-volume geometry" (best failure, −40) and a ballistic ground impact
+kilometres out scores ≈ −100.
+
+**Why graded, not flat (SLS-29 finding):** with a flat −100 on every failure,
+the 150k-step smoke run sat at ep_rew ≈ −91 with zero movement — a chance
+catch is unreachable by exploration (five simultaneous tolerances inside a
+7×8×10 m box), so every trajectory ended in the same terminal and PPO had no
+gradient *through* the terminal event. Grading restores that gradient
+("crash slower, closer, more upright" is strictly better) while preserving
+the ordering `caught (+100) ≫ best failure (−40) > worst (−100)`. The bonus
+is terminal-only, so it cannot be farmed as a reward cycle, and hovering to
+avoid the penalty is closed off by fuel exhaustion (itself graded).
+
+Terminal magnitudes still dwarf per-step shaping, so the sparse signal
+dominates the return once the agent is near the tower.
 
 ### Control-effort penalty
 
@@ -79,6 +123,19 @@ two invariants:
 
 When SLS-29 lands training, the stronger check is: a trained policy's mean
 return must exceed the PID baseline's on the same env.
+
+### The curriculum interacts with the reward (SLS-29 diagnostic)
+
+The nominal ballistic trajectory deliberately lands **~800 m past the tower**
+(SLS-49 safety offset). Consequently every ballistic-start episode embeds a
+large powered divert, and a scripted vertical suicide-burn still terminates
+~790 m out — the reward gradient exists but the first success is unreachable.
+The curriculum therefore opens with **corridor starts** (above the catch
+point, small lateral offset — the state class MPC's dock phase reaches),
+where a crude hand cascade already produces near-misses, and expands to
+ballistic starts only after the terminal envelope is learned. An **escape
+terminal** (leaving the flight envelope ends the episode, graded like any
+failure) closes off the "fly away on 50 % throttle" exploration mode.
 
 ## Deliberate non-goals (v1)
 

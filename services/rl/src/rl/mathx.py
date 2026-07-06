@@ -116,3 +116,38 @@ def vlen(v: Vec3) -> float:
     order. (np.linalg.norm uses a scaled/BLAS path that differs in the last
     bits, which accumulates on high-speed trajectories — SLS-28 parity.)"""
     return math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+
+
+# --- batched variants (SLS-29 training throughput) ---------------------------
+# Same math as the scalar helpers above, over a leading batch axis. Elementwise
+# formulas are identical; only the order of float additions in reductions
+# differs (~1e-16 rel), far inside the SLS-28 parity gate (rtol 1e-6).
+
+
+def quat_from_axis_angle_batch(axes: np.ndarray, angles: np.ndarray) -> np.ndarray:
+    """(N,3) unit axes + (N,) angles -> (N,4) quats [x,y,z,w]."""
+    half = angles * 0.5
+    s = np.sin(half)
+    return np.concatenate([axes * s[:, None], np.cos(half)[:, None]], axis=1)
+
+
+def quat_multiply_batch(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Hamilton product over (N,4) x (N,4) -> (N,4)."""
+    ax, ay, az, aw = a[:, 0], a[:, 1], a[:, 2], a[:, 3]
+    bx, by, bz, bw = b[:, 0], b[:, 1], b[:, 2], b[:, 3]
+    return np.stack(
+        [
+            aw * bx + ax * bw + ay * bz - az * by,
+            aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw,
+            aw * bw - ax * bx - ay * by - az * bz,
+        ],
+        axis=1,
+    )
+
+
+def quat_rotate_batch(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """Rotate (N,3) vectors by (N,4) unit quats — optimised form, batched."""
+    qv = q[:, :3]
+    t = 2.0 * np.cross(qv, v)
+    return v + q[:, 3:4] * t + np.cross(qv, t)
