@@ -23,8 +23,10 @@ import { Vec3 } from "./math/vec3.js";
 // Interpolation between breakpoints is smoothstep — C1 at every join.
 // ---------------------------------------------------------------------------
 
-/** [Mach, Cd multiplier on the subsonic plateau] — must be Mach-ascending. */
-const CD_MACH_TABLE: readonly (readonly [number, number])[] = [
+/** [Mach, Cd multiplier on the subsonic plateau] — must be Mach-ascending.
+ * Exported so the RL numpy port's constants generator single-sources it
+ * (SLS-28 / R1); the Python side consumes it via the generated JSON. */
+export const CD_MACH_TABLE: readonly (readonly [number, number])[] = [
   [0.0, 1.0],
   [0.6, 1.0], // drag-divergence onset (SALTO already rising at M 0.6)
   [0.9, 1.25],

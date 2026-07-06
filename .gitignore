@@ -31,6 +31,13 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
+# Python (services/mpc, services/rl) — keep uv.lock tracked for --frozen CI
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
 # Playwright
 playwright-report/
 test-results/

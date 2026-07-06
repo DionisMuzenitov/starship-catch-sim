@@ -1,0 +1,249 @@
+/**
+ * Generate golden TS→Python parity fixtures (SLS-28 / R1).
+ *
+ * For each fixture we take a scenario's initial world, drive it for 1 s at
+ * PHYSICS_DT with a DETERMINISTIC control sequence, and record both the
+ * control at each step and the resulting rigid-body + fuel state. The Python
+ * numpy port (`services/rl`) replays the *recorded* control sequence (it does
+ * not regenerate it — sidestepping cross-language PRNG parity) and asserts the
+ * per-step state matches within 1e-4. Any equation drift between the TS plant
+ * and the numpy port fails `services/rl/tests/test_equivalence.py` in CI.
+ *
+ * Wind is CALM for every fixture: the equivalence test compares the *plant*,
+ * not the stateful Dryden turbulence RNG (which is not a bit-exact contract).
+ *
+ * Run: `pnpm gen:parity-fixtures`.
+ */
+
+import { writeFileSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+import {
+  BoosterVehicle,
+  ShipVehicle,
+  constantWind,
+  scenarioById,
+  simStep,
+  Vec3,
+  type ControlInput,
+  type SimEnv,
+  type Vehicle,
+  type World,
+} from "../../packages/physics/src/index.js";
+
+const PHYSICS_DT = 1 / 250;
+const STEPS = 250; // 1 second.
+
+// Deterministic splitmix32 — used only on the TS side to synthesise varied
+// control inputs; the values are recorded, never regenerated in Python.
+function splitmix32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x9e3779b9) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 16), 0x21f0aaad);
+    t = Math.imul(t ^ (t >>> 15), 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+
+type ProfileKind = "booster" | "ship";
+
+/** Build a control input for step `i` that exercises engines, gimbal, and
+ *  surfaces so the fixture covers every force/torque path. */
+function controlAt(
+  kind: ProfileKind,
+  i: number,
+  rng: () => number,
+  finCount: number,
+  flapCount: number,
+): ControlInput {
+  const t = i * PHYSICS_DT;
+  // Throttle ramps up over the second with a little per-step jitter.
+  const base = Math.min(1, 0.4 + 0.5 * t + 0.05 * (rng() - 0.5));
+  const gimbalPitch = 0.15 * Math.sin(6 * t) + 0.02 * (rng() - 0.5);
+  const gimbalYaw = 0.12 * Math.cos(5 * t);
+  const finDefl = 0.2 * Math.sin(4 * t + 1);
+  const fins = Array.from({ length: finCount }, (_, k) =>
+    finDefl * (k % 2 === 0 ? 1 : -1),
+  );
+  const flaps = Array.from({ length: flapCount }, (_, k) =>
+    0.3 * Math.sin(3 * t) * (k % 2 === 0 ? 1 : -1),
+  );
+  if (kind === "ship") {
+    return {
+      engineGroups: { centre: 0, inner: 0, outer: 0, ship: base },
+      enginesOn: { centre: false, inner: false, outer: false, ship: true },
+      gimbalPitch,
+      gimbalYaw,
+      fins,
+      flaps,
+    };
+  }
+  return {
+    engineGroups: { centre: base, inner: 0.8 * base, outer: 0, ship: 0 },
+    enginesOn: { centre: true, inner: true, outer: false, ship: false },
+    gimbalPitch,
+    gimbalYaw,
+    fins,
+    flaps,
+  };
+}
+
+function serializeState(w: World) {
+  return {
+    position: [
+      w.rigidBody.position.x,
+      w.rigidBody.position.y,
+      w.rigidBody.position.z,
+    ],
+    velocity: [
+      w.rigidBody.velocity.x,
+      w.rigidBody.velocity.y,
+      w.rigidBody.velocity.z,
+    ],
+    attitude: [
+      w.rigidBody.attitude.x,
+      w.rigidBody.attitude.y,
+      w.rigidBody.attitude.z,
+      w.rigidBody.attitude.w,
+    ],
+    angularVelocity: [
+      w.rigidBody.angularVelocity.x,
+      w.rigidBody.angularVelocity.y,
+      w.rigidBody.angularVelocity.z,
+    ],
+    mass: w.rigidBody.mass,
+    propellantMass: w.mass.propellantMass,
+  };
+}
+
+function serializeControl(c: ControlInput) {
+  return {
+    engineGroups: c.engineGroups,
+    enginesOn: c.enginesOn,
+    gimbalPitch: c.gimbalPitch,
+    gimbalYaw: c.gimbalYaw,
+    fins: c.fins,
+    flaps: c.flaps,
+  };
+}
+
+type FixtureSpec = {
+  name: string;
+  scenarioId: string;
+  kind: ProfileKind;
+  seed: number;
+};
+
+const FIXTURES: FixtureSpec[] = [
+  {
+    name: "booster-descent-a",
+    scenarioId: "booster-descent-calm",
+    kind: "booster",
+    seed: 1,
+  },
+  {
+    name: "booster-descent-b",
+    scenarioId: "booster-descent-standard",
+    kind: "booster",
+    seed: 2,
+  },
+  {
+    name: "booster-descent-c",
+    scenarioId: "booster-descent-stormy",
+    kind: "booster",
+    seed: 3,
+  },
+  {
+    name: "ship-descent-a",
+    scenarioId: "ship-descent-calm",
+    kind: "ship",
+    seed: 4,
+  },
+  {
+    name: "ship-descent-b",
+    scenarioId: "ship-descent-standard",
+    kind: "ship",
+    seed: 5,
+  },
+];
+
+function vehicleFor(kind: ProfileKind): Vehicle {
+  return kind === "ship" ? ShipVehicle : BoosterVehicle;
+}
+
+const here = dirname(fileURLToPath(import.meta.url));
+const outDir = join(here, "..", "..", "services", "rl", "tests", "fixtures");
+mkdirSync(outDir, { recursive: true });
+
+// CALM env for every fixture — wind excluded from the parity contract.
+const calmEnv: SimEnv = { wind: constantWind(Vec3.ZERO), gravity: 9.80665 };
+
+for (const spec of FIXTURES) {
+  const scenario = scenarioById(spec.scenarioId);
+  const vehicle = vehicleFor(spec.kind);
+  const finCount = vehicle.surfaces.filter((s) => s.kind === "grid_fin").length;
+  const flapCount = vehicle.surfaces.filter((s) => s.kind === "flap").length;
+  const rng = splitmix32(spec.seed);
+
+  let world = scenario.initialWorld;
+  const controls: ReturnType<typeof serializeControl>[] = [];
+  const states: ReturnType<typeof serializeState>[] = [];
+
+  for (let i = 0; i < STEPS; i++) {
+    const control = controlAt(spec.kind, i, rng, finCount, flapCount);
+    controls.push(serializeControl(control));
+    world = simStep(world, vehicle, control, PHYSICS_DT, calmEnv);
+    states.push(serializeState(world));
+  }
+
+  const fixture = {
+    schemaVersion: 1,
+    name: spec.name,
+    scenarioId: spec.scenarioId,
+    vehicle: spec.kind,
+    dt: PHYSICS_DT,
+    steps: STEPS,
+    initialWorld: {
+      rigidBody: {
+        position: [
+          scenario.initialWorld.rigidBody.position.x,
+          scenario.initialWorld.rigidBody.position.y,
+          scenario.initialWorld.rigidBody.position.z,
+        ],
+        velocity: [
+          scenario.initialWorld.rigidBody.velocity.x,
+          scenario.initialWorld.rigidBody.velocity.y,
+          scenario.initialWorld.rigidBody.velocity.z,
+        ],
+        attitude: [
+          scenario.initialWorld.rigidBody.attitude.x,
+          scenario.initialWorld.rigidBody.attitude.y,
+          scenario.initialWorld.rigidBody.attitude.z,
+          scenario.initialWorld.rigidBody.attitude.w,
+        ],
+        angularVelocity: [
+          scenario.initialWorld.rigidBody.angularVelocity.x,
+          scenario.initialWorld.rigidBody.angularVelocity.y,
+          scenario.initialWorld.rigidBody.angularVelocity.z,
+        ],
+        mass: scenario.initialWorld.rigidBody.mass,
+      },
+      propellantMass: scenario.initialWorld.mass.propellantMass,
+    },
+    controls,
+    states,
+  };
+
+  const outPath = join(outDir, `${spec.name}.json`);
+  writeFileSync(outPath, JSON.stringify(fixture) + "\n");
+  const last = states[states.length - 1]!;
+  console.log(
+    `${spec.name}: ${STEPS} steps → final y=${last.position[1]!.toFixed(1)} ` +
+      `m, prop=${last.propellantMass.toFixed(0)} kg`,
+  );
+}
+
+console.log(`wrote ${FIXTURES.length} fixtures to ${outDir}`);

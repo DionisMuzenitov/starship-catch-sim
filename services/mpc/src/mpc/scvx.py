@@ -54,10 +54,12 @@ from .problem import (
     solve_pdg,
 )
 
-# Booster defaults, mirrors packages/physics/src/scenarios.ts
-# (BOOSTER_REF_AREA = π·4.5², BOOSTER_CD = 0.7).
-DEFAULT_REF_AREA_M2 = float(np.pi * 4.5 * 4.5)
-DEFAULT_CD_SUBSONIC = 0.7
+# Booster body-drag geometry — single-sourced from the generated
+# rl_consts.json (SLS-28 / R1), so it tracks the sim's BoosterVehicle.
+from .physics_consts import BOOSTER_CD_SUBSONIC, BOOSTER_REF_AREA_M2
+
+DEFAULT_REF_AREA_M2 = BOOSTER_REF_AREA_M2
+DEFAULT_CD_SUBSONIC = BOOSTER_CD_SUBSONIC
 
 # Weight on the accumulated drag defect (m/s of velocity error over the
 # horizon) in the ACTUAL-cost metric. Sized against the terminal-slack

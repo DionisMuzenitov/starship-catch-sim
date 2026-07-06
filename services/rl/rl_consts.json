@@ -1,0 +1,2785 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/gen-physics-consts.ts (SLS-28)",
+  "physicsDt": 0.004,
+  "g0": 9.80665,
+  "atmosphere": {
+    "rho0": 1.225,
+    "p0": 101325,
+    "hRho": 8500,
+    "hP": 7400,
+    "gammaAir": 1.4,
+    "rAir": 287.05,
+    "isaLayers": [
+      [
+        0,
+        288.15,
+        -0.0065
+      ],
+      [
+        11000,
+        216.65,
+        0
+      ],
+      [
+        20000,
+        216.65,
+        0.001
+      ],
+      [
+        32000,
+        228.65,
+        0.0028
+      ],
+      [
+        47000,
+        270.65,
+        0
+      ],
+      [
+        51000,
+        270.65,
+        -0.0028
+      ],
+      [
+        71000,
+        214.65,
+        -0.002
+      ],
+      [
+        84852,
+        186.946,
+        0
+      ]
+    ]
+  },
+  "dragCdMachTable": [
+    [
+      0,
+      1
+    ],
+    [
+      0.6,
+      1
+    ],
+    [
+      0.9,
+      1.25
+    ],
+    [
+      1.1,
+      1.55
+    ],
+    [
+      1.5,
+      1.8
+    ],
+    [
+      2,
+      1.78
+    ],
+    [
+      3,
+      1.6
+    ],
+    [
+      5,
+      1.5
+    ]
+  ],
+  "massPresets": {
+    "superHeavy": {
+      "dryMass": 200000,
+      "propellantMass": 0,
+      "dryCoM": [
+        0,
+        28,
+        0
+      ],
+      "dryInertia": [
+        84016666.66666667,
+        0,
+        0,
+        0,
+        4050000,
+        0,
+        0,
+        0,
+        84016666.66666667
+      ],
+      "tankBottom": 5,
+      "tankTop": 67,
+      "tankRadius": 4.5,
+      "propellantDensity": 830
+    },
+    "starship": {
+      "dryMass": 120000,
+      "propellantMass": 0,
+      "dryCoM": [
+        0,
+        20,
+        0
+      ],
+      "dryInertia": [
+        25000000,
+        0,
+        0,
+        0,
+        2430000,
+        0,
+        0,
+        0,
+        25000000
+      ],
+      "tankBottom": 3,
+      "tankTop": 28,
+      "tankRadius": 4.5,
+      "propellantDensity": 830
+    }
+  },
+  "vehicles": {
+    "booster": {
+      "engines": [
+        {
+          "mount": [
+            0.6,
+            0,
+            0
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            -0.2999999999999999,
+            0,
+            0.5196152422706632
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            -0.30000000000000027,
+            0,
+            -0.519615242270663
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            1.8,
+            0,
+            0
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            1.4562305898749055,
+            0,
+            1.0580134541264516
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            0.5562305898749055,
+            0,
+            1.7119017293312764
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -0.5562305898749053,
+            0,
+            1.7119017293312766
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -1.4562305898749053,
+            0,
+            1.0580134541264519
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -1.8,
+            0,
+            2.2043642384652358e-16
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -1.4562305898749055,
+            0,
+            -1.0580134541264514
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -0.5562305898749056,
+            0,
+            -1.7119017293312764
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            0.556230589874905,
+            0,
+            -1.7119017293312766
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            1.4562305898749053,
+            0,
+            -1.058013454126452
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            3.555678026142496,
+            0,
+            0.5631640741448312
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            3.2076234870781244,
+            0,
+            1.6343657990623686
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            2.5455844122715714,
+            0,
+            2.545584412271571
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            1.6343657990623688,
+            0,
+            3.207623487078124
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            0.5631640741448314,
+            0,
+            3.555678026142496
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -0.5631640741448309,
+            0,
+            3.555678026142496
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -1.6343657990623683,
+            0,
+            3.2076234870781244
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -2.545584412271571,
+            0,
+            2.5455844122715714
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -3.207623487078124,
+            0,
+            1.6343657990623688
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -3.5556780261424956,
+            0,
+            0.5631640741448315
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -3.555678026142496,
+            0,
+            -0.5631640741448306
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -3.2076234870781253,
+            0,
+            -1.6343657990623666
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -2.545584412271572,
+            0,
+            -2.545584412271571
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -1.634365799062369,
+            0,
+            -3.207623487078124
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -0.5631640741448317,
+            0,
+            -3.5556780261424956
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            0.5631640741448305,
+            0,
+            -3.555678026142496
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            1.634365799062368,
+            0,
+            -3.207623487078125
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            2.5455844122715705,
+            0,
+            -2.545584412271572
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            3.207623487078124,
+            0,
+            -1.6343657990623692
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            3.5556780261424956,
+            0,
+            -0.563164074144832
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        }
+      ],
+      "engineGroupOf": [
+        "centre",
+        "centre",
+        "centre",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "inner",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer",
+        "outer"
+      ],
+      "surfaces": [
+        {
+          "kind": "grid_fin",
+          "mount": [
+            4.5,
+            65,
+            0
+          ],
+          "hingeAxisBody": [
+            1,
+            0,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            0,
+            0,
+            -1
+          ],
+          "area": 4,
+          "clAlpha": 3,
+          "cd0": 0.05,
+          "maxDeflection": 0.349,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.05
+        },
+        {
+          "kind": "grid_fin",
+          "mount": [
+            0,
+            65,
+            4.5
+          ],
+          "hingeAxisBody": [
+            0,
+            0,
+            1
+          ],
+          "zeroDeflectionNormalBody": [
+            1,
+            0,
+            0
+          ],
+          "area": 4,
+          "clAlpha": 3,
+          "cd0": 0.05,
+          "maxDeflection": 0.349,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.05
+        },
+        {
+          "kind": "grid_fin",
+          "mount": [
+            -4.5,
+            65,
+            0
+          ],
+          "hingeAxisBody": [
+            -1,
+            0,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            0,
+            0,
+            1
+          ],
+          "area": 4,
+          "clAlpha": 3,
+          "cd0": 0.05,
+          "maxDeflection": 0.349,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.05
+        },
+        {
+          "kind": "grid_fin",
+          "mount": [
+            0,
+            65,
+            -4.5
+          ],
+          "hingeAxisBody": [
+            0,
+            0,
+            -1
+          ],
+          "zeroDeflectionNormalBody": [
+            -1,
+            0,
+            0
+          ],
+          "area": 4,
+          "clAlpha": 3,
+          "cd0": 0.05,
+          "maxDeflection": 0.349,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.05
+        }
+      ],
+      "surfaceCtlIndexOf": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "bodyRefArea": 63.61725123519331,
+      "bodyCd": 0.7
+    },
+    "ship": {
+      "engines": [
+        {
+          "mount": [
+            1,
+            0,
+            0
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            -0.4999999999999998,
+            0,
+            0.8660254037844387
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            -0.5000000000000004,
+            0,
+            -0.8660254037844385
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2300000,
+          "thrustSea": 2050000,
+          "ispVac": 350,
+          "ispSea": 327,
+          "maxGimbal": 0.262,
+          "maxGimbalRate": 0.35,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0.1,
+          "canGimbal": true
+        },
+        {
+          "mount": [
+            1.4000000000000001,
+            0,
+            2.424871130596428
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2500000,
+          "thrustSea": 0,
+          "ispVac": 380,
+          "ispSea": 0,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            -2.8,
+            0,
+            3.429011037612589e-16
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2500000,
+          "thrustSea": 0,
+          "ispVac": 380,
+          "ispSea": 0,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        },
+        {
+          "mount": [
+            1.3999999999999981,
+            0,
+            -2.4248711305964292
+          ],
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "thrustVac": 2500000,
+          "thrustSea": 0,
+          "ispVac": 380,
+          "ispSea": 0,
+          "maxGimbal": 0,
+          "maxGimbalRate": 0,
+          "minThrottle": 0.4,
+          "tauThrottle": 0.15,
+          "tauGimbal": 0,
+          "canGimbal": false
+        }
+      ],
+      "engineGroupOf": [
+        "ship",
+        "ship",
+        "ship",
+        "ship",
+        "ship",
+        "ship"
+      ],
+      "surfaces": [
+        {
+          "kind": "flap",
+          "mount": [
+            4.5,
+            45,
+            0
+          ],
+          "hingeAxisBody": [
+            0,
+            1,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            1,
+            0,
+            0
+          ],
+          "area": 12,
+          "clAlpha": 4,
+          "cd0": 0.04,
+          "maxDeflection": 1,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.12
+        },
+        {
+          "kind": "flap",
+          "mount": [
+            -4.5,
+            45,
+            0
+          ],
+          "hingeAxisBody": [
+            0,
+            1,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            -1,
+            0,
+            0
+          ],
+          "area": 12,
+          "clAlpha": 4,
+          "cd0": 0.04,
+          "maxDeflection": 1,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.12
+        },
+        {
+          "kind": "flap",
+          "mount": [
+            4.5,
+            5,
+            0
+          ],
+          "hingeAxisBody": [
+            0,
+            1,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            1,
+            0,
+            0
+          ],
+          "area": 12,
+          "clAlpha": 4,
+          "cd0": 0.04,
+          "maxDeflection": 1,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.12
+        },
+        {
+          "kind": "flap",
+          "mount": [
+            -4.5,
+            5,
+            0
+          ],
+          "hingeAxisBody": [
+            0,
+            1,
+            0
+          ],
+          "zeroDeflectionNormalBody": [
+            -1,
+            0,
+            0
+          ],
+          "area": 12,
+          "clAlpha": 4,
+          "cd0": 0.04,
+          "maxDeflection": 1,
+          "maxDeflectionRate": 0.5,
+          "alphaStall": 0.436,
+          "tau": 0.12
+        }
+      ],
+      "surfaceCtlIndexOf": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "bodyRefArea": 63.61725123519331,
+      "bodyCd": 0.9
+    }
+  },
+  "tower": {
+    "captureVolume": {
+      "center": [
+        8.5,
+        91,
+        0
+      ],
+      "halfExtents": [
+        3.5,
+        4,
+        5
+      ]
+    },
+    "structureAabb": {
+      "center": [
+        0,
+        73,
+        0
+      ],
+      "halfExtents": [
+        6,
+        73,
+        6
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "id": "booster-descent-calm",
+      "name": "Booster Descent — Calm",
+      "difficulty": "calm",
+      "vehicle": "booster",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            0,
+            65000,
+            12260
+          ],
+          "velocity": [
+            0,
+            -200,
+            -120
+          ],
+          "attitude": [
+            0.2669335818958114,
+            0,
+            0,
+            0.963714928210761
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 527374.3748563048,
+          "inertia": [
+            135888341.15986785,
+            0,
+            0,
+            0,
+            7364665.545420086,
+            0,
+            0,
+            0,
+            135888341.15986785
+          ]
+        },
+        "mass": {
+          "dryMass": 200000,
+          "propellantMass": 327374.37485630484,
+          "dryCoM": [
+            0,
+            28,
+            0
+          ],
+          "dryInertia": [
+            84016666.66666667,
+            0,
+            0,
+            0,
+            4050000,
+            0,
+            0,
+            0,
+            84016666.66666667
+          ],
+          "tankBottom": 5,
+          "tankTop": 67,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "constant",
+          "value": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 10,
+        "verticalSpeedTolMps": 5,
+        "horizontalSpeedTolMps": 2,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    },
+    {
+      "id": "booster-descent-standard",
+      "name": "Booster Descent — Standard",
+      "difficulty": "standard",
+      "vehicle": "booster",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            0,
+            65000,
+            12260
+          ],
+          "velocity": [
+            0,
+            -200,
+            -120
+          ],
+          "attitude": [
+            0.2669335818958114,
+            0,
+            0,
+            0.963714928210761
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 527374.3748563048,
+          "inertia": [
+            135888341.15986785,
+            0,
+            0,
+            0,
+            7364665.545420086,
+            0,
+            0,
+            0,
+            135888341.15986785
+          ]
+        },
+        "mass": {
+          "dryMass": 200000,
+          "propellantMass": 327374.37485630484,
+          "dryCoM": [
+            0,
+            28,
+            0
+          ],
+          "dryInertia": [
+            84016666.66666667,
+            0,
+            0,
+            0,
+            4050000,
+            0,
+            0,
+            0,
+            84016666.66666667
+          ],
+          "tankBottom": 5,
+          "tankTop": 67,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "layered",
+          "layers": [
+            {
+              "altitude": 0,
+              "wind": [
+                5,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 10000,
+              "wind": [
+                12,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 30000,
+              "wind": [
+                20,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 65000,
+              "wind": [
+                20,
+                0,
+                0
+              ]
+            }
+          ]
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 10,
+        "verticalSpeedTolMps": 5,
+        "horizontalSpeedTolMps": 2,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    },
+    {
+      "id": "booster-descent-stormy",
+      "name": "Booster Descent — Stormy",
+      "difficulty": "stormy",
+      "vehicle": "booster",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            0,
+            65000,
+            12260
+          ],
+          "velocity": [
+            0,
+            -200,
+            -120
+          ],
+          "attitude": [
+            0.2669335818958114,
+            0,
+            0,
+            0.963714928210761
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 527374.3748563048,
+          "inertia": [
+            135888341.15986785,
+            0,
+            0,
+            0,
+            7364665.545420086,
+            0,
+            0,
+            0,
+            135888341.15986785
+          ]
+        },
+        "mass": {
+          "dryMass": 200000,
+          "propellantMass": 327374.37485630484,
+          "dryCoM": [
+            0,
+            28,
+            0
+          ],
+          "dryInertia": [
+            84016666.66666667,
+            0,
+            0,
+            0,
+            4050000,
+            0,
+            0,
+            0,
+            84016666.66666667
+          ],
+          "tankBottom": 5,
+          "tankTop": 67,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          },
+          {
+            "deflection": 0
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "combined",
+          "layers": [
+            {
+              "altitude": 0,
+              "wind": [
+                15,
+                0,
+                5
+              ]
+            },
+            {
+              "altitude": 5000,
+              "wind": [
+                25,
+                0,
+                5
+              ]
+            },
+            {
+              "altitude": 20000,
+              "wind": [
+                35,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 65000,
+              "wind": [
+                35,
+                0,
+                0
+              ]
+            }
+          ],
+          "dryden": {
+            "sigma": [
+              6,
+              1,
+              6
+            ],
+            "tau": [
+              2,
+              2,
+              2
+            ],
+            "seed": 42
+          }
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 10,
+        "verticalSpeedTolMps": 5,
+        "horizontalSpeedTolMps": 2,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    },
+    {
+      "id": "ship-descent-calm",
+      "name": "Ship Descent — Calm",
+      "difficulty": "calm",
+      "vehicle": "ship",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            -100000,
+            100000,
+            0
+          ],
+          "velocity": [
+            1500,
+            -200,
+            0
+          ],
+          "attitude": [
+            0,
+            0,
+            -0.7071067811865475,
+            0.7071067811865476
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 199203.47778781573,
+          "inertia": [
+            38014796.09889701,
+            0,
+            0,
+            0,
+            3231935.212601634,
+            0,
+            0,
+            0,
+            38014796.09889701
+          ]
+        },
+        "mass": {
+          "dryMass": 120000,
+          "propellantMass": 79203.47778781573,
+          "dryCoM": [
+            0,
+            20,
+            0
+          ],
+          "dryInertia": [
+            25000000,
+            0,
+            0,
+            0,
+            2430000,
+            0,
+            0,
+            0,
+            25000000
+          ],
+          "tankBottom": 3,
+          "tankTop": 28,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "constant",
+          "value": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 8,
+        "verticalSpeedTolMps": 3,
+        "horizontalSpeedTolMps": 1,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    },
+    {
+      "id": "ship-descent-standard",
+      "name": "Ship Descent — Standard",
+      "difficulty": "standard",
+      "vehicle": "ship",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            -100000,
+            100000,
+            0
+          ],
+          "velocity": [
+            1500,
+            -200,
+            0
+          ],
+          "attitude": [
+            0,
+            0,
+            -0.7071067811865475,
+            0.7071067811865476
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 199203.47778781573,
+          "inertia": [
+            38014796.09889701,
+            0,
+            0,
+            0,
+            3231935.212601634,
+            0,
+            0,
+            0,
+            38014796.09889701
+          ]
+        },
+        "mass": {
+          "dryMass": 120000,
+          "propellantMass": 79203.47778781573,
+          "dryCoM": [
+            0,
+            20,
+            0
+          ],
+          "dryInertia": [
+            25000000,
+            0,
+            0,
+            0,
+            2430000,
+            0,
+            0,
+            0,
+            25000000
+          ],
+          "tankBottom": 3,
+          "tankTop": 28,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "layered",
+          "layers": [
+            {
+              "altitude": 0,
+              "wind": [
+                5,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 10000,
+              "wind": [
+                12,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 30000,
+              "wind": [
+                20,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 65000,
+              "wind": [
+                20,
+                0,
+                0
+              ]
+            }
+          ]
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 8,
+        "verticalSpeedTolMps": 3,
+        "horizontalSpeedTolMps": 1,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    },
+    {
+      "id": "ship-descent-stormy",
+      "name": "Ship Descent — Stormy",
+      "difficulty": "stormy",
+      "vehicle": "ship",
+      "initialWorld": {
+        "rigidBody": {
+          "position": [
+            -100000,
+            100000,
+            0
+          ],
+          "velocity": [
+            1500,
+            -200,
+            0
+          ],
+          "attitude": [
+            0,
+            0,
+            -0.7071067811865475,
+            0.7071067811865476
+          ],
+          "angularVelocity": [
+            0,
+            0,
+            0
+          ],
+          "mass": 199203.47778781573,
+          "inertia": [
+            38014796.09889701,
+            0,
+            0,
+            0,
+            3231935.212601634,
+            0,
+            0,
+            0,
+            38014796.09889701
+          ]
+        },
+        "mass": {
+          "dryMass": 120000,
+          "propellantMass": 79203.47778781573,
+          "dryCoM": [
+            0,
+            20,
+            0
+          ],
+          "dryInertia": [
+            25000000,
+            0,
+            0,
+            0,
+            2430000,
+            0,
+            0,
+            0,
+            25000000
+          ],
+          "tankBottom": 3,
+          "tankTop": 28,
+          "tankRadius": 4.5,
+          "propellantDensity": 830
+        },
+        "engineStates": [
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          },
+          {
+            "gimbalPitch": 0,
+            "gimbalYaw": 0,
+            "throttle": 0,
+            "on": false
+          }
+        ],
+        "surfaceStates": [
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          },
+          {
+            "deflection": 0.3490658503988659
+          }
+        ],
+        "t": 0
+      },
+      "env": {
+        "gravity": 9.80665,
+        "wind": {
+          "kind": "combined",
+          "layers": [
+            {
+              "altitude": 0,
+              "wind": [
+                15,
+                0,
+                5
+              ]
+            },
+            {
+              "altitude": 5000,
+              "wind": [
+                25,
+                0,
+                5
+              ]
+            },
+            {
+              "altitude": 20000,
+              "wind": [
+                35,
+                0,
+                0
+              ]
+            },
+            {
+              "altitude": 65000,
+              "wind": [
+                35,
+                0,
+                0
+              ]
+            }
+          ],
+          "dryden": {
+            "sigma": [
+              6,
+              1,
+              6
+            ],
+            "tau": [
+              2,
+              2,
+              2
+            ],
+            "seed": 42
+          }
+        }
+      },
+      "targetCatch": {
+        "targetPosition": [
+          8.5,
+          91,
+          0
+        ],
+        "positionTolM": 8,
+        "verticalSpeedTolMps": 3,
+        "horizontalSpeedTolMps": 1,
+        "attitudeTiltTolRad": 0.05235987755982988,
+        "angularRateTolRadPerS": 0.08726646259971647
+      }
+    }
+  ]
+}
