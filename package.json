@@ -18,6 +18,7 @@
     "gen:consts": "tsx tools/gen-physics-consts.ts",
     "gen:consts:check": "tsx tools/gen-physics-consts.ts --check",
     "gen:parity-fixtures": "tsx tools/eval/gen-parity-fixtures.ts",
+    "gen:parity-fixtures:check": "tsx tools/eval/gen-parity-fixtures.ts --check",
     "bench": "tsx tools/bench/physics-bench.ts",
     "bench:mpc": "tsx tools/eval/mpc-bench.ts",
     "eval:pid": "tsx tools/eval/pid-monte-carlo.ts",

@@ -55,10 +55,7 @@ jobs:
       # can't silently leave the numpy port validating against stale goldens.
       # (Constant drift is caught earlier by `gen:consts:check`.)
       - name: Parity fixtures freshness check
-        run: |
-          pnpm gen:parity-fixtures
-          git diff --exit-code services/rl/tests/fixtures \
-            || (echo "::error::parity fixtures stale — run pnpm gen:parity-fixtures and commit" && exit 1)
+        run: pnpm gen:parity-fixtures:check
 
       - name: Eval matrix (quick)
         run: pnpm eval:all --quick

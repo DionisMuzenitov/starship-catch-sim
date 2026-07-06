@@ -15,7 +15,7 @@
  * Run: `pnpm gen:parity-fixtures`.
  */
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -174,9 +174,40 @@ function vehicleFor(kind: ProfileKind): Vehicle {
   return kind === "ship" ? ShipVehicle : BoosterVehicle;
 }
 
+// Numeric-tolerant compare — the 1 s integrations accumulate last-ULP
+// transcendental differences across Node/V8 builds, so a byte-exact freshness
+// check is fragile in CI. A real physics *equation* change is far larger than
+// 1e-6 relative, so drift is still caught (R1).
+function deepClose(a: unknown, b: unknown, rtol = 1e-6): boolean {
+  if (typeof a === "number" && typeof b === "number") {
+    if (a === b) return true;
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+    return Math.abs(a - b) <= rtol * Math.max(1, Math.abs(a), Math.abs(b));
+  }
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((x, i) => deepClose(x, b[i], rtol));
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const ka = Object.keys(a as object);
+    const kb = Object.keys(b as object);
+    return (
+      ka.length === kb.length &&
+      ka.every((k) =>
+        deepClose(
+          (a as Record<string, unknown>)[k],
+          (b as Record<string, unknown>)[k],
+          rtol,
+        ),
+      )
+    );
+  }
+  return a === b;
+}
+
+const checkMode = process.argv.includes("--check");
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "..", "..", "services", "rl", "tests", "fixtures");
 mkdirSync(outDir, { recursive: true });
+let stale = 0;
 
 // CALM env for every fixture — wind excluded from the parity contract.
 const calmEnv: SimEnv = { wind: constantWind(Vec3.ZERO), gravity: 9.80665 };
@@ -238,12 +269,24 @@ for (const spec of FIXTURES) {
   };
 
   const outPath = join(outDir, `${spec.name}.json`);
-  writeFileSync(outPath, JSON.stringify(fixture) + "\n");
-  const last = states[states.length - 1]!;
-  console.log(
-    `${spec.name}: ${STEPS} steps → final y=${last.position[1]!.toFixed(1)} ` +
-      `m, prop=${last.propellantMass.toFixed(0)} kg`,
-  );
+  if (checkMode) {
+    if (!existsSync(outPath) || !deepClose(fixture, JSON.parse(readFileSync(outPath, "utf8")))) {
+      console.error(`::error::${spec.name}.json is STALE — run \`pnpm gen:parity-fixtures\` and commit`);
+      stale++;
+    }
+  } else {
+    writeFileSync(outPath, JSON.stringify(fixture) + "\n");
+    const last = states[states.length - 1]!;
+    console.log(
+      `${spec.name}: ${STEPS} steps → final y=${last.position[1]!.toFixed(1)} ` +
+        `m, prop=${last.propellantMass.toFixed(0)} kg`,
+    );
+  }
 }
 
-console.log(`wrote ${FIXTURES.length} fixtures to ${outDir}`);
+if (checkMode) {
+  if (stale > 0) process.exit(1);
+  console.log("parity fixtures are up to date (numeric-tolerant check).");
+} else {
+  console.log(`wrote ${FIXTURES.length} fixtures to ${outDir}`);
+}

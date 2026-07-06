@@ -232,17 +232,53 @@ const here = dirname(fileURLToPath(import.meta.url));
 const outPath = join(here, "..", "services", "rl", "rl_consts.json");
 const json = JSON.stringify(consts, null, 2) + "\n";
 
+/**
+ * Deep numeric-tolerant equality. The JSON holds trig-derived values (engine
+ * ring mounts via sin/cos, the retrograde attitude via acos) whose LAST ULP
+ * varies across Node/V8 builds and platforms — so a byte-exact `===` check is
+ * fragile in CI. We compare structure exactly and numbers within a tight
+ * relative tolerance: a REAL constant change is orders of magnitude larger
+ * than a last-ULP transcendental difference, so drift is still caught (R1).
+ */
+function deepClose(a: unknown, b: unknown, rtol = 1e-9): boolean {
+  if (typeof a === "number" && typeof b === "number") {
+    if (a === b) return true;
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+    return Math.abs(a - b) <= rtol * Math.max(1, Math.abs(a), Math.abs(b));
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((x, i) => deepClose(x, b[i], rtol));
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const ka = Object.keys(a as object);
+    const kb = Object.keys(b as object);
+    if (ka.length !== kb.length) return false;
+    return ka.every((k) =>
+      deepClose(
+        (a as Record<string, unknown>)[k],
+        (b as Record<string, unknown>)[k],
+        rtol,
+      ),
+    );
+  }
+  return a === b;
+}
+
 const check = process.argv.includes("--check");
 if (check) {
-  const current = existsSync(outPath) ? readFileSync(outPath, "utf8") : "";
-  if (current !== json) {
+  if (!existsSync(outPath)) {
+    console.error("rl_consts.json is MISSING — run `pnpm gen:consts` and commit.");
+    process.exit(1);
+  }
+  const committed = JSON.parse(readFileSync(outPath, "utf8"));
+  if (!deepClose(committed, consts)) {
     console.error(
       `rl_consts.json is STALE — run \`pnpm gen:consts\` and commit.\n` +
-        `(physics constants changed but the generated JSON was not regenerated — R1)`,
+        `(a physics constant changed but the generated JSON was not regenerated — R1)`,
     );
     process.exit(1);
   }
-  console.log("rl_consts.json is up to date.");
+  console.log("rl_consts.json is up to date (numeric-tolerant check).");
 } else {
   writeFileSync(outPath, json);
   console.log(`wrote ${outPath} (${json.length} bytes)`);
