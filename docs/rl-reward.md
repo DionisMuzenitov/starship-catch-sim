@@ -29,6 +29,16 @@ shaped MDP equals that of the sparse MDP. We get dense gradient without moving
 the optimum. `γ` here MUST equal the training discount (SLS-29) for the
 invariance to hold exactly.
 
+**γ must match the episode timescale (SLS-29 finding — the procrastination
+exploit).** At 25 Hz control, γ=0.99 gives a ~4 s effective horizon
+(γ^480 ≈ 0.008). The trained policy discovered that *delaying* the −100
+terminal until step ~480 (by flying up and away until the escape bound)
+makes the penalty vanish from the discounted objective — diagnostic rollouts
+showed every episode ending `escaped` at ~2.3 km, ascending, tumbling.
+Equally, a catch bonus 300 steps ahead was invisible from the episode start.
+The training discount (and therefore the shaping γ) is **0.999** — a ~40 s
+horizon matched to catch-phase episode lengths.
+
 ### The potential Φ(s)
 
 `Φ` is higher (less negative) the closer the vehicle is to a catchable state:

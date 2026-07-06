@@ -63,7 +63,15 @@ preserved; (ii) **shaping scale** — Φ weights ×5 so telescoped shaping is
 O(10–50) per episode instead of ~±3 against a ±100 terminal (policy-invariant
 for any Φ); (iii) **escape terminal** — leaving the flight envelope ends the
 episode (graded), closing the "fly away on mid throttle" exploration mode
-(the action midpoint maps to 50 % throttle ⇒ TWR ≈ 2.6).
+(the action midpoint maps to 50 % throttle ⇒ TWR ≈ 2.6); (iv) **γ = 0.999,
+not 0.99** — at 25 Hz control γ=0.99 is a ~4 s horizon, and a 1.2M-step run
+exploited it by *procrastinating*: fly away until the escape bound at step
+~480, where the −100 terminal is discounted to nothing (γ^480 ≈ 0.008).
+Checkpoint rollouts showed 8/8 episodes ending `escaped`, ascending,
+tumbling. γ=0.999 (~40 s horizon) makes both the delayed penalty and the
+prospective catch bonus visible; a near-trivial `hover-calm` first rung was
+added at the same time so the value function receives real +100 catch
+signals early (first-rung-nearly-solved principle).
 
 **3. Domain randomization as a wrapper** (`rl.dr`): per-episode perturbed
 frozen `Vehicle` copies (thrust ±5 %, Isp ±2 %, τ ±20 %, dry mass ±5 % with

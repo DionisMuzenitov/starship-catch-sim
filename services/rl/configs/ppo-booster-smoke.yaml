@@ -13,7 +13,7 @@ env:
   max_episode_steps: 6000
   booster_landing_action: true
   normalize_obs: true
-  gamma: 0.99
+  gamma: 0.999
 
 dr:
   enabled: true
@@ -32,7 +32,7 @@ ppo:
   n_steps: 1024
   batch_size: 256
   n_epochs: 10
-  gamma: 0.99
+  gamma: 0.999
   gae_lambda: 0.95
   clip_range: 0.2
   ent_coef: 0.001
@@ -50,6 +50,10 @@ curriculum:
   # past the tower by design, so ballistic starts embed a large divert —
   # the terminal envelope must be learned from a catchable corridor first).
   stages:
+    - name: hover-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [60, 180], lateral: 25, vy: [-10, -2], vh: 2, tilt: 0.02, omega: 0.005 }
+      promote_at: 0.8
     - name: dock-calm
       scenario_id: booster-descent-calm
       start_alt_range: { kind: corridor, alt_above: [100, 500], lateral: 100, vy: [-40, -5] }
