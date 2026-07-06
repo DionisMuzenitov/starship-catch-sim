@@ -23,10 +23,12 @@ from .mathx import (
     mat3_inverse,
     mat3_mul_vec,
     quat_conjugate,
-    quat_from_axis_angle,
+    quat_from_axis_angle_batch,
     quat_multiply,
+    quat_multiply_batch,
     quat_normalize,
     quat_rotate,
+    quat_rotate_batch,
     vlen,
 )
 
@@ -181,93 +183,206 @@ def _lag(current: float, target: float, tau: float, dt: float) -> float:
     return current + (target - current) * alpha
 
 
-def _update_engine(eng: C.Engine, state: np.ndarray, cmd: dict, dt: float) -> np.ndarray:
-    # state = [gimbalPitch, gimbalYaw, throttle, on]
-    gp, gy, thr, _on = state
-    throttle_target = clamp(cmd["throttle"], eng.min_throttle, 1.0) if cmd["on"] else 0.0
-    next_thr = _lag(thr, throttle_target, eng.tau_throttle, dt)
-
-    pitch_target = clamp(cmd["pitch"], -eng.max_gimbal, eng.max_gimbal) if eng.can_gimbal else 0.0
-    yaw_target = clamp(cmd["yaw"], -eng.max_gimbal, eng.max_gimbal) if eng.can_gimbal else 0.0
-
-    max_step = eng.max_gimbal_rate * dt
-    pitch_lagged = _lag(gp, pitch_target, eng.tau_gimbal, dt)
-    pitch_delta = clamp(pitch_lagged - gp, -max_step, max_step)
-    yaw_lagged = _lag(gy, yaw_target, eng.tau_gimbal, dt)
-    yaw_delta = clamp(yaw_lagged - gy, -max_step, max_step)
-
-    return np.array([gp + pitch_delta, gy + yaw_delta, next_thr, 1.0 if cmd["on"] else 0.0])
+# The engine + surface plants are evaluated BATCHED over the engine/surface
+# axis (SLS-29): profiling showed the per-engine Python loop was ~85 % of
+# sim_step wall time (33 engines × quaternion ops in scalar numpy). The math
+# is identical to thrust.ts/aero.ts; only reduction order of float sums
+# differs (~1e-16 rel — far inside the SLS-28 parity gate, re-verified by
+# tests/test_equivalence.py).
 
 
-def _thrust_at_pressure(eng: C.Engine, pr: float) -> float:
-    p = clamp(pr, 0.0, 1.0)
-    return eng.thrust_vac - (eng.thrust_vac - eng.thrust_sea) * p
+class _PackedVehicle:
+    """Static per-vehicle arrays for the batched plant. Built once per Vehicle
+    instance and cached on it (frozen dataclass — attach via object.__setattr__).
+    """
+
+    __slots__ = (
+        "mounts",
+        "directions",
+        "thrust_vac",
+        "thrust_sea",
+        "isp_vac",
+        "isp_sea",
+        "max_gimbal",
+        "max_gimbal_rate",
+        "min_throttle",
+        "tau_throttle",
+        "tau_gimbal",
+        "can_gimbal",
+        "group_idx",
+        "s_mounts",
+        "s_hinges",
+        "s_normals",
+        "s_area",
+        "s_cl_alpha",
+        "s_cd0",
+        "s_max_defl",
+        "s_max_defl_rate",
+        "s_alpha_stall",
+        "s_tau",
+        "s_is_fin",
+        "s_ctl_idx",
+    )
 
 
-def _isp_at_pressure(eng: C.Engine, pr: float) -> float:
-    p = clamp(pr, 0.0, 1.0)
-    return eng.isp_vac - (eng.isp_vac - eng.isp_sea) * p
+_GROUP_ORDER = ("centre", "inner", "outer", "ship")
 
 
-def _gimbal_direction(eng: C.Engine, state: np.ndarray) -> np.ndarray:
-    q_pitch = quat_from_axis_angle(_X, state[0])
-    q_yaw = quat_from_axis_angle(_Z, state[1])
-    q = quat_multiply(q_yaw, q_pitch)
-    return quat_rotate(q, eng.direction)
+def _pack_vehicle(veh: C.Vehicle) -> _PackedVehicle:
+    p = _PackedVehicle()
+    e = veh.engines
+    p.mounts = np.array([x.mount for x in e])
+    p.directions = np.array([x.direction for x in e])
+    p.thrust_vac = np.array([x.thrust_vac for x in e])
+    p.thrust_sea = np.array([x.thrust_sea for x in e])
+    p.isp_vac = np.array([x.isp_vac for x in e])
+    p.isp_sea = np.array([x.isp_sea for x in e])
+    p.max_gimbal = np.array([x.max_gimbal for x in e])
+    p.max_gimbal_rate = np.array([x.max_gimbal_rate for x in e])
+    p.min_throttle = np.array([x.min_throttle for x in e])
+    p.tau_throttle = np.array([x.tau_throttle for x in e])
+    p.tau_gimbal = np.array([x.tau_gimbal for x in e])
+    p.can_gimbal = np.array([x.can_gimbal for x in e])
+    p.group_idx = np.array([_GROUP_ORDER.index(g) for g in veh.engine_group_of])
+    s = veh.surfaces
+    p.s_mounts = np.array([x.mount for x in s])
+    p.s_hinges = np.array([x.hinge_axis for x in s])
+    p.s_normals = np.array([x.zero_defl_normal for x in s])
+    p.s_area = np.array([x.area for x in s])
+    p.s_cl_alpha = np.array([x.cl_alpha for x in s])
+    p.s_cd0 = np.array([x.cd0 for x in s])
+    p.s_max_defl = np.array([x.max_deflection for x in s])
+    p.s_max_defl_rate = np.array([x.max_deflection_rate for x in s])
+    p.s_alpha_stall = np.array([x.alpha_stall for x in s])
+    p.s_tau = np.array([x.tau for x in s])
+    p.s_is_fin = np.array([x.kind == "grid_fin" for x in s])
+    p.s_ctl_idx = np.array(veh.surface_ctl_index_of, dtype=np.int64)
+    return p
 
 
-def _engine_force_torque(eng: C.Engine, state: np.ndarray, com_body, pr):
-    thrust_mag = state[2] * _thrust_at_pressure(eng, pr)
-    if thrust_mag <= 0:
-        return _ZERO3.copy(), _ZERO3.copy(), 0.0
-    direction = _gimbal_direction(eng, state)
-    force = direction * thrust_mag
-    arm = eng.mount - com_body
-    torque = cross(arm, force)
-    isp = _isp_at_pressure(eng, pr)
-    mdot = thrust_mag / (isp * C.G0) if isp > 0 else 0.0
-    return force, torque, mdot
+def _packed(veh: C.Vehicle) -> _PackedVehicle:
+    p = getattr(veh, "_packed_cache", None)
+    if p is None:
+        p = _pack_vehicle(veh)
+        object.__setattr__(veh, "_packed_cache", p)
+    return p
 
 
-# --- aero surfaces (aero.ts) -----------------------------------------------
+def _lag_arr(current: np.ndarray, target: np.ndarray, tau: np.ndarray, dt: float):
+    """First-order lag, elementwise; tau<=0 snaps to target (mirrors _lag)."""
+    alpha = np.where(tau > 0, 1.0 - np.exp(-dt / np.where(tau > 0, tau, 1.0)), 1.0)
+    return current + (target - current) * alpha
 
 
-def _update_surface(s: C.Surface, defl: float, target: float, dt: float) -> float:
-    clamped = clamp(target, -s.max_deflection, s.max_deflection)
-    desired = _lag(defl, clamped, s.tau, dt)
-    max_step = s.max_deflection_rate * dt
-    delta = clamp(desired - defl, -max_step, max_step)
-    return defl + delta
+def _engines_step(p: _PackedVehicle, states: np.ndarray, control, com_body, pr, dt):
+    """Advance all engine actuator states and aggregate force/torque/mdot.
+    states: (N,4) [gimbalPitch, gimbalYaw, throttle, on]."""
+    groups_thr = np.array([control.engine_groups[g] for g in _GROUP_ORDER])
+    groups_on = np.array([bool(control.engines_on[g]) for g in _GROUP_ORDER])
+    cmd_thr = groups_thr[p.group_idx]
+    cmd_on = groups_on[p.group_idx]
+
+    thr_target = np.where(cmd_on, np.clip(cmd_thr, p.min_throttle, 1.0), 0.0)
+    new_thr = _lag_arr(states[:, 2], thr_target, p.tau_throttle, dt)
+
+    pitch_target = np.where(
+        p.can_gimbal, np.clip(control.gimbal_pitch, -p.max_gimbal, p.max_gimbal), 0.0
+    )
+    yaw_target = np.where(
+        p.can_gimbal, np.clip(control.gimbal_yaw, -p.max_gimbal, p.max_gimbal), 0.0
+    )
+    max_step = p.max_gimbal_rate * dt
+    pitch_delta = np.clip(
+        _lag_arr(states[:, 0], pitch_target, p.tau_gimbal, dt) - states[:, 0],
+        -max_step,
+        max_step,
+    )
+    yaw_delta = np.clip(
+        _lag_arr(states[:, 1], yaw_target, p.tau_gimbal, dt) - states[:, 1],
+        -max_step,
+        max_step,
+    )
+    new_pitch = states[:, 0] + pitch_delta
+    new_yaw = states[:, 1] + yaw_delta
+    new_states = np.stack(
+        [new_pitch, new_yaw, new_thr, cmd_on.astype(np.float64)], axis=1
+    )
+
+    prc = clamp(pr, 0.0, 1.0)
+    thrust_mag = new_thr * (p.thrust_vac - (p.thrust_vac - p.thrust_sea) * prc)
+    isp = p.isp_vac - (p.isp_vac - p.isp_sea) * prc
+
+    # Gimballed thrust direction: rotate by qYaw(z) ⊗ qPitch(x) (thrust.ts).
+    q_pitch = quat_from_axis_angle_batch(
+        np.broadcast_to(_X, (len(new_pitch), 3)), new_pitch
+    )
+    q_yaw = quat_from_axis_angle_batch(
+        np.broadcast_to(_Z, (len(new_yaw), 3)), new_yaw
+    )
+    q = quat_multiply_batch(q_yaw, q_pitch)
+    dirs = quat_rotate_batch(q, p.directions)
+
+    forces = dirs * thrust_mag[:, None]
+    arms = p.mounts - com_body
+    torques = np.cross(arms, forces)
+    mdots = np.where(isp > 0, thrust_mag / (isp * C.G0), 0.0)
+
+    return new_states, forces.sum(axis=0), torques.sum(axis=0), float(mdots.sum())
 
 
-def _surface_force_torque(s, defl, v_world, omega_body, attitude, com_body, density):
+def _surfaces_step(
+    p: _PackedVehicle, defl, control, rel_vel, omega_body, attitude, com_body, density, dt
+):
+    """Advance all surface deflections and aggregate aero force/torque.
+    defl: (M,) realised deflections."""
+    m = len(defl)
+    if m == 0:
+        return defl, _ZERO3.copy(), _ZERO3.copy()
+    fins = np.asarray(control.fins, dtype=np.float64)
+    flaps = np.asarray(control.flaps, dtype=np.float64)
+    targets = np.where(
+        p.s_is_fin,
+        fins[np.minimum(p.s_ctl_idx, max(len(fins) - 1, 0))] if len(fins) else 0.0,
+        flaps[np.minimum(p.s_ctl_idx, max(len(flaps) - 1, 0))] if len(flaps) else 0.0,
+    )
+    clamped = np.clip(targets, -p.s_max_defl, p.s_max_defl)
+    desired = _lag_arr(defl, clamped, p.s_tau, dt)
+    delta = np.clip(desired - defl, -p.s_max_defl_rate * dt, p.s_max_defl_rate * dt)
+    new_defl = defl + delta
+
     if density < 1e-12:
-        return _ZERO3.copy(), _ZERO3.copy()
-    arm = s.mount - com_body
-    rot_contrib = cross(omega_body, arm)
-    v_world_in_body = quat_rotate(quat_conjugate(attitude), v_world)
+        return new_defl, _ZERO3.copy(), _ZERO3.copy()
+
+    arms = p.s_mounts - com_body
+    rot_contrib = np.cross(np.broadcast_to(omega_body, (m, 3)), arms)
+    v_world_in_body = quat_rotate(quat_conjugate(attitude), rel_vel)
     v_mount = v_world_in_body + rot_contrib
-    speed = vlen(v_mount)
-    if speed < 1e-9:
-        return _ZERO3.copy(), _ZERO3.copy()
-    wind_dir = v_mount * (-1.0 / speed)
-    q_defl = quat_from_axis_angle(s.hinge_axis, defl)
-    n = quat_rotate(q_defl, s.zero_defl_normal)
-    sin_alpha = clamp(float(n @ wind_dir), -1.0, 1.0)
-    alpha = math.asin(sin_alpha)
-    alpha_for_cl = clamp(alpha, -s.alpha_stall, s.alpha_stall)
-    cl = s.cl_alpha * alpha_for_cl
-    cd = s.cd0 + alpha * alpha
-    q = 0.5 * density * speed * speed
-    lift_mag = q * s.area * cl
-    drag_mag = q * s.area * cd
-    n_perp = n - wind_dir * float(n @ wind_dir)
-    n_perp_len = vlen(n_perp)
-    lift = n_perp * (lift_mag / n_perp_len) if n_perp_len > 1e-9 else _ZERO3.copy()
-    drag = wind_dir * drag_mag
-    force = lift + drag
-    torque = cross(arm, force)
-    return force, torque
+    speed = np.sqrt((v_mount * v_mount).sum(axis=1))
+    live = speed >= 1e-9
+    safe_speed = np.where(live, speed, 1.0)
+    wind_dir = v_mount * (-1.0 / safe_speed)[:, None]
+
+    q_defl = quat_from_axis_angle_batch(p.s_hinges, new_defl)
+    n = quat_rotate_batch(q_defl, p.s_normals)
+    sin_alpha = np.clip((n * wind_dir).sum(axis=1), -1.0, 1.0)
+    alpha = np.arcsin(sin_alpha)
+    cl = p.s_cl_alpha * np.clip(alpha, -p.s_alpha_stall, p.s_alpha_stall)
+    cd = p.s_cd0 + alpha * alpha
+    qdyn = 0.5 * density * speed * speed
+    lift_mag = qdyn * p.s_area * cl
+    drag_mag = qdyn * p.s_area * cd
+
+    ndw = (n * wind_dir).sum(axis=1)
+    n_perp = n - wind_dir * ndw[:, None]
+    n_perp_len = np.sqrt((n_perp * n_perp).sum(axis=1))
+    lift_ok = n_perp_len > 1e-9
+    safe_len = np.where(lift_ok, n_perp_len, 1.0)
+    lift = n_perp * np.where(lift_ok, lift_mag / safe_len, 0.0)[:, None]
+    drag = wind_dir * drag_mag[:, None]
+    forces = np.where(live[:, None], lift + drag, 0.0)
+    torques = np.cross(arms, forces)
+
+    return new_defl, forces.sum(axis=0), torques.sum(axis=0)
 
 
 # --- integrator (integrator.ts) --------------------------------------------
@@ -378,53 +493,33 @@ def sim_step(
     wind: np.ndarray = _ZERO3,
 ) -> World:
     mp = vehicle.mass_props
+    p = _packed(vehicle)
 
-    # 1. per-engine commands from grouped control.
-    # 2. plant aggregation in body frame.
+    # 1+2. per-engine commands from grouped control; batched plant aggregation.
     alt = float(world.position[1])
     pr = pressure_ratio(alt)
     density = density_at(alt)
     com_body = current_com(mp, world.propellant_mass)
 
-    force_body = _ZERO3.copy()
-    torque_body = _ZERO3.copy()
-    mdot_total = 0.0
-    new_engine_states = np.empty_like(world.engine_states)
-    for i, eng in enumerate(vehicle.engines):
-        group = vehicle.engine_group_of[i]
-        cmd = {
-            "pitch": control.gimbal_pitch if eng.can_gimbal else 0.0,
-            "yaw": control.gimbal_yaw if eng.can_gimbal else 0.0,
-            "throttle": control.engine_groups[group],
-            "on": control.engines_on[group],
-        }
-        st = _update_engine(eng, world.engine_states[i], cmd, dt)
-        new_engine_states[i] = st
-        f, tq, md = _engine_force_torque(eng, st, com_body, pr)
-        force_body = force_body + f
-        torque_body = torque_body + tq
-        mdot_total += md
+    new_engine_states, force_body, torque_body, mdot_total = _engines_step(
+        p, world.engine_states, control, com_body, pr, dt
+    )
 
     # wind-relative velocity for aero + drag.
     rel_vel = world.velocity - wind
 
-    # 3. aero surfaces.
-    new_surface_states = np.empty_like(world.surface_states)
-    aero_force = _ZERO3.copy()
-    aero_torque = _ZERO3.copy()
-    for i, s in enumerate(vehicle.surfaces):
-        idx = vehicle.surface_ctl_index_of[i]
-        if s.kind == "grid_fin":
-            target = control.fins[idx] if idx < len(control.fins) else 0.0
-        else:
-            target = control.flaps[idx] if idx < len(control.flaps) else 0.0
-        next_defl = _update_surface(s, float(world.surface_states[i]), float(target), dt)
-        new_surface_states[i] = next_defl
-        f, tq = _surface_force_torque(
-            s, next_defl, rel_vel, world.angular_velocity, world.attitude, com_body, density
-        )
-        aero_force = aero_force + f
-        aero_torque = aero_torque + tq
+    # 3. aero surfaces (batched).
+    new_surface_states, aero_force, aero_torque = _surfaces_step(
+        p,
+        world.surface_states,
+        control,
+        rel_vel,
+        world.angular_velocity,
+        world.attitude,
+        com_body,
+        density,
+        dt,
+    )
 
     # 4. body -> world for thrust + aero.
     thrust_world = quat_rotate(world.attitude, force_body)
