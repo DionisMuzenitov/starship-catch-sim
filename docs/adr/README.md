@@ -50,3 +50,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 010 | [Terminal-dock control laws for dispersion robustness](010-terminal-dock-dispersion-robustness.md) | Accepted |
 | 011 | [Static demo hosting on GitHub Pages](011-static-demo-hosting.md) | Accepted |
 | 012 | [Headless GLB pipeline & named-node articulation](012-glb-asset-pipeline-and-articulation.md) | Accepted |
+| 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md) | Accepted |

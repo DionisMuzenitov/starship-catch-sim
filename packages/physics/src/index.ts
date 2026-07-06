@@ -42,8 +42,11 @@ export {
   P0,
   H_RHO,
   H_P,
+  GAMMA_AIR,
+  R_AIR,
+  ISA_LAYERS,
 } from "./atmosphere.js";
-export { bodyDragForce, cdAt } from "./drag.js";
+export { bodyDragForce, cdAt, CD_MACH_TABLE } from "./drag.js";
 export {
   initialSurfaceState,
   surfaceForceTorque,
