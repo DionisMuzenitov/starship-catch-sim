@@ -51,3 +51,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 011 | [Static demo hosting on GitHub Pages](011-static-demo-hosting.md) | Accepted |
 | 012 | [Headless GLB pipeline & named-node articulation](012-glb-asset-pipeline-and-articulation.md) | Accepted |
 | 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md) | Accepted |
+| 014 | [PPO training pipeline — vectorized plant, curriculum, DR](014-ppo-training-pipeline.md) | Accepted |

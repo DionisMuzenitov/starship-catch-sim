@@ -1,0 +1,91 @@
+# PPO booster-catch training config (SLS-29). Versioned — treat changes like
+# code. The `ppo.gamma` MUST equal `env.gamma` (potential-based shaping
+# invariance, docs/rl-reward.md).
+
+run_name: ppo-booster
+total_timesteps: 10_000_000
+n_envs: 8
+device: cpu # MLP-sized nets train faster on CPU than MPS on this M3
+seed: 42
+
+env:
+  frame_skip: 10 # 25 Hz control over the 250 Hz plant
+  max_episode_steps: 6000
+  booster_landing_action: true # 8-dim action: centre+inner, gimbal, 4 fins
+  normalize_obs: true # fixed OBS_SCALE (export-friendly, SLS-30)
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
+
+dr:
+  enabled: true
+  mass_frac: 0.05 # dry mass ±5 %
+  thrust_frac: 0.05 # engine thrust ±5 %
+  isp_frac: 0.02 # Isp ±2 %
+  tau_frac: 0.20 # engine response τ ±20 %
+  wind_offset_mps: 5.0 # wind layer means ±5 m/s
+  turbulence_range: [0.5, 2.0] # Dryden sigma ×[0.5, 2]
+  obs_noise_scale: 1.0 # Gaussian sensor noise (OBS_NOISE_SIGMA × this)
+  position_jitter_m: 200.0 # IC position ±200 m
+  velocity_jitter_mps: 20.0 # IC velocity ±20 m/s
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 2048 # per env → 16384-step rollouts at n_envs=8
+  batch_size: 512
+  n_epochs: 10
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
+  gae_lambda: 0.98 # ~50-step credit window (0.95 was ~20 steps at 25 Hz -- too short to connect thrust to its consequences)
+  clip_range: 0.2
+  ent_coef: 0.001
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_sde: true # smooth exploration -- white actuator noise tumbles the plant
+  sde_sample_freq: 8
+  log_std_init: -1.5 # std ~0.22: explore around the mean, do not dominate it
+  net_arch: [256, 256]
+
+eval:
+  freq_steps: 100_000
+  n_episodes: 24
+  n_envs: 4
+
+curriculum:
+  # Corridor-first (SLS-29 diagnostic: the nominal ballistic lands ~800 m
+  # past the tower by design, so ballistic starts embed a large divert —
+  # the terminal envelope must be learned from a catchable corridor first).
+  stages:
+    - name: hover-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [60, 180], lateral: 25, vy: [-10, -2], vh: 2, tilt: 0.02, omega: 0.005 }
+      promote_at: 0.8
+    - name: dock-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [100, 500], lateral: 100, vy: [-40, -5] }
+      promote_at: 0.8
+    - name: approach-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [500, 2500], lateral: 400, vy: [-120, -30] }
+      promote_at: 0.8
+    - name: divert-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: [2000, 8000]
+      promote_at: 0.8
+    - name: descent-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: [8000, 40000]
+      promote_at: 0.8
+    - name: full-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: null
+      promote_at: 0.8
+    - name: full-standard # the ticket's 80 % target lives here
+      scenario_id: booster-descent-standard
+      start_alt_range: null
+      promote_at: 0.8
+    - name: full-stormy # terminal stage (promote_at > 1 -> never leaves)
+      scenario_id: booster-descent-stormy
+      start_alt_range: null
+      promote_at: 1.1
+
+checkpoint:
+  freq_steps: 250_000
+  dir: checkpoints

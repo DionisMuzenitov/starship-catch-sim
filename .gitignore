@@ -49,3 +49,8 @@ playwright/.cache/
 # Eval outputs (CI uploads them as artifacts; not versioned)
 eval/results/
 eval/plots/
+
+# RL training artifacts (SLS-29) — checkpoints & TB logs stay local
+services/rl/checkpoints*/
+services/rl/runs/
+services/rl/eval/results/

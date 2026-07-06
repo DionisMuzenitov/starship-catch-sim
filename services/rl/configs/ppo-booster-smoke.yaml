@@ -1,0 +1,71 @@
+# Smoke config (SLS-29): tiny run to validate the pipeline end-to-end —
+# learning signal rises, curriculum/eval/checkpoint machinery works.
+# NOT expected to reach the 80 % gate; use ppo-booster.yaml for that.
+
+run_name: ppo-booster-smoke
+total_timesteps: 150_000
+n_envs: 8
+device: cpu
+seed: 42
+
+env:
+  frame_skip: 10
+  max_episode_steps: 6000
+  booster_landing_action: true
+  normalize_obs: true
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
+
+dr:
+  enabled: true
+  mass_frac: 0.05
+  thrust_frac: 0.05
+  isp_frac: 0.02
+  tau_frac: 0.20
+  wind_offset_mps: 5.0
+  turbulence_range: [0.5, 2.0]
+  obs_noise_scale: 1.0
+  position_jitter_m: 200.0
+  velocity_jitter_mps: 20.0
+
+ppo:
+  learning_rate: 3.0e-4
+  n_steps: 1024
+  batch_size: 256
+  n_epochs: 10
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
+  gae_lambda: 0.98 # ~50-step credit window (0.95 was ~20 steps at 25 Hz -- too short to connect thrust to its consequences)
+  clip_range: 0.2
+  ent_coef: 0.001
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  use_sde: true # smooth exploration -- white actuator noise tumbles the plant
+  sde_sample_freq: 8
+  log_std_init: -1.5 # std ~0.22: explore around the mean, do not dominate it
+  net_arch: [256, 256]
+
+eval:
+  freq_steps: 50_000
+  n_episodes: 12
+  n_envs: 4
+
+curriculum:
+  # Corridor-first (SLS-29 diagnostic: the nominal ballistic lands ~800 m
+  # past the tower by design, so ballistic starts embed a large divert —
+  # the terminal envelope must be learned from a catchable corridor first).
+  stages:
+    - name: hover-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [60, 180], lateral: 25, vy: [-10, -2], vh: 2, tilt: 0.02, omega: 0.005 }
+      promote_at: 0.8
+    - name: dock-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [100, 500], lateral: 100, vy: [-40, -5] }
+      promote_at: 0.8
+    - name: approach-calm
+      scenario_id: booster-descent-calm
+      start_alt_range: { kind: corridor, alt_above: [500, 2500], lateral: 400, vy: [-120, -30] }
+      promote_at: 0.8
+
+checkpoint:
+  freq_steps: 50_000
+  dir: checkpoints-smoke
