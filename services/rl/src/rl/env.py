@@ -48,7 +48,8 @@ _GRAVITY = 9.80665
 W_POS = 5.0e-3  # per metre of distance-to-target
 W_VSPEED = 2.5e-2  # per m/s of vertical speed
 W_HSPEED = 2.5e-2  # per m/s of horizontal speed
-W_TILT = 1.0  # per rad of tilt from upright
+W_TILT = 3.0  # per rad of tilt from upright
+W_OMEGA = 3.0  # per rad/s of angular rate — the earliest anti-tumble signal
 R_CATCH = 100.0
 R_FAIL = 100.0
 # Graded-terminal bonus: failures earn back up to R_MISS_BONUS by how close to
@@ -204,20 +205,25 @@ class StarshipCatchEnv(gym.Env):
 
     def _decode(self, action: np.ndarray) -> ControlInput:
         a = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
+        # Null action (0) = null actuation: a <= 0 means engines OFF, a in
+        # (0, 1] maps to throttle (0, 1]. The previous (a+1)/2 mapping put the
+        # newborn policy at 50 % throttle (TWR 2.6) — born as an unstabilised
+        # inverted pendulum, tumbling in every rollout (SLS-29 diagnostic).
+        # Freefall is the aerodynamically stable mode; thrust is opt-in.
         if self.booster_landing_action:
             # [thr_centre, thr_inner, gp, gy, surfaces...] — outer/ship off.
-            throttles = np.array([(a[0] + 1) * 0.5, (a[1] + 1) * 0.5, 0.0, 0.0])
+            throttles = np.array([max(0.0, a[0]), max(0.0, a[1]), 0.0, 0.0])
             engines_on = {
-                "centre": bool(throttles[0] > 0.05),
-                "inner": bool(throttles[1] > 0.05),
+                "centre": bool(throttles[0] > 0.02),
+                "inner": bool(throttles[1] > 0.02),
                 "outer": False,
                 "ship": False,
             }
             gi = 2
         else:
-            throttles = (a[:4] + 1.0) * 0.5
+            throttles = np.maximum(a[:4], 0.0)
             engines_on = {
-                g: bool(throttles[i] > 0.05) for i, g in enumerate(_GROUPS)
+                g: bool(throttles[i] > 0.02) for i, g in enumerate(_GROUPS)
             }
             gi = 4
         engine_groups = {g: float(throttles[i]) for i, g in enumerate(_GROUPS)}
@@ -249,21 +255,35 @@ class StarshipCatchEnv(gym.Env):
 
     def _throttle_sum(self, action: np.ndarray) -> float:
         n = 2 if self.booster_landing_action else 4
-        return float(np.clip((np.asarray(action)[:n] + 1.0) * 0.5, 0, 1).sum())
+        return float(np.clip(np.asarray(action)[:n], 0, 1).sum())
 
     # -- reward + termination -------------------------------------------------
 
     def _potential(self, w: World) -> float:
         """Shaping potential Φ(s): higher (less negative) when near the target,
-        slow, and upright. Potential-based so the optimal policy is unchanged."""
+        on a sane descent profile, and upright. Potential-based (function of
+        state only) so the optimal policy is unchanged.
+
+        The vertical term tracks a REFERENCE DESCENT PROFILE, not |vy|:
+        rewarding |vy|→0 unconditionally paid the policy to thrust into an
+        ascent (the transient reward lands inside GAE's credit window, the
+        doom 400 steps later does not — SLS-29 diagnostic). Under profile
+        tracking, ascending is immediately expensive and freefalling past
+        the profile is too — the funnel points at the catch."""
         sc = self.scenario
         dist = float(np.linalg.norm(w.position - sc.target_position))
         vh = math.hypot(float(w.velocity[0]), float(w.velocity[2]))
+        omega = float(np.linalg.norm(w.angular_velocity))
+        alt_above = float(w.position[1]) - float(sc.target_position[1])
+        # gentle near the tower (2 m/s), up to 90 m/s high up
+        vy_ref = -min(max(0.06 * alt_above, 2.0), 90.0)
+        vy_err = abs(float(w.velocity[1]) - vy_ref)
         return -(
             W_POS * dist
-            + W_VSPEED * abs(float(w.velocity[1]))
+            + W_VSPEED * vy_err
             + W_HSPEED * vh
             + W_TILT * _tilt_rad(w.attitude)
+            + W_OMEGA * omega
         )
 
     def _caught(self, w: World) -> bool:
@@ -294,6 +314,12 @@ class StarshipCatchEnv(gym.Env):
             + max(0.0, abs(float(w.velocity[1])) / sc.vertical_speed_tol_mps - 1.0)
             + max(0.0, vh / sc.horizontal_speed_tol_mps - 1.0)
             + max(0.0, _tilt_rad(w.attitude) / sc.attitude_tilt_tol_rad - 1.0)
+            + max(
+                0.0,
+                float(np.linalg.norm(w.angular_velocity))
+                / sc.angular_rate_tol_rad_per_s
+                - 1.0,
+            )
         )
 
     def _terminal(self, w: World) -> tuple[bool, str]:

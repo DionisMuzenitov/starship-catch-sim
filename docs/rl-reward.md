@@ -36,8 +36,25 @@ terminal until step ~480 (by flying up and away until the escape bound)
 makes the penalty vanish from the discounted objective — diagnostic rollouts
 showed every episode ending `escaped` at ~2.3 km, ascending, tumbling.
 Equally, a catch bonus 300 steps ahead was invisible from the episode start.
-The training discount (and therefore the shaping γ) is **0.999** — a ~40 s
-horizon matched to catch-phase episode lengths.
+A first fix (γ=0.999) only moved the crossover: escaping at step 500 still
+beat crashing at step 140 in discounted terms. The final setting is
+**γ = 1.0 (undiscounted episodic)** — delaying a terminal gains exactly
+nothing, and the shaping telescopes exactly.
+
+**Null action = null actuation.** The original `(a+1)/2` throttle decode put
+the newborn policy at 50 % throttle (TWR ≈ 2.6) — born as an unstabilised
+inverted pendulum, tumbling in every rollout. Actions ≤ 0 now mean engines
+OFF; freefall (aerodynamically stable) is the policy's origin and thrust is
+opt-in.
+
+**The vertical shaping term tracks a descent profile, not |vy|.** Rewarding
+|vy|→0 unconditionally paid the policy to thrust into an ascent: the
+transient reward lands inside GAE's credit window while the doom 400 steps
+later does not. Φ now penalises `|vy − vy_ref(alt)|` with
+`vy_ref = −clip(0.06·alt_above, 2, 90)` — ascending is immediately
+expensive, freefalling past the profile is too, and the funnel points at
+the catch. Φ also carries tilt (W=3/rad) and angular-rate (W=3/(rad/s))
+terms — the earliest anti-tumble signals.
 
 ### The potential Φ(s)
 

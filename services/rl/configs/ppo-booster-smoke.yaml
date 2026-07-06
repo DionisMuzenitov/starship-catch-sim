@@ -13,7 +13,7 @@ env:
   max_episode_steps: 6000
   booster_landing_action: true
   normalize_obs: true
-  gamma: 0.999
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
 
 dr:
   enabled: true
@@ -32,12 +32,15 @@ ppo:
   n_steps: 1024
   batch_size: 256
   n_epochs: 10
-  gamma: 0.999
-  gae_lambda: 0.95
+  gamma: 1.0 # undiscounted episodic: any gamma<1 pays the policy to procrastinate the fail terminal
+  gae_lambda: 0.98 # ~50-step credit window (0.95 was ~20 steps at 25 Hz -- too short to connect thrust to its consequences)
   clip_range: 0.2
   ent_coef: 0.001
   vf_coef: 0.5
   max_grad_norm: 0.5
+  use_sde: true # smooth exploration -- white actuator noise tumbles the plant
+  sde_sample_freq: 8
+  log_std_init: -1.5 # std ~0.22: explore around the mean, do not dominate it
   net_arch: [256, 256]
 
 eval:

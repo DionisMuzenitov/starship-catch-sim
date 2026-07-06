@@ -228,6 +228,13 @@ def main():
 
     ppo_cfg = dict(cfg.get("ppo", {}))
     net_arch = ppo_cfg.pop("net_arch", [256, 256])
+    policy_kwargs = {"net_arch": list(net_arch)}
+    # Exploration noise scale: std=1.0 white noise on all actuators tumbles
+    # the vehicle every rollout (500k-step diagnostic) — attitude stability
+    # never appears in the training data. log_std_init + gSDE (smooth,
+    # state-dependent noise; `use_sde` in the ppo section) fix that.
+    if "log_std_init" in ppo_cfg:
+        policy_kwargs["log_std_init"] = float(ppo_cfg.pop("log_std_init"))
     tb_dir = f"runs/tb-{run_name}"
 
     if args.resume_from:
@@ -238,7 +245,7 @@ def main():
         model = PPO(
             "MlpPolicy",
             venv,
-            policy_kwargs={"net_arch": list(net_arch)},
+            policy_kwargs=policy_kwargs,
             tensorboard_log=tb_dir,
             seed=seed,
             device=device,
