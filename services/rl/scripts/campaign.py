@@ -44,6 +44,11 @@ from pathlib import Path
 import yaml
 
 RL_DIR = Path(__file__).resolve().parents[1]
+# Children are spawned with THIS interpreter (the uv venv python), not
+# `uv run`: the uv wrapper does not forward SIGINT, so wall-clock-capped
+# runs were SIGKILLed after the grace period instead of checkpointing
+# (SLS-51 dry-run finding).
+PY = sys.executable
 
 
 def sh(cmd: list[str], timeout_s: float | None = None, log: Path | None = None) -> int:
@@ -83,8 +88,7 @@ def run_one(run: dict, out_dir: Path) -> dict:
     run_config = out_dir / f"{name}.config.yaml"
     run_config.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
-    train_cmd = ["uv", "run", "python", "scripts/train_ppo.py",
-                 "--config", str(run_config)]
+    train_cmd = [PY, "scripts/train_ppo.py", "--config", str(run_config)]
     if run.get("total_timesteps"):
         train_cmd += ["--total-timesteps", str(int(run["total_timesteps"]))]
 
@@ -95,7 +99,7 @@ def run_one(run: dict, out_dir: Path) -> dict:
         if not warm.exists():
             print(f"[{name}] BC pretrain...", flush=True)
             code = sh(
-                ["uv", "run", "python", "scripts/bc_pretrain.py",
+                [PY, "scripts/bc_pretrain.py",
                  "--config", str(run_config), "--out", str(warm),
                  "--episodes", str(bc.get("episodes", 30)),
                  "--epochs", str(bc.get("epochs", 60))],
@@ -121,12 +125,12 @@ def run_one(run: dict, out_dir: Path) -> dict:
         return rec
 
     print(f"[{name}] eval ({ckpt.name})...", flush=True)
-    sh(["uv", "run", "python", "scripts/eval_policy.py",
+    sh([PY, "scripts/eval_policy.py",
         "--checkpoint", str(ckpt),
         "--episodes", str(int(run.get("eval_episodes", 30))),
         "--n-envs", "6"],
        timeout_s=3600, log=log)
-    sh(["uv", "run", "python", "scripts/plot_learning.py",
+    sh([PY, "scripts/plot_learning.py",
         "--tb-dir", f"runs/tb-{name}",
         "--out", str(out_dir / f"{name}-learning-curve.png")],
        timeout_s=600, log=log)

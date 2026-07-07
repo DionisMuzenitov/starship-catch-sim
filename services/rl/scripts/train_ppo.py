@@ -188,6 +188,14 @@ class CheckpointCallback(BaseCallback):
 
 
 def main():
+    # A nohup/background launch chain leaves SIGINT at SIG_IGN (POSIX) and
+    # Python inherits it — the campaign's wall-clock SIGINT then does
+    # nothing and the run gets SIGKILLed without saving (SLS-51 dry-run
+    # finding). Restore the default handler explicitly.
+    import signal
+
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--total-timesteps", type=int, default=None)
@@ -274,6 +282,31 @@ def main():
     ]
 
     # Manifest for downstream export (SLS-30): obs scaling + action layout.
+
+    _write_manifest(ckpt_dir, run_name, env_cfg, gamma, cfg)
+
+    try:
+        model.learn(
+            total_timesteps=total,
+            callback=callbacks,
+            reset_num_timesteps=not bool(args.resume_from),
+            progress_bar=False,
+        )
+        print("training done.")
+    except KeyboardInterrupt:
+        # Wall-clock cap (campaign.py sends SIGINT): SB3 skips the
+        # callbacks' _on_training_end on exceptions, so save here or a
+        # capped run keeps only its last PERIODIC checkpoint.
+        path = ckpt_dir / f"{run_name}_interrupted_{model.num_timesteps}.zip"
+        model.save(path)
+        venv_final = model.get_env()
+        if isinstance(venv_final, VecNormalize):
+            venv_final.save(str(ckpt_dir / "vecnormalize.pkl"))
+        shutil.copyfile(path, ckpt_dir / "latest.zip")
+        print(f"interrupted @ {model.num_timesteps:,}; saved {path.name}")
+
+
+def _write_manifest(ckpt_dir, run_name, env_cfg, gamma, cfg):
     from rl.env import OBS_SCALE
 
     (ckpt_dir / "manifest.json").write_text(
@@ -296,26 +329,6 @@ def main():
             default=str,
         )
     )
-
-    try:
-        model.learn(
-            total_timesteps=total,
-            callback=callbacks,
-            reset_num_timesteps=not bool(args.resume_from),
-            progress_bar=False,
-        )
-        print("training done.")
-    except KeyboardInterrupt:
-        # Wall-clock cap (campaign.py sends SIGINT): SB3 skips the
-        # callbacks' _on_training_end on exceptions, so save here or a
-        # capped run keeps only its last PERIODIC checkpoint.
-        path = ckpt_dir / f"{run_name}_interrupted_{model.num_timesteps}.zip"
-        model.save(path)
-        venv_final = model.get_env()
-        if isinstance(venv_final, VecNormalize):
-            venv_final.save(str(ckpt_dir / "vecnormalize.pkl"))
-        shutil.copyfile(path, ckpt_dir / "latest.zip")
-        print(f"interrupted @ {model.num_timesteps:,}; saved {path.name}")
 
 
 if __name__ == "__main__":
