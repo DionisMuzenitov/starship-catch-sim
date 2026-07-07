@@ -37,6 +37,7 @@ from .physics_np import ControlInput, World, initial_world, sim_step
 from .wind_np import WindField, build_wind
 
 _GROUPS = ("centre", "inner", "outer", "ship")
+_Y = np.array([0.0, 1.0, 0.0])
 _GRAVITY = 9.80665
 
 # Reward weights (see docs/rl-reward.md for the rationale).
@@ -63,6 +64,15 @@ R_MISS_BONUS = 60.0
 # ~20 reward points of gradient across the approach problem.
 MISS_SOFTNESS = 8.0
 W_CTRL = 1.0e-3  # per unit of summed throttle (fuel-efficiency nudge)
+
+# Attitude inner loop (SLS-51): PD gains mapping lean-target error + body
+# rates -> gimbal command. Signs from the SLS-29 cascade sign search; gains
+# from a step-response sweep (K_ATT=8/K_RATE=4 overshot 46 % and oscillated
+# under the gimbal actuator lag; 4/8 settles on target with no overshoot).
+# LEAN_MAX bounds commanded lean (horizontal components of body-up).
+K_ATT = 4.0
+K_RATE = 8.0
+LEAN_MAX = 0.15
 
 # Fixed observation scales (normalize_obs=True): keeps every component ~O(1).
 # MUST stay in sync with the ONNX export pipeline (SLS-30).
@@ -106,6 +116,7 @@ class StarshipCatchEnv(gym.Env):
         velocity_jitter_mps: float = 0.0,
         gamma: float = 0.99,
         booster_landing_action: bool = False,
+        attitude_inner_loop: bool = False,
         normalize_obs: bool = False,
         obs_noise_scale: float = 0.0,
         start_alt_range: tuple[float, float] | dict | None = None,
@@ -120,6 +131,7 @@ class StarshipCatchEnv(gym.Env):
         self.velocity_jitter_mps = velocity_jitter_mps
         self.gamma = gamma
         self.booster_landing_action = booster_landing_action
+        self.attitude_inner_loop = attitude_inner_loop
         self.normalize_obs = normalize_obs
         self.obs_noise_scale = obs_noise_scale
         self.start_alt_range = start_alt_range
@@ -151,8 +163,17 @@ class StarshipCatchEnv(gym.Env):
         self._n_fins = sum(1 for s in self.vehicle.surfaces if s.kind == "grid_fin")
         self._n_flaps = sum(1 for s in self.vehicle.surfaces if s.kind == "flap")
         self._n_surf = self._n_fins + self._n_flaps
-        # 4 group throttles (or 2 when landing-masked) + gimbal 2 + surfaces.
-        self.n_act = (2 if self.booster_landing_action else 4) + 2 + self._n_surf
+        # Inner-loop layout: [thr_centre, thr_inner, lean_x, lean_z] — the
+        # embedded PD flies the gimbal, fins stay neutral (SLS-51; removes
+        # the non-minimum-phase steering sub-problem from the policy).
+        # Else: 4 group throttles (or 2 when landing-masked) + gimbal 2 + surfaces.
+        if self.attitude_inner_loop:
+            self.n_act = 4
+        else:
+            self.n_act = (2 if self.booster_landing_action else 4) + 2 + self._n_surf
+        self._max_gimbal = next(
+            (e.max_gimbal for e in self.vehicle.engines if e.can_gimbal), 0.0
+        )
         self._full_prop = self.scenario.propellant_mass
 
     def set_vehicle(self, vehicle: C.Vehicle | None) -> None:
@@ -254,7 +275,7 @@ class StarshipCatchEnv(gym.Env):
         )
 
     def _throttle_sum(self, action: np.ndarray) -> float:
-        n = 2 if self.booster_landing_action else 4
+        n = 2 if (self.booster_landing_action or self.attitude_inner_loop) else 4
         return float(np.clip(np.asarray(action)[:n], 0, 1).sum())
 
     # -- reward + termination -------------------------------------------------
@@ -386,11 +407,62 @@ class StarshipCatchEnv(gym.Env):
         self._prev_phi = self._potential(w)
         return self._obs(), {"phase": "descent"}
 
+    def _inner_gimbal(self, control: ControlInput, lean_x, lean_z) -> None:
+        """Close the PD attitude loop on the CURRENT world state, writing the
+        gimbal command into `control` in place (250 Hz — hot path).
+
+        The lean error is computed in the WORLD frame but the gimbal + rate
+        feedback act in the BODY frame — the error must be rotated into the
+        body frame first. (With uncontrolled roll drift the frames diverge;
+        the mixed-frame version drifted vehicles sideways into the truss —
+        SLS-51 trace.)"""
+        from .mathx import quat_conjugate, quat_rotate
+
+        q = self.world.attitude
+        up = quat_rotate(q, _Y)
+        e_world = np.array([lean_x - float(up[0]), 0.0, lean_z - float(up[2])])
+        e_body = quat_rotate(quat_conjugate(q), e_world)
+        wx = float(self.world.angular_velocity[0])
+        wz = float(self.world.angular_velocity[2])
+        control.gimbal_pitch = (
+            max(-1.0, min(1.0, -K_ATT * float(e_body[2]) + K_RATE * wx))
+            * self._max_gimbal
+        )
+        control.gimbal_yaw = (
+            max(-1.0, min(1.0, +K_ATT * float(e_body[0]) + K_RATE * wz))
+            * self._max_gimbal
+        )
+
     def step(self, action):
-        control = self._decode(action)
+        if self.attitude_inner_loop:
+            a = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
+            thr = {
+                "centre": float(max(0.0, a[0])),
+                "inner": float(max(0.0, a[1])),
+                "outer": 0.0,
+                "ship": 0.0,
+            }
+            eng_on = {
+                "centre": thr["centre"] > 0.02,
+                "inner": thr["inner"] > 0.02,
+                "outer": False,
+                "ship": False,
+            }
+            lean_x = float(a[2]) * LEAN_MAX
+            lean_z = float(a[3]) * LEAN_MAX
+            control = ControlInput(
+                engine_groups=thr,
+                engines_on=eng_on,
+                fins=np.zeros(self._n_fins),
+                flaps=np.zeros(self._n_flaps),
+            )
+        else:
+            control = self._decode(action)
         outcome = "none"
         terminated = False
         for _ in range(self.frame_skip):
+            if self.attitude_inner_loop:
+                self._inner_gimbal(control, lean_x, lean_z)
             wind_vec = self.wind.at(self.world.position, self.world.t)
             self.world = sim_step(
                 self.world, self.vehicle, control, self.dt, _GRAVITY, wind=wind_vec

@@ -52,3 +52,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 012 | [Headless GLB pipeline & named-node articulation](012-glb-asset-pipeline-and-articulation.md) | Accepted |
 | 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md) | Accepted |
 | 014 | [PPO training pipeline — vectorized plant, curriculum, DR](014-ppo-training-pipeline.md) | Accepted |
+| 015 | [Attitude inner loop, cascade teacher & BC campaign](015-attitude-inner-loop-and-bc-campaign.md) | Accepted |

@@ -21,6 +21,7 @@
     "gen:parity-fixtures:check": "tsx tools/eval/gen-parity-fixtures.ts --check",
     "rl:train": "cd services/rl && uv sync --group train && uv run python scripts/train_ppo.py --config configs/ppo-booster.yaml",
     "rl:eval": "cd services/rl && uv run python scripts/eval_policy.py --checkpoint checkpoints/latest.zip",
+    "rl:campaign": "cd services/rl && uv sync --group train && nohup uv run python scripts/campaign.py --plan configs/campaign-night1.yaml > runs/campaign.log 2>&1 & echo 'campaign launched: tail -f services/rl/runs/campaign.log'",
     "bench": "tsx tools/bench/physics-bench.ts",
     "bench:mpc": "tsx tools/eval/mpc-bench.ts",
     "eval:pid": "tsx tools/eval/pid-monte-carlo.ts",
