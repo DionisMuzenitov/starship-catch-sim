@@ -1,4 +1,4 @@
-"""PPO training for the booster catch (SLS-29).
+"""PPO/SAC training for the booster catch (SLS-29, SLS-51).
 
 Usage:
     uv run python scripts/train_ppo.py --config configs/ppo-booster.yaml
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import (
     SubprocVecEnv,
@@ -188,12 +188,26 @@ class CheckpointCallback(BaseCallback):
 
 
 def main():
+    # A nohup/background launch chain leaves SIGINT at SIG_IGN (POSIX) and
+    # Python inherits it — the campaign's wall-clock SIGINT then does
+    # nothing and the run gets SIGKILLed without saving (SLS-51 dry-run
+    # finding). Restore the default handler explicitly.
+    import signal
+
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--total-timesteps", type=int, default=None)
     ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--device", default=None)
     ap.add_argument("--resume-from", default=None)
+    ap.add_argument(
+        "--warm-start",
+        default=None,
+        help="checkpoint to copy POLICY WEIGHTS from (e.g. a BC pretrain zip); "
+        "fresh optimizer/timesteps, unlike --resume-from",
+    )
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -226,23 +240,25 @@ def main():
     else:
         venv = VecNormalize(venv, norm_obs=False, norm_reward=True, gamma=gamma)
 
-    ppo_cfg = dict(cfg.get("ppo", {}))
+    algo_name = str(cfg.get("algo", "ppo")).lower()
+    ALGO = {"ppo": PPO, "sac": SAC}[algo_name]
+    ppo_cfg = dict(cfg.get(algo_name, cfg.get("ppo", {})))
     net_arch = ppo_cfg.pop("net_arch", [256, 256])
     policy_kwargs = {"net_arch": list(net_arch)}
     # Exploration noise scale: std=1.0 white noise on all actuators tumbles
     # the vehicle every rollout (500k-step diagnostic) — attitude stability
     # never appears in the training data. log_std_init + gSDE (smooth,
-    # state-dependent noise; `use_sde` in the ppo section) fix that.
+    # state-dependent noise; `use_sde` in the algo section) fix that.
     if "log_std_init" in ppo_cfg:
         policy_kwargs["log_std_init"] = float(ppo_cfg.pop("log_std_init"))
     tb_dir = f"runs/tb-{run_name}"
 
     if args.resume_from:
-        model = PPO.load(args.resume_from, env=venv, device=device,
-                         tensorboard_log=tb_dir)
+        model = ALGO.load(args.resume_from, env=venv, device=device,
+                          tensorboard_log=tb_dir)
         print(f"resumed from {args.resume_from} @ {model.num_timesteps:,} steps")
     else:
-        model = PPO(
+        model = ALGO(
             "MlpPolicy",
             venv,
             policy_kwargs=policy_kwargs,
@@ -252,6 +268,11 @@ def main():
             verbose=1,
             **ppo_cfg,
         )
+        if args.warm_start:
+            # weights only — same algo + same net_arch required
+            src = ALGO.load(args.warm_start, device=device)
+            model.policy.load_state_dict(src.policy.state_dict())
+            print(f"warm-started policy weights from {args.warm_start}")
 
     callbacks = [
         CurriculumEvalCallback(manager, env_cfg, cfg.get("eval", {}), ckpt_dir),
@@ -261,6 +282,31 @@ def main():
     ]
 
     # Manifest for downstream export (SLS-30): obs scaling + action layout.
+
+    _write_manifest(ckpt_dir, run_name, env_cfg, gamma, cfg)
+
+    try:
+        model.learn(
+            total_timesteps=total,
+            callback=callbacks,
+            reset_num_timesteps=not bool(args.resume_from),
+            progress_bar=False,
+        )
+        print("training done.")
+    except KeyboardInterrupt:
+        # Wall-clock cap (campaign.py sends SIGINT): SB3 skips the
+        # callbacks' _on_training_end on exceptions, so save here or a
+        # capped run keeps only its last PERIODIC checkpoint.
+        path = ckpt_dir / f"{run_name}_interrupted_{model.num_timesteps}.zip"
+        model.save(path)
+        venv_final = model.get_env()
+        if isinstance(venv_final, VecNormalize):
+            venv_final.save(str(ckpt_dir / "vecnormalize.pkl"))
+        shutil.copyfile(path, ckpt_dir / "latest.zip")
+        print(f"interrupted @ {model.num_timesteps:,}; saved {path.name}")
+
+
+def _write_manifest(ckpt_dir, run_name, env_cfg, gamma, cfg):
     from rl.env import OBS_SCALE
 
     (ckpt_dir / "manifest.json").write_text(
@@ -272,6 +318,9 @@ def main():
                 "booster_landing_action": bool(
                     env_cfg.get("booster_landing_action", False)
                 ),
+                "attitude_inner_loop": bool(
+                    env_cfg.get("attitude_inner_loop", False)
+                ),
                 "frame_skip": int(env_cfg.get("frame_skip", 10)),
                 "gamma": gamma,
                 "config": cfg,
@@ -280,14 +329,6 @@ def main():
             default=str,
         )
     )
-
-    model.learn(
-        total_timesteps=total,
-        callback=callbacks,
-        reset_num_timesteps=not bool(args.resume_from),
-        progress_bar=False,
-    )
-    print("training done.")
 
 
 if __name__ == "__main__":

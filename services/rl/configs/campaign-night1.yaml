@@ -1,0 +1,27 @@
+# SLS-51 night-1 ablation plan (owner-approved A+B+C, ~8 h).
+# Launch:  cd services/rl && nohup uv run python scripts/campaign.py \
+#            --plan configs/campaign-night1.yaml > runs/campaign.log 2>&1 &
+# Morning: read runs/campaign-night1/summary.json + the per-run PNGs.
+
+name: night1
+runs:
+  # A — strongest combo: PPO, 4-dim inner-loop action, BC warm start from
+  # the cascade teacher (hover 6/6, dock 4/6 catches).
+  - name: A-ppo-il-bc
+    config: configs/ppo-booster-il.yaml
+    hours: 4
+    bc:
+      episodes: 30 # per teachable curriculum stage
+      epochs: 60
+
+  # B — ablation: same PPO + inner loop, NO warm start. Isolates BC's
+  # contribution vs run A.
+  - name: B-ppo-il
+    config: configs/ppo-booster-il.yaml
+    hours: 2
+
+  # C — off-policy alternative: SAC + inner loop (replay buffer keeps rare
+  # early successes alive far longer than PPO's on-policy batches).
+  - name: C-sac-il
+    config: configs/sac-booster-il.yaml
+    hours: 2

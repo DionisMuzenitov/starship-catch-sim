@@ -130,9 +130,15 @@ def corridor_start(
     target = sc.target_position
     ang = rng.uniform(0, 2 * np.pi)
     r = lateral * np.sqrt(rng.uniform(0, 1))
+    px = target[0] + r * np.cos(ang)
+    # Keep starts on the catch side of the tower: the truss occupies
+    # x ∈ [-6, 6] up to y = 146, and a start at x < 6 forces a path THROUGH
+    # it (SLS-51 trace: seed-1 collision inbound). Mirror across x = 8.
+    if px < 8.0:
+        px = 16.0 - px
     position = np.array(
         [
-            target[0] + r * np.cos(ang),
+            px,
             target[1] + rng.uniform(alt_lo, alt_hi),
             target[2] + r * np.sin(ang),
         ]
