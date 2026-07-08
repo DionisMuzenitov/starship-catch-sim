@@ -44,10 +44,14 @@ DEFAULT_STAGES: tuple[Stage, ...] = (
     # 2. steeper + faster + wider corridor.
     Stage("approach-calm", "booster-descent-calm",
           _corridor((500.0, 2_500.0), 400.0, (-120.0, -30.0)), 0.8),
-    # 3. ballistic band: brake + the ~800 m divert.
-    Stage("divert-calm", "booster-descent-calm", (2_000.0, 8_000.0), 0.8),
-    # 4. high ballistic: fin steering matters.
-    Stage("descent-calm", "booster-descent-calm", (8_000.0, 40_000.0), 0.8),
+    # 3. divert corridor: the ~800 m lateral divert from feasible entry
+    # states. NOTE: a raw ballistic band here is UNSAVABLE (the engines-off
+    # table still carries ~-700 m/s at 3.5 km; 13-engine braking distance
+    # exceeds altitude — SLS-51 energy analysis). Post-entry-burn state
+    # class instead; the 8-40 km ballistic stage returns with the
+    # full-descent teacher (needs MPC-style ignition planning).
+    Stage("divert-calm", "booster-descent-calm",
+          _corridor((2_000.0, 6_000.0), 800.0, (-150.0, -80.0)), 0.8),
     # 5. full scenario.
     Stage("full-calm", "booster-descent-calm", None, 0.8),
     Stage("full-standard", "booster-descent-standard", None, 0.8),

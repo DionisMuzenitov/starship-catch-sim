@@ -31,7 +31,7 @@ class CascadeParams:
         brake_margin: float = 1.2,  # trigger brake when v²/2h exceeds this (m/s²)
         vy_k: float = 0.10,  # descent-profile slope (1/s)
         vy_min: float = 0.8,  # gentlest commanded descent (m/s)
-        vy_max: float = 20.0,  # steepest profile descent (m/s)
+        vy_max: float = 35.0,  # steepest profile descent (m/s)
         thr_hover: float = 0.84,  # centre throttle for TWR ≈ 1 at 10 % fuel
         thr_kp: float = 0.12,  # centre-throttle gain on vy error
         pos_kp: float = 0.04,  # lateral position gain (m/s² per m)
@@ -43,6 +43,10 @@ class CascadeParams:
         # truss face is only 2.5 m from it in -x; aiming at x≈10.5 keeps the
         # PD's overshoot away from steel while staying inside both the
         # capture box (x∈[5,12]) and the 10 m distance tolerance.
+        hold_radius: float = 60.0,  # hold altitude until this close overhead
+        hold_alt: float = 120.0,  # holding altitude above the catch point (m)
+        v_lat_max: float = 12.0,  # lateral transit equilibrium speed (m/s)
+        vel_kd_v2: float = 0.8,  # gain onto the braking-envelope velocity target
         wall_x: float = 7.0,  # virtual wall: push +x when closer than this
         # (must stay OUTSIDE the capture box — its centre is x = 8.5; a wall at
         # 9.0 shoved the vehicle during final entry and caused near-misses)
@@ -60,58 +64,80 @@ class CascadeParams:
         self.a_thrust = a_thrust
         self.lean_cmd_max = lean_cmd_max
         self.aim_x_offset = aim_x_offset
+        self.hold_radius = hold_radius
+        self.hold_alt = hold_alt
+        self.v_lat_max = v_lat_max
+        self.vel_kd_v2 = vel_kd_v2
         self.wall_x = wall_x
         self.wall_k = wall_k
 
 
 def cascade_action(env, params: CascadeParams | None = None) -> np.ndarray:
     """One 4-dim inner-loop action from the current env state. Reads the
-    TRUE world (teacher has clean state; the student only sees obs)."""
+    TRUE world (teacher has clean state; the student only sees obs).
+
+    v2 (SLS-51 imitation-first): braking-envelope lateral speed cap (v1's
+    raw PD built 17 m/s of closing speed it could not brake — flew THROUGH
+    the tower), altitude hold until roughly overhead (v1 descended to truss
+    height 400 m out), and coast attitude authority (ballistic starts
+    tumbled with engines off, then fired the landing burn sideways)."""
     p = params or CascadeParams()
     w = env.unwrapped.world
     tgt = env.unwrapped.scenario.target_position
 
+    from .env import LEAN_MAX
+
     vy = float(w.velocity[1])
     alt = float(w.position[1]) - float(tgt[1])  # height above catch point
-
-    # vertical: brake if kinetic energy demands more decel than centre can give
-    need_brake = vy < -3.0 and (vy * vy) / (2.0 * max(alt, 1.0)) > p.brake_margin
-    if need_brake:
-        thr_c, thr_i = 1.0, 1.0
-    else:
-        vy_tgt = -min(max(p.vy_k * alt, p.vy_min), p.vy_max)
-        # Mass feed-forward: a constant hover throttle drifts as fuel burns
-        # (P-only loop hovered ABOVE the box and slowly rose — SLS-51 trace).
-        # The teacher may read the true mass; the exact hover throttle is
-        # m·g / (n_centre · F_engine).
-        veh = env.unwrapped.vehicle
-        centre = [
-            e for i, e in enumerate(veh.engines)
-            if veh.engine_group_of[i] == "centre"
-        ]
-        thr_ff = float(w.mass) * 9.80665 / (len(centre) * centre[0].thrust_sea)
-        thr_c = float(np.clip(thr_ff + p.thr_kp * (vy_tgt - vy), 0.0, 1.0))
-        thr_i = 0.0
-
-    # horizontal: PD position/velocity -> desired accel -> lean target
     dx = float(w.position[0] - (tgt[0] + p.aim_x_offset))
     dz = float(w.position[2] - tgt[2])
     vx = float(w.velocity[0])
     vz = float(w.velocity[2])
-    ax = -(p.pos_kp * dx + p.vel_kd * vx)
-    az = -(p.pos_kp * dz + p.vel_kd * vz)
-    # virtual wall: never drift into the tower truss (its face is at x = 6).
-    # Predictive — reacts to where momentum puts the vehicle ~1.5 s out, or
-    # a fast inbound approach blows through a static wall (SLS-51: 4/6 dock
-    # starts clipped the truss).
-    x_pred = float(w.position[0]) + 1.0 * vx
-    ax += p.wall_k * max(0.0, p.wall_x - min(float(w.position[0]), x_pred))
+    h_dist = float(np.hypot(dx, dz))
+
+    # --- vertical ------------------------------------------------------------
+    need_brake = vy < -3.0 and (vy * vy) / (2.0 * max(alt, 1.0)) > p.brake_margin
+    veh = env.unwrapped.vehicle
+    centre = [
+        e for i, e in enumerate(veh.engines)
+        if veh.engine_group_of[i] == "centre"
+    ]
+    thr_ff = float(w.mass) * 9.80665 / (len(centre) * centre[0].thrust_sea)
+    if need_brake:
+        thr_c, thr_i = 1.0, 1.0
+    else:
+        if h_dist > p.hold_radius:
+            # Not overhead yet: hold a safe altitude above the tower while
+            # translating (v1 sank to truss height 400 m out and collided).
+            vy_tgt = float(np.clip(0.15 * (p.hold_alt - alt), -p.vy_max, 8.0))
+        else:
+            vy_tgt = -min(max(p.vy_k * alt, p.vy_min), p.vy_max)
+        thr_c = float(np.clip(thr_ff + p.thr_kp * (vy_tgt - vy), 0.0, 1.0))
+        thr_i = 0.0
+        # Coast attitude authority: high + fast means ballistic descent —
+        # keep the centre ring lit at min throttle so the gimbal inner loop
+        # can hold attitude (engines-off coast tumbles, and a tumbled
+        # landing burn fires sideways — v1 crashed at 300 m/s).
+        if alt > 600.0 and vy < -40.0:
+            thr_c = max(thr_c, 0.45)
+
+    # --- lateral: saturated-proportional PD -----------------------------------
+    # One continuous law for all ranges. Clamping the P-term's effective
+    # distance bounds the transit speed at v_eq = kp*d_sat/kd (~12 m/s) and
+    # braking begins naturally inside d_sat — no mode switch, no sign
+    # discontinuity (both of which limit-cycled against the attitude lag),
+    # and closing speed can never exceed what the lean authority can stop.
+    d_sat = p.vel_kd * p.v_lat_max / p.pos_kp
+    dxe = float(np.clip(dx, -d_sat, d_sat))
+    dze = float(np.clip(dz, -d_sat, d_sat))
+    ax = -(p.pos_kp * dxe + p.vel_kd * vx)
+    az = -(p.pos_kp * dze + p.vel_kd * vz)
+    # predictive anti-truss wall (face at x=6), active below tower top
+    if float(w.position[1]) < 170.0:
+        x_pred = float(w.position[0]) + 1.0 * vx
+        ax += p.wall_k * max(0.0, p.wall_x - min(float(w.position[0]), x_pred))
     ax = float(np.clip(ax, -p.acc_max, p.acc_max))
     az = float(np.clip(az, -p.acc_max, p.acc_max))
-    # action fraction: the env scales the lean action by LEAN_MAX (rad of
-    # body-up deflection), and achieved accel ~ a_thrust * lean_rad — so one
-    # unit of action buys a_thrust * LEAN_MAX m/s^2 (~1.8), NOT a_thrust.
-    from .env import LEAN_MAX
 
     per_unit = p.a_thrust * LEAN_MAX
     lean_x = float(np.clip(ax / per_unit, -1.0, 1.0)) * p.lean_cmd_max

@@ -95,10 +95,25 @@ def sample_start(
     """
     snaps = nominal_descent(scenario_id)
     alts = np.array([s.position[1] for s in snaps])
+    # Savable-energy filter: the raw ballistic still carries ~-700 m/s at
+    # 3.5 km — braking distance exceeds the altitude and the state is
+    # physically unsavable with the 13-engine landing set (SLS-51 teacher-v2
+    # trace: max brake from step 0, impact at -300). Keep only states where
+    # a 30 m/s² brake can null the descent above the catch point.
+    catch_y = C.SCENARIOS[scenario_id].target_position[1]
+    savable = np.array(
+        [s.velocity[1] ** 2 <= 2.0 * 30.0 * max(s.position[1] - catch_y, 1.0)
+         for s in snaps]
+    )
     lo = max(float(alt_range[0]), float(alts.min()))
     hi = min(float(alt_range[1]), float(alts.max()))
-    target = rng.uniform(lo, hi)
-    idx = int(np.argmin(np.abs(alts - target)))
+    in_band = (alts >= lo) & (alts <= hi)
+    ok = in_band & savable
+    if not ok.any():
+        ok = savable  # fall back to any savable state (lowest bands)
+    idxs = np.flatnonzero(ok)
+    target = rng.uniform(alts[idxs].min(), alts[idxs].max())
+    idx = int(idxs[np.argmin(np.abs(alts[idxs] - target))])
     w = _copy_world(snaps[idx])
     w.t = 0.0
     return w
