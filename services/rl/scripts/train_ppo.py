@@ -283,25 +283,27 @@ def main():
             src = ALGO.load(args.warm_start, device=device)
             model.policy.load_state_dict(src.policy.state_dict())
             print(f"warm-started policy weights from {args.warm_start}")
-        if args.demo_buffer:
-            if algo_name != "sac":
-                raise SystemExit("--demo-buffer requires algo: sac")
-            if bool(cfg.get("normalize_reward", True)):
-                raise SystemExit(
-                    "--demo-buffer requires normalize_reward: false "
-                    "(demo rewards are raw; a normalized env reward stream "
-                    "would put buffer and rollouts on different scales)"
-                )
-            d = np.load(args.demo_buffer)
-            n = venv.num_envs
-            total_t = (len(d["obs"]) // n) * n
-            for i in range(0, total_t, n):
-                sl = slice(i, i + n)
-                model.replay_buffer.add(
-                    d["obs"][sl], d["next_obs"][sl], d["act"][sl],
-                    d["rew"][sl], d["done"][sl], [{} for _ in range(n)],
-                )
-            print(f"seeded replay buffer with {total_t:,} demo transitions")
+
+
+    if args.demo_buffer:
+        if algo_name != "sac":
+            raise SystemExit("--demo-buffer requires algo: sac")
+        if bool(cfg.get("normalize_reward", True)):
+            raise SystemExit(
+                "--demo-buffer requires normalize_reward: false "
+                "(demo rewards are raw; a normalized env reward stream "
+                "would put buffer and rollouts on different scales)"
+            )
+        d = np.load(args.demo_buffer)
+        n = venv.num_envs
+        total_t = (len(d["obs"]) // n) * n
+        for i in range(0, total_t, n):
+            sl = slice(i, i + n)
+            model.replay_buffer.add(
+                d["obs"][sl], d["next_obs"][sl], d["act"][sl],
+                d["rew"][sl], d["done"][sl], [{} for _ in range(n)],
+            )
+        print(f"seeded replay buffer with {total_t:,} demo transitions")
 
     callbacks = [
         CurriculumEvalCallback(manager, env_cfg, cfg.get("eval", {}), ckpt_dir),

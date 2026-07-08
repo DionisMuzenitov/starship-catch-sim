@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
 from rl.env import StarshipCatchEnv
@@ -104,7 +104,10 @@ def main():
         env_cfg["frame_skip"] = m.get("frame_skip", args.frame_skip)
         env_cfg["gamma"] = m.get("gamma", 0.99)
 
-    model = PPO.load(ckpt, device="cpu")
+    try:
+        model = PPO.load(ckpt, device="cpu")
+    except (TypeError, KeyError, ValueError):
+        model = SAC.load(ckpt, device="cpu")  # SAC checkpoint (SLS-51)
     results = []
     for sid in args.scenarios.split(","):
         t0 = time.time()
