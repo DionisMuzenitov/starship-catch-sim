@@ -42,9 +42,10 @@ def main():
     stages = stages_from_config(cfg.get("curriculum", {}).get("stages"))
     teach_stages = [s for s in stages if s.start_alt_range is not None]
 
-    OBS, ACT, REW, NOBS, DONE = [], [], [], [], []
+    OBS, ACT, REW, NOBS, DONE, EP = [], [], [], [], [], []
     outcomes: dict[str, int] = {}
     seed = args.seed
+    ep_id = 0
     p = CascadeParams()
     for stage in teach_stages:
         for _ in range(args.episodes):
@@ -57,6 +58,7 @@ def main():
                 env = DomainRandomizationWrapper(env, DRConfig(**dr_raw))
             obs, _ = env.reset(seed=seed)
             seed += 1
+            ep_id += 1
             for _ in range(args.max_steps):
                 a = cascade_action(env, p)
                 nobs, r, term, trunc, info = env.step(a)
@@ -67,6 +69,7 @@ def main():
                 # truncation is not a Markov terminal: done=False keeps the
                 # bootstrap alive for timeout episodes.
                 DONE.append(bool(term))
+                EP.append(ep_id)
                 obs = nobs
                 if term or trunc:
                     outcomes[info.get("outcome", "none")] = (
@@ -83,6 +86,7 @@ def main():
         rew=np.asarray(REW, dtype=np.float32),
         next_obs=np.asarray(NOBS, dtype=np.float32),
         done=np.asarray(DONE, dtype=np.float32),
+        ep=np.asarray(EP, dtype=np.int64),
     )
     print(f"saved {len(OBS):,} transitions -> {out}; teacher outcomes: {outcomes}")
 

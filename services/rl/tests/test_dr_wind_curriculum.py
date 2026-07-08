@@ -96,13 +96,18 @@ def test_ou_turbulence_stats():
 # --- ballistic starts + curriculum --------------------------------------------
 
 
-def test_sample_start_altitude_band():
+def test_sample_start_is_savable():
+    """Ballistic sampling only returns SAVABLE states (13-engine braking can
+    null the descent above the catch point) — a raw low band still carries
+    ~-700 m/s and is physically unsavable, so the sampler filters and, if the
+    requested band has no savable states, falls back to ones that do
+    (SLS-51 energy analysis)."""
     for seed in range(5):
         w = sample_start(
             "booster-descent-calm", (2_000.0, 5_000.0), np.random.default_rng(seed)
         )
-        # nearest-snapshot lookup: allow one snapshot (~250 m fall) of slack
-        assert 1_500.0 < w.position[1] < 5_600.0
+        alt_above = w.position[1] - 91.0
+        assert w.velocity[1] ** 2 <= 2.0 * 30.0 * alt_above  # savable
         assert w.velocity[1] < -100.0  # descending
         assert w.t == 0.0
 
@@ -144,9 +149,11 @@ def test_masked_action_space_and_obs_norm():
 
 
 def test_set_stage_switches_scenario_and_band():
-    env = StarshipCatchEnv(start_alt_range=(1_500.0, 3_000.0))
+    corridor = {"kind": "corridor", "alt_above": (100.0, 500.0), "lateral": 100.0,
+                "vy": (-40.0, -5.0)}
+    env = StarshipCatchEnv(start_alt_range=corridor)
     env.reset(seed=0)
-    assert env.world.position[1] < 3_600.0
+    assert env.world.position[1] < 700.0
     env.set_stage(scenario_id="booster-descent-standard", start_alt_range=None)
     env.reset(seed=0)
     assert env.scenario_id == "booster-descent-standard"
