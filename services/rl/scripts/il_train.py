@@ -32,22 +32,61 @@ from rl.dr import DomainRandomizationWrapper, DRConfig
 from rl.env import StarshipCatchEnv
 
 
-def load_demos(pattern: str):
+def load_demos(pattern: str, successes_only: bool = False,
+               subsample_coast: bool = False):
     files = sorted(glob.glob(pattern))
     if not files:
         raise SystemExit(f"no demo files match {pattern}")
     OBS, ACT, RET = [], [], []
-    ep_offset = 0
+    kept = dropped = 0
     for f in files:
         d = np.load(f)
-        OBS.append(d["obs"])
-        ACT.append(d["act"])
-        RET.append(returns_to_go(d["rew"], d["ep"]))
-        ep_offset += int(d["ep"].max()) if len(d["ep"]) else 0
+        obs_f, act_f, rew_f, ep_f = d["obs"], d["act"], d["rew"], d["ep"]
+        if successes_only:
+            # Keep only episodes ending in a catch (terminal reward ≈ +100;
+            # graded failures are ≤ -40). The v3 demo set's 28 % of episodes
+            # END in tower collisions from otherwise-good approaches —
+            # cloning those trajectories teaches flying INTO the truss
+            # (round-4 BC eval collapsed to 3/48).
+            mask = np.zeros(len(ep_f), dtype=bool)
+            boundaries = np.flatnonzero(np.diff(ep_f)) + 1
+            starts = np.concatenate([[0], boundaries])
+            ends = np.concatenate([boundaries, [len(ep_f)]])
+            for st, en in zip(starts, ends):
+                ok = rew_f[en - 1] > 50.0
+                mask[st:en] = ok
+                kept += int(ok)
+                dropped += int(not ok)
+            obs_f, act_f, rew_f, ep_f = (
+                obs_f[mask], act_f[mask], rew_f[mask], ep_f[mask]
+            )
+        OBS.append(obs_f)
+        ACT.append(act_f)
+        RET.append(returns_to_go(rew_f, ep_f))
+    if subsample_coast:
+        obs_all = np.concatenate(OBS)
+        act_all = np.concatenate(ACT)
+        ret_all = np.concatenate(RET)
+        # Coast transitions (high altitude, constant attitude-authority
+        # throttle) are ~55 % of full-descent episodes and teach a constant
+        # action — they drown the terminal-phase data (round-5 finding:
+        # full-descent demos diluted corridor cloning 6x). Keep 1-in-8.
+        alt_above = obs_all[:, 1] * 70_000.0 - 91.0  # normalized obs -> metres
+        coast = (
+            (alt_above > 2_000.0)
+            & (np.abs(act_all[:, 0] - 0.45) < 0.05)
+            & (act_all[:, 1] <= 0.02)
+        )
+        keep = ~coast | (np.arange(len(coast)) % 8 == 0)
+        n0 = len(obs_all)
+        obs_all, act_all, ret_all = obs_all[keep], act_all[keep], ret_all[keep]
+        print(f"coast subsample: {n0:,} -> {len(obs_all):,} transitions")
+        return obs_all, act_all, ret_all
     obs = np.concatenate(OBS)
     act = np.concatenate(ACT)
     ret = np.concatenate(RET)
-    print(f"loaded {len(obs):,} transitions from {len(files)} files")
+    extra = f" (successes only: kept {kept} eps, dropped {dropped})" if successes_only else ""
+    print(f"loaded {len(obs):,} transitions from {len(files)} files{extra}")
     return obs, act, ret
 
 
@@ -123,13 +162,20 @@ def main():
     ap.add_argument("--batch", type=int, default=1024)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--max-steps", type=int, default=4000)
+    ap.add_argument("--successes-only", action="store_true",
+                    help="BC only on episodes that ended in a catch")
+    ap.add_argument("--subsample-coast", action="store_true",
+                    help="keep 1-in-8 constant-action coast transitions")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
-    stages = [s for s in stages_from_config(cfg.get("curriculum", {}).get("stages"))
-              if s.start_alt_range is not None]
+    stages = [
+        s for s in stages_from_config(cfg.get("curriculum", {}).get("stages"))
+        if s.start_alt_range is not None or not s.name.endswith("stormy")
+    ]
 
-    obs, act, ret = load_demos(args.demos)
+    obs, act, ret = load_demos(args.demos, successes_only=args.successes_only,
+                               subsample_coast=args.subsample_coast)
 
     env_cfg = dict(cfg.get("env", {}))
     ppo_cfg = dict(cfg.get("ppo", {}))

@@ -40,7 +40,13 @@ def main():
     dr_raw = dict(cfg.get("dr", {}))
     use_dr = dr_raw.pop("enabled", False)
     stages = stages_from_config(cfg.get("curriculum", {}).get("stages"))
-    teach_stages = [s for s in stages if s.start_alt_range is not None]
+    # teacher v3 flies full descents (6/6 calm, 98 t fuel margin) — include
+    # full-scenario stages in teaching; stormy stays out (wind sigma 6 m/s x
+    # DR turbulence is beyond the teacher's validated envelope for now).
+    teach_stages = [
+        s for s in stages
+        if s.start_alt_range is not None or not s.name.endswith("stormy")
+    ]
 
     OBS, ACT, REW, NOBS, DONE, EP = [], [], [], [], [], []
     outcomes: dict[str, int] = {}
