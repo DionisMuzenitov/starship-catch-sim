@@ -7,6 +7,11 @@ total_timesteps: 10_000_000
 n_envs: 8
 device: cpu # MLP-sized nets train faster on CPU than MPS on this M3
 seed: 42
+# VecNormalize's reward normalizer divides by cumulative-return std; with
+# gamma=1 that crushes the per-step signal ~100x. Night-1 verification: the
+# same recipe learns with this off (-111 -> -95 in 150k) and drifts into the
+# escape attractor with it on (flat -113..-124 over 700k).
+normalize_reward: false
 
 env:
   frame_skip: 10 # 25 Hz control over the 250 Hz plant
