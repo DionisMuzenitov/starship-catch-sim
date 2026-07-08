@@ -1,0 +1,21 @@
+# Night-1b (revised in-flight): run A's standard PPO lr/epochs erased the BC
+# warm start (evals -92 -> -94 -> -95 over 300k steps, converging on the
+# cold-start attractor). A2 adds warm-start-protective hparams: KL-limited
+# updates, low lr, few epochs. B stays the standard cold-start recipe.
+name: night1b
+runs:
+  - name: A2-ppo-il-bc-kl
+    config: configs/ppo-booster-il.yaml
+    hours: 3.5
+    bc: { episodes: 30, epochs: 60 }
+    overrides:
+      ppo:
+        learning_rate: 1.0e-4
+        n_epochs: 4
+        target_kl: 0.02
+  - name: B-ppo-il
+    config: configs/ppo-booster-il.yaml
+    hours: 1.75
+  - name: C-sac-il
+    config: configs/sac-booster-il.yaml
+    hours: 1.75

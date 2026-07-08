@@ -203,6 +203,13 @@ def main():
     ap.add_argument("--device", default=None)
     ap.add_argument("--resume-from", default=None)
     ap.add_argument(
+        "--demo-buffer",
+        default=None,
+        help="npz of teacher transitions (obs, act, rew, next_obs, done) to "
+        "seed an off-policy (SAC) replay buffer; requires "
+        "normalize_reward: false so demo and env rewards share a scale",
+    )
+    ap.add_argument(
         "--warm-start",
         default=None,
         help="checkpoint to copy POLICY WEIGHTS from (e.g. a BC pretrain zip); "
@@ -238,7 +245,10 @@ def main():
         venv = VecNormalize.load(str(ckpt_dir / "vecnormalize.pkl"), venv)
         venv.training = True
     else:
-        venv = VecNormalize(venv, norm_obs=False, norm_reward=True, gamma=gamma)
+        norm_reward = bool(cfg.get("normalize_reward", True))
+        venv = VecNormalize(
+            venv, norm_obs=False, norm_reward=norm_reward, gamma=gamma
+        )
 
     algo_name = str(cfg.get("algo", "ppo")).lower()
     ALGO = {"ppo": PPO, "sac": SAC}[algo_name]
@@ -273,6 +283,25 @@ def main():
             src = ALGO.load(args.warm_start, device=device)
             model.policy.load_state_dict(src.policy.state_dict())
             print(f"warm-started policy weights from {args.warm_start}")
+        if args.demo_buffer:
+            if algo_name != "sac":
+                raise SystemExit("--demo-buffer requires algo: sac")
+            if bool(cfg.get("normalize_reward", True)):
+                raise SystemExit(
+                    "--demo-buffer requires normalize_reward: false "
+                    "(demo rewards are raw; a normalized env reward stream "
+                    "would put buffer and rollouts on different scales)"
+                )
+            d = np.load(args.demo_buffer)
+            n = venv.num_envs
+            total_t = (len(d["obs"]) // n) * n
+            for i in range(0, total_t, n):
+                sl = slice(i, i + n)
+                model.replay_buffer.add(
+                    d["obs"][sl], d["next_obs"][sl], d["act"][sl],
+                    d["rew"][sl], d["done"][sl], [{} for _ in range(n)],
+                )
+            print(f"seeded replay buffer with {total_t:,} demo transitions")
 
     callbacks = [
         CurriculumEvalCallback(manager, env_cfg, cfg.get("eval", {}), ckpt_dir),
