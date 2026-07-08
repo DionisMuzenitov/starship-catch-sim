@@ -103,7 +103,19 @@ class DomainRandomizationWrapper(gym.Wrapper):
         e.set_wind(build_wind(spec, layer_offset=offset, turbulence_scale=turb))
 
         e.obs_noise_scale = self.cfg.obs_noise_scale
-        e.position_jitter_m = self.cfg.position_jitter_m
-        e.velocity_jitter_mps = self.cfg.velocity_jitter_mps
+        # IC jitter must not swamp the curriculum stage: the ticket's ±200 m /
+        # ±20 m/s was specified for full-descent starts (65 km). On a corridor
+        # stage whose own lateral spread is ~25-400 m, a 200 m jitter throws
+        # starts behind the tower or below the capture box — the SLS-51 BC
+        # collection measured teacher catches at 5/150 with the flat jitter
+        # vs 6/6 clean. Scale the jitter to the stage's start spec.
+        spec = e.start_alt_range
+        if isinstance(spec, dict):  # corridor: spec already randomizes
+            lateral = float(spec.get("lateral", 100.0))
+            e.position_jitter_m = min(self.cfg.position_jitter_m, 0.5 * lateral)
+            e.velocity_jitter_mps = min(self.cfg.velocity_jitter_mps, 5.0)
+        else:  # ballistic band or full-scenario start: full ticket spec
+            e.position_jitter_m = self.cfg.position_jitter_m
+            e.velocity_jitter_mps = self.cfg.velocity_jitter_mps
 
         return self.env.reset(seed=seed, options=options)
