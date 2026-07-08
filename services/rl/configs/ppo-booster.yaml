@@ -70,13 +70,9 @@ curriculum:
       scenario_id: booster-descent-calm
       start_alt_range: { kind: corridor, alt_above: [500, 2500], lateral: 400, vy: [-120, -30] }
       promote_at: 0.8
-    - name: divert-calm
+    - name: divert-calm # feasible post-entry-burn states; raw 2-8 km ballistic is unsavable (SLS-51)
       scenario_id: booster-descent-calm
-      start_alt_range: [2000, 8000]
-      promote_at: 0.8
-    - name: descent-calm
-      scenario_id: booster-descent-calm
-      start_alt_range: [8000, 40000]
+      start_alt_range: { kind: corridor, alt_above: [2000, 6000], lateral: 800, vy: [-150, -80] }
       promote_at: 0.8
     - name: full-calm
       scenario_id: booster-descent-calm

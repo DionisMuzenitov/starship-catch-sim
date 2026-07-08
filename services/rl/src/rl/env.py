@@ -72,7 +72,10 @@ W_CTRL = 1.0e-3  # per unit of summed throttle (fuel-efficiency nudge)
 # LEAN_MAX bounds commanded lean (horizontal components of body-up).
 K_ATT = 4.0
 K_RATE = 8.0
-LEAN_MAX = 0.15
+# 0.35 rad (20°): the 0.15 ceiling gave only ~1.8 m/s² lateral authority —
+# an 800 m divert took forever and fast approaches couldn't brake before the
+# tower (SLS-51 teacher-v2 diagnosis). Real divert burns bank harder.
+LEAN_MAX = 0.35
 
 # Fixed observation scales (normalize_obs=True): keeps every component ~O(1).
 # MUST stay in sync with the ONNX export pipeline (SLS-30).
@@ -86,13 +89,18 @@ OBS_SCALE = np.array(
 )
 
 # Per-component observation-noise sigmas at scale 1.0 (domain randomization).
+# Position/velocity sigmas reflect landing-grade fused INS/RTK-GNSS
+# (sub-decimetre): the original 2 m position sigma exceeded the 2.5 m
+# truss-clearance margin, making precise docking unlearnable through the
+# noise (SLS-51 imitation session: DAgger clone reached the tower but
+# collided 26/32).
 OBS_NOISE_SIGMA = np.array(
-    [2.0, 2.0, 2.0,
-     0.5, 0.5, 0.5,
+    [0.3, 0.3, 0.3,
+     0.1, 0.1, 0.1,
      0.002, 0.002, 0.002, 0.002,
      0.002, 0.002, 0.002,
      0.002,
-     2.0, 2.0, 2.0]
+     0.3, 0.3, 0.3]
 )
 
 
