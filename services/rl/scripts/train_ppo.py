@@ -246,6 +246,12 @@ def main():
         venv.training = True
     else:
         norm_reward = bool(cfg.get("normalize_reward", True))
+        if norm_reward and gamma >= 1.0:
+            print(
+                "WARNING: normalize_reward with gamma=1.0 crushes the reward "
+                "signal (cumulative-return std ~100x per-step scale) — "
+                "night-1 finding; set normalize_reward: false"
+            )
         venv = VecNormalize(
             venv, norm_obs=False, norm_reward=norm_reward, gamma=gamma
         )
