@@ -85,12 +85,17 @@ def run_one(run: dict, out_dir: Path) -> dict:
     # per-run checkpoint dir: rewrite the config copy so runs never collide
     cfg["checkpoint"] = dict(cfg.get("checkpoint", {}), dir=str(ckpt_dir))
     cfg["run_name"] = name
+    # plan-level config overrides, e.g. warm-start-protective PPO hparams
+    for sect, kv in (run.get("overrides") or {}).items():
+        cfg[sect] = {**cfg.get(sect, {}), **kv} if isinstance(kv, dict) else kv
     run_config = out_dir / f"{name}.config.yaml"
     run_config.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
     train_cmd = [PY, "scripts/train_ppo.py", "--config", str(run_config)]
     if run.get("total_timesteps"):
         train_cmd += ["--total-timesteps", str(int(run["total_timesteps"]))]
+    if run.get("demo_buffer"):
+        train_cmd += ["--demo-buffer", str(run["demo_buffer"])]
 
     # optional BC warm start
     if run.get("bc"):

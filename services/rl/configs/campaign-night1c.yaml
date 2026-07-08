@@ -1,0 +1,9 @@
+# Night-1c part 1: cold-PPO baseline only (B). A/A2 showed one-shot BC into
+# standard PPO gets erased (KL-compliant drift driven by a wrong value fn);
+# the BC-regularized-PPO fix is filed for daytime. Part 2 (separate plan):
+# SAC with teacher demos seeded into the replay buffer.
+name: night1c
+runs:
+  - name: B-ppo-il
+    config: configs/ppo-booster-il.yaml
+    hours: 1.5

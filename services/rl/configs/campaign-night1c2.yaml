@@ -1,0 +1,13 @@
+# Night-1c part 2: SAC with the teacher's transitions seeded into the replay
+# buffer (off-policy learns from demos directly — no distribution-shift
+# erasure like the PPO warm start). Raw rewards end-to-end.
+name: night1c2
+runs:
+  - name: C2-sac-il-demos
+    config: configs/sac-booster-il.yaml
+    hours: 3.5
+    demo_buffer: demos/teacher_transitions.npz
+    overrides:
+      normalize_reward: false
+      sac:
+        learning_starts: 5000
