@@ -114,3 +114,24 @@ def test_bc_fit_reduces_action_mse():
     bc_fit(model, obs, act, ret, epochs=15, batch=64, lr=1e-3)
     after = mse()
     assert after < 0.5 * before  # cloning actually fits the teacher
+
+
+def test_dr_jitter_scales_to_corridor_stage():
+    """The ticket's ±200 m IC jitter is for full-descent starts; on a tight
+    corridor stage it must shrink to the stage scale or it defeats the
+    curriculum (SLS-51 night-1 finding: teacher 5/150 vs 6/6 clean)."""
+    from rl.dr import DomainRandomizationWrapper, DRConfig
+
+    env = DomainRandomizationWrapper(
+        StarshipCatchEnv(attitude_inner_loop=True, start_alt_range=HOVER),
+        DRConfig(),
+    )
+    env.reset(seed=0)
+    assert env.unwrapped.position_jitter_m <= 0.5 * HOVER["lateral"]
+    assert env.unwrapped.velocity_jitter_mps <= 5.0
+
+    env2 = DomainRandomizationWrapper(
+        StarshipCatchEnv(start_alt_range=(2_000.0, 8_000.0)), DRConfig()
+    )
+    env2.reset(seed=0)
+    assert env2.unwrapped.position_jitter_m == 200.0  # ballistic: full spec
