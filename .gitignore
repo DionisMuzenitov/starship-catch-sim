@@ -56,4 +56,5 @@ services/rl/runs/
 services/rl/eval/results/
 
 # RL teacher demo datasets (SLS-51) — local only
-services/rl/demos/
+# (covered by demos*/ below)
+services/rl/demos*/
