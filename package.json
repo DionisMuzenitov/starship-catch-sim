@@ -24,6 +24,7 @@
     "rl:campaign": "cd services/rl && uv sync --group train && nohup uv run python scripts/campaign.py --plan configs/campaign-night1.yaml > runs/campaign.log 2>&1 & echo 'campaign launched: tail -f services/rl/runs/campaign.log'",
     "bench": "tsx tools/bench/physics-bench.ts",
     "bench:mpc": "tsx tools/eval/mpc-bench.ts",
+    "bench:rl": "tsx tools/eval/rl-bench.ts",
     "eval:pid": "tsx tools/eval/pid-monte-carlo.ts",
     "eval:all": "tsx tools/eval/run-eval.ts",
     "plot": "tsx tools/eval/plot.ts",

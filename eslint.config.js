@@ -16,6 +16,9 @@ export default tseslint.config(
       "**/coverage/**",
       // Static public assets, incl. the vendored (minified) Draco decoder.
       "apps/web/public/**",
+      // Python virtualenvs vendor JS (matplotlib/tensorboard/torch) that
+      // eslint must never scan (SLS-30: 4500+ phantom errors locally).
+      "services/**/.venv/**",
     ],
   },
   js.configs.recommended,
