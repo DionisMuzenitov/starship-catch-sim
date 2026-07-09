@@ -51,7 +51,7 @@ test("controller switcher toggles PID, tuning panel appears, charts mount", asyn
     page.locator('[data-testid="controller-override-temporary"]'),
   ).toHaveCount(0);
 
-  // MPC is live (SLS-26); RL stays a disabled placeholder (SLS-28+).
+  // MPC is live (SLS-26); RL is live too (SLS-30 — neural policy).
   const mpcOption = page.locator(
     '[data-testid="controller-switcher-select"] option[value="mpc"]',
   );
@@ -59,7 +59,7 @@ test("controller switcher toggles PID, tuning panel appears, charts mount", asyn
   const rlOption = page.locator(
     '[data-testid="controller-switcher-select"] option[value="rl"]',
   );
-  await expect(rlOption).toBeDisabled();
+  await expect(rlOption).toBeEnabled();
 
   expect(errors, `unexpected console errors:\n${errors.join("\n")}`).toEqual([]);
 });
