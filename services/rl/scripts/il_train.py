@@ -103,14 +103,17 @@ def make_env(cfg: dict, stage, use_dr: bool):
     return env
 
 
-def dagger_collect(model, cfg, stages, episodes_per_stage, max_steps, seed0):
-    """Roll the clone; label visited states with the teacher."""
+def dagger_collect(model, cfg, stages, episodes_per_stage, max_steps, seed0,
+                   weights: dict | None = None):
+    """Roll the clone; label visited states with the teacher. `weights`
+    multiplies episodes for named stages (wind-descent emphasis)."""
     p = CascadeParams(pos_kp=0.06, vel_kd=0.40, lean_cmd_max=1.0, acc_max=4.0)
     OBS, ACT = [], []
     outcomes: dict[str, int] = {}
     seed = seed0
     for stage in stages:
-        for _ in range(episodes_per_stage):
+        mult = (weights or {}).get(stage.name, 1)
+        for _ in range(episodes_per_stage * mult):
             env = make_env(cfg, stage, use_dr=True)
             obs, _ = env.reset(seed=seed)
             seed += 1
@@ -166,6 +169,8 @@ def main():
                     help="BC only on episodes that ended in a catch")
     ap.add_argument("--subsample-coast", action="store_true",
                     help="keep 1-in-8 constant-action coast transitions")
+    ap.add_argument("--dagger-weights", default=None,
+                    help="stage episode multipliers, e.g. full-standard=3,full-calm=2")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -199,9 +204,15 @@ def main():
     all_obs, all_act, all_ret = [obs], [act], [ret]
     for it in range(args.dagger_iters):
         print(f"== DAgger iter {it + 1}: clone rollouts + teacher labels ==")
+        weights = None
+        if args.dagger_weights:
+            weights = {
+                kv.split("=")[0]: int(kv.split("=")[1])
+                for kv in args.dagger_weights.split(",")
+            }
         d_obs, d_act, d_out = dagger_collect(
             model, cfg, stages, args.dagger_episodes, args.max_steps,
-            seed0=40000 + it * 10000,
+            seed0=40000 + it * 10000, weights=weights,
         )
         print(f"  collected {len(d_obs):,} labelled states; clone outcomes {d_out}")
         all_obs.append(d_obs)

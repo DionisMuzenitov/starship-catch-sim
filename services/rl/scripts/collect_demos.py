@@ -33,6 +33,13 @@ def main():
     ap.add_argument("--episodes", type=int, default=20, help="per teachable stage")
     ap.add_argument("--max-steps", type=int, default=1500)
     ap.add_argument("--seed", type=int, default=9000)
+    ap.add_argument("--gentle", action="store_true",
+                    help="gentle-teacher params (v_transit_max=12): the "
+                    "proven-clonable corridor behavior; fast envelope "
+                    "transits resist cloning (SLS-51 round-6 finding)")
+    ap.add_argument("--only-stages", default=None,
+                    help="comma list; collect only stages whose name "
+                    "contains one of these substrings")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -47,12 +54,18 @@ def main():
         s for s in stages
         if s.start_alt_range is not None or not s.name.endswith("stormy")
     ]
+    if args.only_stages:
+        keys = [k.strip() for k in args.only_stages.split(",")]
+        teach_stages = [
+            s for s in teach_stages if any(k in s.name for k in keys)
+        ]
+        print(f"collecting stages: {[s.name for s in teach_stages]}")
 
     OBS, ACT, REW, NOBS, DONE, EP = [], [], [], [], [], []
     outcomes: dict[str, int] = {}
     seed = args.seed
     ep_id = 0
-    p = CascadeParams()
+    p = CascadeParams(v_transit_max=12.0) if args.gentle else CascadeParams()
     for stage in teach_stages:
         for _ in range(args.episodes):
             env = StarshipCatchEnv(
