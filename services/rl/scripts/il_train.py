@@ -32,22 +32,61 @@ from rl.dr import DomainRandomizationWrapper, DRConfig
 from rl.env import StarshipCatchEnv
 
 
-def load_demos(pattern: str):
+def load_demos(pattern: str, successes_only: bool = False,
+               subsample_coast: bool = False):
     files = sorted(glob.glob(pattern))
     if not files:
         raise SystemExit(f"no demo files match {pattern}")
     OBS, ACT, RET = [], [], []
-    ep_offset = 0
+    kept = dropped = 0
     for f in files:
         d = np.load(f)
-        OBS.append(d["obs"])
-        ACT.append(d["act"])
-        RET.append(returns_to_go(d["rew"], d["ep"]))
-        ep_offset += int(d["ep"].max()) if len(d["ep"]) else 0
+        obs_f, act_f, rew_f, ep_f = d["obs"], d["act"], d["rew"], d["ep"]
+        if successes_only:
+            # Keep only episodes ending in a catch (terminal reward ≈ +100;
+            # graded failures are ≤ -40). The v3 demo set's 28 % of episodes
+            # END in tower collisions from otherwise-good approaches —
+            # cloning those trajectories teaches flying INTO the truss
+            # (round-4 BC eval collapsed to 3/48).
+            mask = np.zeros(len(ep_f), dtype=bool)
+            boundaries = np.flatnonzero(np.diff(ep_f)) + 1
+            starts = np.concatenate([[0], boundaries])
+            ends = np.concatenate([boundaries, [len(ep_f)]])
+            for st, en in zip(starts, ends):
+                ok = rew_f[en - 1] > 50.0
+                mask[st:en] = ok
+                kept += int(ok)
+                dropped += int(not ok)
+            obs_f, act_f, rew_f, ep_f = (
+                obs_f[mask], act_f[mask], rew_f[mask], ep_f[mask]
+            )
+        OBS.append(obs_f)
+        ACT.append(act_f)
+        RET.append(returns_to_go(rew_f, ep_f))
+    if subsample_coast:
+        obs_all = np.concatenate(OBS)
+        act_all = np.concatenate(ACT)
+        ret_all = np.concatenate(RET)
+        # Coast transitions (high altitude, constant attitude-authority
+        # throttle) are ~55 % of full-descent episodes and teach a constant
+        # action — they drown the terminal-phase data (round-5 finding:
+        # full-descent demos diluted corridor cloning 6x). Keep 1-in-8.
+        alt_above = obs_all[:, 1] * 70_000.0 - 91.0  # normalized obs -> metres
+        coast = (
+            (alt_above > 2_000.0)
+            & (np.abs(act_all[:, 0] - 0.45) < 0.05)
+            & (act_all[:, 1] <= 0.02)
+        )
+        keep = ~coast | (np.arange(len(coast)) % 8 == 0)
+        n0 = len(obs_all)
+        obs_all, act_all, ret_all = obs_all[keep], act_all[keep], ret_all[keep]
+        print(f"coast subsample: {n0:,} -> {len(obs_all):,} transitions")
+        return obs_all, act_all, ret_all
     obs = np.concatenate(OBS)
     act = np.concatenate(ACT)
     ret = np.concatenate(RET)
-    print(f"loaded {len(obs):,} transitions from {len(files)} files")
+    extra = f" (successes only: kept {kept} eps, dropped {dropped})" if successes_only else ""
+    print(f"loaded {len(obs):,} transitions from {len(files)} files{extra}")
     return obs, act, ret
 
 
@@ -64,14 +103,17 @@ def make_env(cfg: dict, stage, use_dr: bool):
     return env
 
 
-def dagger_collect(model, cfg, stages, episodes_per_stage, max_steps, seed0):
-    """Roll the clone; label visited states with the teacher."""
+def dagger_collect(model, cfg, stages, episodes_per_stage, max_steps, seed0,
+                   weights: dict | None = None):
+    """Roll the clone; label visited states with the teacher. `weights`
+    multiplies episodes for named stages (wind-descent emphasis)."""
     p = CascadeParams(pos_kp=0.06, vel_kd=0.40, lean_cmd_max=1.0, acc_max=4.0)
     OBS, ACT = [], []
     outcomes: dict[str, int] = {}
     seed = seed0
     for stage in stages:
-        for _ in range(episodes_per_stage):
+        mult = (weights or {}).get(stage.name, 1)
+        for _ in range(episodes_per_stage * mult):
             env = make_env(cfg, stage, use_dr=True)
             obs, _ = env.reset(seed=seed)
             seed += 1
@@ -123,13 +165,22 @@ def main():
     ap.add_argument("--batch", type=int, default=1024)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--max-steps", type=int, default=4000)
+    ap.add_argument("--successes-only", action="store_true",
+                    help="BC only on episodes that ended in a catch")
+    ap.add_argument("--subsample-coast", action="store_true",
+                    help="keep 1-in-8 constant-action coast transitions")
+    ap.add_argument("--dagger-weights", default=None,
+                    help="stage episode multipliers, e.g. full-standard=3,full-calm=2")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
-    stages = [s for s in stages_from_config(cfg.get("curriculum", {}).get("stages"))
-              if s.start_alt_range is not None]
+    stages = [
+        s for s in stages_from_config(cfg.get("curriculum", {}).get("stages"))
+        if s.start_alt_range is not None or not s.name.endswith("stormy")
+    ]
 
-    obs, act, ret = load_demos(args.demos)
+    obs, act, ret = load_demos(args.demos, successes_only=args.successes_only,
+                               subsample_coast=args.subsample_coast)
 
     env_cfg = dict(cfg.get("env", {}))
     ppo_cfg = dict(cfg.get("ppo", {}))
@@ -153,9 +204,15 @@ def main():
     all_obs, all_act, all_ret = [obs], [act], [ret]
     for it in range(args.dagger_iters):
         print(f"== DAgger iter {it + 1}: clone rollouts + teacher labels ==")
+        weights = None
+        if args.dagger_weights:
+            weights = {
+                kv.split("=")[0]: int(kv.split("=")[1])
+                for kv in args.dagger_weights.split(",")
+            }
         d_obs, d_act, d_out = dagger_collect(
             model, cfg, stages, args.dagger_episodes, args.max_steps,
-            seed0=40000 + it * 10000,
+            seed0=40000 + it * 10000, weights=weights,
         )
         print(f"  collected {len(d_obs):,} labelled states; clone outcomes {d_out}")
         all_obs.append(d_obs)
