@@ -19,6 +19,7 @@ import {
   type Controller,
   type ManualInputState,
 } from "@starship-catch-sim/controllers";
+import { RLLazyController } from "./rlLazyController.js";
 import {
   BoosterDescentStandard,
   createRecorder,
@@ -126,6 +127,14 @@ export function useSimRunner(): UseSimRunner {
         useMpcStore.getState().setUsingFallback(mpc.isUsingFallback());
       });
       controller = wrapWithOverride(mpc);
+    } else if (controllerKind === "rl") {
+      // Neural policy (SLS-30): lazy-fetches the weights JSON; flies the
+      // trained null action (freefall) for the sub-second load window.
+      const rl = new RLLazyController(
+        scenario.vehicle,
+        scenario.targetCatch.targetPosition,
+      );
+      controller = wrapWithOverride(rl);
     } else {
       // Manual mode: ignore the override layer; clear the "YOU" flash.
       useControllerStore.getState().setOverrideActive(false);

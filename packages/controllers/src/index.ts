@@ -40,3 +40,10 @@ export {
   type MPCSolveResponse,
   type MPCTransport,
 } from "./mpcController.js";
+
+export {
+  RLController,
+  type RLPolicyArtifact,
+  mlpForward,
+  innerLoopGimbal,
+} from "./rlController.js";
