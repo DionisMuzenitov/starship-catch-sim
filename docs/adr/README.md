@@ -53,3 +53,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md) | Accepted |
 | 014 | [PPO training pipeline — vectorized plant, curriculum, DR](014-ppo-training-pipeline.md) | Accepted |
 | 015 | [Attitude inner loop, cascade teacher & BC campaign](015-attitude-inner-loop-and-bc-campaign.md) | Accepted |
+| 016 | [Pure-TS policy runtime (JSON weights, no ONNX)](016-ts-policy-runtime.md) | Accepted |
