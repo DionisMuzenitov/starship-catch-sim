@@ -1,17 +1,17 @@
 # Controller comparison v1 — PID vs MPC vs RL (booster catch)
 
-*Generated 2026-07-09 (SLS-30). Protocol: TS physics core (250 Hz), the three
-`booster-descent-*` scenarios from 65 km, 30 seeded runs per cell with
+_Generated 2026-07-09 (SLS-30). Protocol: TS physics core (250 Hz), the three
+`booster-descent-_` scenarios from 65 km, 30 seeded runs per cell with
 jittered initial worlds (`jitterInitialWorld`), catch per
 `evaluateCatchOutcome` against the standard envelope (10 m / 5 m/s vert /
-2 m/s horiz / 3° tilt / 5°/s).*
+2 m/s horiz / 3° tilt / 5°/s).\*
 
 ## Catch success rate (30 seeds/cell)
 
-| controller | calm | standard | stormy |
-|---|---|---|---|
-| PID (cascaded, M4) | 0 % | 0 % | 0 % |
-| MPC (convex planner, M5 gate record¹) | 53 % | 50 % | 50 % |
+| controller                               | calm     | standard | stormy   |
+| ---------------------------------------- | -------- | -------- | -------- |
+| PID (cascaded, M4)                       | 0 %      | 0 %      | 0 %      |
+| MPC (convex planner, M5 gate record¹)    | 53 %     | 50 %     | 50 %     |
 | **RL — imitation-learned neural policy** | **87 %** | **87 %** | **90 %** |
 
 ¹ MPC numbers are the recorded SLS-47 gate results (same 30-seed protocol);
@@ -21,16 +21,18 @@ process. Re-run with `pnpm mpc:serve` + `pnpm bench:mpc --seeds 30`.
 ## Median terminal accuracy & fuel (successful RL runs land; PID never does)
 
 | controller | scenario | median final pos err | median fuel used |
-|---|---|---|---|
-| RL | calm | 5.2 m | 231.0 t |
-| RL | standard | 4.6 m | 230.8 t |
-| RL | stormy | 4.7 m | 231.3 t |
-| PID | calm | 3 510 m | 243.7 t |
-| PID | standard | 3 884 m | 247.0 t |
-| PID | stormy | 5 492 m | 245.9 t |
+| ---------- | -------- | -------------------- | ---------------- |
+| RL         | calm     | 5.2 m                | 231.0 t          |
+| RL         | standard | 4.6 m                | 230.8 t          |
+| RL         | stormy   | 4.7 m                | 231.3 t          |
+| PID        | calm     | 3 510 m              | 243.7 t          |
+| PID        | standard | 3 884 m              | 247.0 t          |
+| PID        | stormy   | 5 492 m              | 245.9 t          |
 
-Plot: `eval/plots/rl-bench-success.svg`. Raw cells:
-`eval/results/rl-bench-{rl,pid}-*.json`.
+Raw data (committed, versioned — [gate records](../results/gate-records/MANIFEST.md)):
+[`m6-rl-bench-rl-30seed.json`](../results/gate-records/m6-rl-bench-rl-30seed.json)
+(+ its PID pair) and the [`m6-rl-bench-success.svg`](../results/gate-records/m6-rl-bench-success.svg)
+plot. Regenerate with `pnpm bench:rl`.
 
 ## What the RL policy actually is (provenance — read before quoting)
 
@@ -64,7 +66,7 @@ disturbances and the training distribution included comparable wind
 offsets under domain randomization. Treat stormy robustness as promising,
 not proven — SLS-54 owns the dedicated campaign.
 
-Known gaps (tracked): mid-scale corridor starts (SLS-52 — a *different*
+Known gaps (tracked): mid-scale corridor starts (SLS-52 — a _different_
 checkpoint, `clone3_dagger1`, is strong there), RL polish beyond the
 teacher's ceiling (SLS-53), Manual/ship rows + 100-seed matrix +
 leaderboard JSON (M7).

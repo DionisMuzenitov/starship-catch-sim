@@ -16,6 +16,7 @@
  * stdout + eval/plots/rl-bench-success.svg.
  */
 
+import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -34,6 +35,18 @@ import type { Scenario } from "../../packages/physics/src/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "../..");
+
+/** Short commit the benchmark ran against — stamps each record so a gate
+ *  result is self-describing (SLS-67). "unknown" outside a git checkout. */
+function gitCommit(): string {
+  try {
+    return execSync("git rev-parse --short HEAD", { cwd: repo })
+      .toString()
+      .trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 function parseArgs(argv: string[]) {
   const quick = argv.includes("--quick");
@@ -147,7 +160,18 @@ function main() {
     rows.push({ label, byScenario });
     writeFileSync(
       join(repo, `eval/results/rl-bench-${label}-${stamp}.json`),
-      JSON.stringify(allCells[label], null, 1),
+      JSON.stringify(
+        {
+          controllerKey: label,
+          gitCommit: gitCommit(),
+          generatedAt: stamp,
+          seeds,
+          scenarios: SCENARIOS,
+          cells: allCells[label],
+        },
+        null,
+        1,
+      ),
     );
   }
 

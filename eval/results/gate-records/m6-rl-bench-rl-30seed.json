@@ -1,0 +1,2378 @@
+[
+ {
+  "scenarioId": "booster-descent-calm",
+  "windScale": 1,
+  "runs": [
+   {
+    "seed": 0,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.999602839417307,
+      "y": 94.76836346484492,
+      "z": -0.29804519851207484
+     },
+     "velocity": {
+      "x": -0.2896539765872047,
+      "y": -0.620474318711881,
+      "z": -0.1522660494213223
+     },
+     "verticalSpeedMps": -0.620474318711881,
+     "horizontalSpeedMps": 0.3272374916771571,
+     "tiltRad": 0.014050345371069289,
+     "angularRateMagRadPerS": 0.006578088230623672,
+     "fuelRemainingKg": 97211.04308191141,
+     "distanceToTargetM": 5.151370126208349
+    },
+    "durationS": 206.69999999988107,
+    "runtimeMs": 11486.603707790375,
+    "fuelUsedKg": 230163.33177439345
+   },
+   {
+    "seed": 1,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.825801592161815,
+      "y": 94.99995209766249,
+      "z": -0.38633778223109255
+     },
+     "velocity": {
+      "x": 0.3585830717438239,
+      "y": -0.5365995039464165,
+      "z": 0.06051322041116919
+     },
+     "verticalSpeedMps": -0.5365995039464165,
+     "horizontalSpeedMps": 0.36365322655761917,
+     "tiltRad": 0.013166983371718547,
+     "angularRateMagRadPerS": 0.006258889864770091,
+     "fuelRemainingKg": 97249.83388014328,
+     "distanceToTargetM": 5.216304237292897
+    },
+    "durationS": 204.4559999998863,
+    "runtimeMs": 1576.013500213623,
+    "fuelUsedKg": 230124.54097616154
+   },
+   {
+    "seed": 2,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.661906509116678,
+      "y": 94.99805762716096,
+      "z": -0.08695262784611944
+     },
+     "velocity": {
+      "x": 0.19820182650181722,
+      "y": -0.6561330869648092,
+      "z": -0.3119579461910676
+     },
+     "verticalSpeedMps": -0.6561330869648092,
+     "horizontalSpeedMps": 0.3695967048289331,
+     "tiltRad": 0.010573194331583097,
+     "angularRateMagRadPerS": 0.005158027579370498,
+     "fuelRemainingKg": 98851.78199168183,
+     "distanceToTargetM": 5.098007289322338
+    },
+    "durationS": 203.26799999988907,
+    "runtimeMs": 889.8510828018188,
+    "fuelUsedKg": 228522.592864623
+   },
+   {
+    "seed": 3,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.90490545187753,
+      "y": 94.99904512582444,
+      "z": -0.31143571268004194
+     },
+     "velocity": {
+      "x": -0.12061499477032779,
+      "y": -0.6724376251115213,
+      "z": -0.12113279760888994
+     },
+     "verticalSpeedMps": -0.6724376251115213,
+     "horizontalSpeedMps": 0.170941895449894,
+     "tiltRad": 0.014030765299392945,
+     "angularRateMagRadPerS": 0.0034596692131305447,
+     "fuelRemainingKg": 97372.50909567367,
+     "distanceToTargetM": 5.26143851600853
+    },
+    "durationS": 206.5559999998814,
+    "runtimeMs": 864.3107919692993,
+    "fuelUsedKg": 230001.86576063116
+   },
+   {
+    "seed": 4,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.908218643078023,
+      "y": 94.99802792005724,
+      "z": 0.02927781009609707
+     },
+     "velocity": {
+      "x": -0.044372117417109,
+      "y": -0.7451504997025221,
+      "z": -0.33330800353623946
+     },
+     "verticalSpeedMps": -0.7451504997025221,
+     "horizontalSpeedMps": 0.3362485836778967,
+     "tiltRad": 0.011203140256858679,
+     "angularRateMagRadPerS": 0.005513192927078428,
+     "fuelRemainingKg": 98263.43420814049,
+     "distanceToTargetM": 5.253669075869343
+    },
+    "durationS": 205.9959999998827,
+    "runtimeMs": 911.252375125885,
+    "fuelUsedKg": 229110.94064816437
+   },
+   {
+    "seed": 5,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.14417034619016,
+      "y": 94.99961532408325,
+      "z": -0.2931685062357999
+     },
+     "velocity": {
+      "x": 0.4084734544769743,
+      "y": -0.6586271999737994,
+      "z": -0.1364581348414267
+     },
+     "verticalSpeedMps": -0.6586271999737994,
+     "horizontalSpeedMps": 0.430663889334541,
+     "tiltRad": 0.012193775626746872,
+     "angularRateMagRadPerS": 0.0072979050299920144,
+     "fuelRemainingKg": 99192.01592494648,
+     "distanceToTargetM": 4.803593169010203
+    },
+    "durationS": 201.7959999998925,
+    "runtimeMs": 1972.0505833625793,
+    "fuelUsedKg": 228182.35893135838
+   },
+   {
+    "seed": 6,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.312095686347643,
+      "y": 94.99885198124221,
+      "z": -0.2685149179145762
+     },
+     "velocity": {
+      "x": 0.347776763470481,
+      "y": -0.6529025845321704,
+      "z": -0.17840053760352986
+     },
+     "verticalSpeedMps": -0.6529025845321704,
+     "horizontalSpeedMps": 0.3908649754419438,
+     "tiltRad": 0.011588115960743923,
+     "angularRateMagRadPerS": 0.006136423557772011,
+     "fuelRemainingKg": 98985.15182341411,
+     "distanceToTargetM": 4.8959983229370545
+    },
+    "durationS": 202.28399999989136,
+    "runtimeMs": 1214.0004167556763,
+    "fuelUsedKg": 228389.22303289073
+   },
+   {
+    "seed": 7,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -1683.6218913992002,
+      "y": -0.1044959020512784,
+      "z": -391.8748508632943
+     },
+     "velocity": {
+      "x": 46.38058298116028,
+      "y": -42.03929665865041,
+      "z": 94.8255009169311
+     },
+     "verticalSpeedMps": -42.03929665865041,
+     "horizontalSpeedMps": 105.56057077251523,
+     "tiltRad": 0.9927136600775479,
+     "angularRateMagRadPerS": 0.2890288785998315,
+     "fuelRemainingKg": 42156.40466162295,
+     "distanceToTargetM": 1739.2936564206468
+    },
+    "durationS": 232.7799999998203,
+    "runtimeMs": 1428.0709171295166,
+    "fuelUsedKg": 285217.9701946819
+   },
+   {
+    "seed": 8,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.634457798211495,
+      "y": 94.99812802646983,
+      "z": -0.05902063980545734
+     },
+     "velocity": {
+      "x": -0.33296193075997593,
+      "y": -0.49208475462381585,
+      "z": 0.24050662093375896
+     },
+     "verticalSpeedMps": -0.49208475462381585,
+     "horizontalSpeedMps": 0.4107396767398857,
+     "tiltRad": 0.004166107009234603,
+     "angularRateMagRadPerS": 0.008025642926271769,
+     "fuelRemainingKg": 93779.48771952001,
+     "distanceToTargetM": 5.080682714039071
+    },
+    "durationS": 209.63599999987423,
+    "runtimeMs": 939.859209060669,
+    "fuelUsedKg": 233594.88713678485
+   },
+   {
+    "seed": 9,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.687541266333655,
+      "y": 94.99871972637412,
+      "z": -0.3361079087710937
+     },
+     "velocity": {
+      "x": -0.30641811714348743,
+      "y": -0.5918601702958809,
+      "z": 0.11024537557856924
+     },
+     "verticalSpeedMps": -0.5918601702958809,
+     "horizontalSpeedMps": 0.3256472099530714,
+     "tiltRad": 0.009832383059759945,
+     "angularRateMagRadPerS": 0.007090821577780656,
+     "fuelRemainingKg": 94602.97417581365,
+     "distanceToTargetM": 5.1247582675685255
+    },
+    "durationS": 210.74399999987165,
+    "runtimeMs": 938.1307911872864,
+    "fuelUsedKg": 232771.40068049118
+   },
+   {
+    "seed": 10,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.796452319762928,
+      "y": 94.99858636458819,
+      "z": -0.34471713186047453
+     },
+     "velocity": {
+      "x": -0.288153619163411,
+      "y": -0.5646329364596738,
+      "z": 0.12022494507026409
+     },
+     "verticalSpeedMps": -0.5646329364596738,
+     "horizontalSpeedMps": 0.312228354980966,
+     "tiltRad": 0.009988842448729468,
+     "angularRateMagRadPerS": 0.007016801279851771,
+     "fuelRemainingKg": 95632.53943147743,
+     "distanceToTargetM": 5.193661590105685
+    },
+    "durationS": 207.9359999998782,
+    "runtimeMs": 860.1382923126221,
+    "fuelUsedKg": 231741.8354248274
+   },
+   {
+    "seed": 11,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.558564163436676,
+      "y": 94.9980548336501,
+      "z": -0.27364547873776773
+     },
+     "velocity": {
+      "x": -0.33788365753312904,
+      "y": -0.5615105778238182,
+      "z": 0.17524230281259326
+     },
+     "verticalSpeedMps": -0.5615105778238182,
+     "horizontalSpeedMps": 0.3806247899480871,
+     "tiltRad": 0.008242554345730891,
+     "angularRateMagRadPerS": 0.007805339976731342,
+     "fuelRemainingKg": 94538.77292216608,
+     "distanceToTargetM": 5.04124379917949
+    },
+    "durationS": 209.93199999987354,
+    "runtimeMs": 858.783374786377,
+    "fuelUsedKg": 232835.60193413874
+   },
+   {
+    "seed": 12,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.87303319121341,
+      "y": 94.99915714652467,
+      "z": -0.31988540361233575
+     },
+     "velocity": {
+      "x": -0.23317208521483473,
+      "y": -0.5546772051074349,
+      "z": 0.14500722797633006
+     },
+     "verticalSpeedMps": -0.5546772051074349,
+     "horizontalSpeedMps": 0.2745838988156689,
+     "tiltRad": 0.009907273909518406,
+     "angularRateMagRadPerS": 0.00648140059399404,
+     "fuelRemainingKg": 95569.0293797423,
+     "distanceToTargetM": 5.241463294068829
+    },
+    "durationS": 207.77599999987856,
+    "runtimeMs": 851.4010000228882,
+    "fuelUsedKg": 231805.34547656256
+   },
+   {
+    "seed": 13,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.856008521170379,
+      "y": 94.9995541304588,
+      "z": -0.36994878935522235
+     },
+     "velocity": {
+      "x": -0.27385163640514615,
+      "y": -0.566829853217274,
+      "z": 0.08836990621825032
+     },
+     "verticalSpeedMps": -0.566829853217274,
+     "horizontalSpeedMps": 0.2877567707053975,
+     "tiltRad": 0.011194460277964221,
+     "angularRateMagRadPerS": 0.006644800882911657,
+     "fuelRemainingKg": 95884.6961634432,
+     "distanceToTargetM": 5.234127295298011
+    },
+    "durationS": 207.65999999987883,
+    "runtimeMs": 837.8340001106262,
+    "fuelUsedKg": 231489.67869286163
+   },
+   {
+    "seed": 14,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.707697262804007,
+      "y": 94.99787789958607,
+      "z": -0.3585783591002383
+     },
+     "velocity": {
+      "x": -0.33999319244126625,
+      "y": -0.5849627721353401,
+      "z": 0.08308719678940184
+     },
+     "verticalSpeedMps": -0.5849627721353401,
+     "horizontalSpeedMps": 0.34999836167720083,
+     "tiltRad": 0.010504577037091706,
+     "angularRateMagRadPerS": 0.0074590579937665,
+     "fuelRemainingKg": 94810.3905752025,
+     "distanceToTargetM": 5.13818332384259
+    },
+    "durationS": 210.4159999998724,
+    "runtimeMs": 842.4686250686646,
+    "fuelUsedKg": 232563.98428110234
+   },
+   {
+    "seed": 15,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.802989662978757,
+      "y": 94.99888694766341,
+      "z": -0.37802374411785933
+     },
+     "velocity": {
+      "x": -0.3336824240792117,
+      "y": -0.604137301499499,
+      "z": 0.005318452763565532
+     },
+     "verticalSpeedMps": -0.604137301499499,
+     "horizontalSpeedMps": 0.3337248059092659,
+     "tiltRad": 0.012150249606551682,
+     "angularRateMagRadPerS": 0.007114289810355023,
+     "fuelRemainingKg": 95023.24536378114,
+     "distanceToTargetM": 5.200359553439952
+    },
+    "durationS": 210.2879999998727,
+    "runtimeMs": 845.5369591712952,
+    "fuelUsedKg": 232351.1294925237
+   },
+   {
+    "seed": 16,
+    "caught": false,
+    "outcomeKind": "none",
+    "terminalMetrics": {
+     "position": {
+      "x": 13.011201295185394,
+      "y": 147.518325935172,
+      "z": 5.34237863711764
+     },
+     "velocity": {
+      "x": 0.000049964326507743204,
+      "y": 0.08066175236518217,
+      "z": 0.00017551435027401242
+     },
+     "verticalSpeedMps": 0.08066175236518217,
+     "horizontalSpeedMps": 0.0001824875915657859,
+     "tiltRad": 0.00006199524741495151,
+     "angularRateMagRadPerS": 0.000053103451243260365,
+     "fuelRemainingKg": 0,
+     "distanceToTargetM": 56.94921521094341
+    },
+    "durationS": 600.0000000014087,
+    "runtimeMs": 2537.233124732971,
+    "fuelUsedKg": 327374.37485630484
+   },
+   {
+    "seed": 17,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.901935994495874,
+      "y": 94.99858391445275,
+      "z": -0.1778308717491699
+     },
+     "velocity": {
+      "x": -0.2473249704681724,
+      "y": -0.51166299061673,
+      "z": 0.2119625596054556
+     },
+     "verticalSpeedMps": -0.51166299061673,
+     "horizontalSpeedMps": 0.3257265228555677,
+     "tiltRad": 0.006582089163478202,
+     "angularRateMagRadPerS": 0.0071253528482325135,
+     "fuelRemainingKg": 94715.23300461296,
+     "distanceToTargetM": 5.252948281728461
+    },
+    "durationS": 208.43599999987703,
+    "runtimeMs": 941.5318746566772,
+    "fuelUsedKg": 232659.14185169188
+   },
+   {
+    "seed": 18,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.879414793894366,
+      "y": 94.99703244308438,
+      "z": 0.19815362393852662
+     },
+     "velocity": {
+      "x": -0.08067409772418659,
+      "y": -0.7503994990636602,
+      "z": -0.38927467385039216
+     },
+     "verticalSpeedMps": -0.7503994990636602,
+     "horizontalSpeedMps": 0.39754632653936167,
+     "tiltRad": 0.00894098200750709,
+     "angularRateMagRadPerS": 0.007076132660929346,
+     "fuelRemainingKg": 98504.83206207922,
+     "distanceToTargetM": 5.237936383628686
+    },
+    "durationS": 205.89599999988295,
+    "runtimeMs": 973.8713335990906,
+    "fuelUsedKg": 228869.54279422562
+   },
+   {
+    "seed": 19,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.965075148288552,
+      "y": 94.9971974807539,
+      "z": -0.09165903115756732
+     },
+     "velocity": {
+      "x": -0.011304263958374229,
+      "y": -0.7055938813573973,
+      "z": -0.3041725699198237
+     },
+     "verticalSpeedMps": -0.7055938813573973,
+     "horizontalSpeedMps": 0.3043825531716144,
+     "tiltRad": 0.013407023574242881,
+     "angularRateMagRadPerS": 0.004575768526575268,
+     "fuelRemainingKg": 98866.6709443146,
+     "distanceToTargetM": 5.290816086524363
+    },
+    "durationS": 204.46799999988627,
+    "runtimeMs": 1025.511374950409,
+    "fuelUsedKg": 228507.70391199025
+   },
+   {
+    "seed": 20,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.998969202998378,
+      "y": 94.93631091297847,
+      "z": -0.3893969571857668
+     },
+     "velocity": {
+      "x": -0.2757450483002413,
+      "y": -0.5585331094634497,
+      "z": 0.01579727561877826
+     },
+     "verticalSpeedMps": -0.5585331094634497,
+     "horizontalSpeedMps": 0.2761971860448221,
+     "tiltRad": 0.01336599800936875,
+     "angularRateMagRadPerS": 0.006395972050383911,
+     "fuelRemainingKg": 96176.57116960148,
+     "distanceToTargetM": 5.280999817972922
+    },
+    "durationS": 206.95999999988047,
+    "runtimeMs": 1072.3183341026306,
+    "fuelUsedKg": 231197.80368670338
+   },
+   {
+    "seed": 21,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.999605648690547,
+      "y": 94.97902538580604,
+      "z": -0.368867145101174
+     },
+     "velocity": {
+      "x": -0.3990270531657611,
+      "y": -0.5667714280548395,
+      "z": -0.10142962233253065
+     },
+     "verticalSpeedMps": -0.5667714280548395,
+     "horizontalSpeedMps": 0.41171659845659725,
+     "tiltRad": 0.01379589085109985,
+     "angularRateMagRadPerS": 0.008283037294943871,
+     "fuelRemainingKg": 96230.2837874098,
+     "distanceToTargetM": 5.31186838014373
+    },
+    "durationS": 208.21599999987754,
+    "runtimeMs": 1053.3659582138062,
+    "fuelUsedKg": 231144.09106889504
+   },
+   {
+    "seed": 22,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.32668194864911,
+      "y": 94.99841606506199,
+      "z": 0.09381762650333322
+     },
+     "velocity": {
+      "x": 0.14818609997483045,
+      "y": -0.890505827355415,
+      "z": -0.3765765718830171
+     },
+     "verticalSpeedMps": -0.890505827355415,
+     "horizontalSpeedMps": 0.40468387009728424,
+     "tiltRad": 0.005259575978869426,
+     "angularRateMagRadPerS": 0.006338412185355396,
+     "fuelRemainingKg": 101663.41191697372,
+     "distanceToTargetM": 4.897577321003441
+    },
+    "durationS": 199.75999999989725,
+    "runtimeMs": 960.6537089347839,
+    "fuelUsedKg": 225710.96293933113
+   },
+   {
+    "seed": 23,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.960294869889495,
+      "y": 94.99807763648265,
+      "z": -0.23734727497563074
+     },
+     "velocity": {
+      "x": -0.25532435281695925,
+      "y": -0.6523051350000626,
+      "z": -0.1924466406342879
+     },
+     "verticalSpeedMps": -0.6523051350000626,
+     "horizontalSpeedMps": 0.31972837633344625,
+     "tiltRad": 0.013424448300752411,
+     "angularRateMagRadPerS": 0.006151563696414734,
+     "fuelRemainingKg": 96452.50281764324,
+     "distanceToTargetM": 5.292881927916453
+    },
+    "durationS": 208.6159999998766,
+    "runtimeMs": 981.0707921981812,
+    "fuelUsedKg": 230921.87203866162
+   },
+   {
+    "seed": 24,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.905644005421925,
+      "y": 94.99982345938132,
+      "z": -0.34088799835025074
+     },
+     "velocity": {
+      "x": -0.07596366291701219,
+      "y": -0.6536999388553679,
+      "z": -0.09094503690546293
+     },
+     "verticalSpeedMps": -0.6536999388553679,
+     "horizontalSpeedMps": 0.11849674181810008,
+     "tiltRad": 0.014276057678728337,
+     "angularRateMagRadPerS": 0.002585099927962569,
+     "fuelRemainingKg": 97422.13980395469,
+     "distanceToTargetM": 5.264333141557691
+    },
+    "durationS": 206.06799999988255,
+    "runtimeMs": 966.5951247215271,
+    "fuelUsedKg": 229952.23505235015
+   },
+   {
+    "seed": 25,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.99922661240415,
+      "y": 94.5985036753572,
+      "z": -0.13618424062702755
+     },
+     "velocity": {
+      "x": -0.3054058520430999,
+      "y": -0.6231038407765521,
+      "z": -0.27508432216138773
+     },
+     "verticalSpeedMps": -0.6231038407765521,
+     "horizontalSpeedMps": 0.4110281240513379,
+     "tiltRad": 0.012503341911939076,
+     "angularRateMagRadPerS": 0.007651455610271007,
+     "fuelRemainingKg": 96997.20454946607,
+     "distanceToTargetM": 5.021191266413959
+    },
+    "durationS": 207.87999999987832,
+    "runtimeMs": 929.3360409736633,
+    "fuelUsedKg": 230377.17030683876
+   },
+   {
+    "seed": 26,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.404036727512255,
+      "y": 94.99957825104927,
+      "z": -0.3173959930916306
+     },
+     "velocity": {
+      "x": 0.3426554552776203,
+      "y": -0.6336992615710965,
+      "z": -0.1262652497330156
+     },
+     "verticalSpeedMps": -0.6336992615710965,
+     "horizontalSpeedMps": 0.3651789620469038,
+     "tiltRad": 0.011913969161658934,
+     "angularRateMagRadPerS": 0.005782609576541354,
+     "fuelRemainingKg": 98733.27188235006,
+     "distanceToTargetM": 4.9528573285970054
+    },
+    "durationS": 202.33199999989125,
+    "runtimeMs": 842.1429581642151,
+    "fuelUsedKg": 228641.10297395478
+   },
+   {
+    "seed": 27,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -229.34586791211441,
+      "y": -0.03781372413423212,
+      "z": -283.04313272868694
+     },
+     "velocity": {
+      "x": -140.10810966670547,
+      "y": -192.20908116581938,
+      "z": -131.68473503559116
+     },
+     "verticalSpeedMps": -192.20908116581938,
+     "horizontalSpeedMps": 192.27883876228142,
+     "tiltRad": 2.6206528454301408,
+     "angularRateMagRadPerS": 0.3821566586685567,
+     "fuelRemainingKg": 20874.917271162667,
+     "distanceToTargetM": 380.75182914256135
+    },
+    "durationS": 261.7079999997934,
+    "runtimeMs": 1084.7027082443237,
+    "fuelUsedKg": 306499.45758514217
+   },
+   {
+    "seed": 28,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -880.6194984745345,
+      "y": -0.17373187755421193,
+      "z": -206.60210360816276
+     },
+     "velocity": {
+      "x": 375.371981142369,
+      "y": -187.62397653816012,
+      "z": 171.34857955052846
+     },
+     "verticalSpeedMps": -187.62397653816012,
+     "horizontalSpeedMps": 412.63114271796155,
+     "tiltRad": 2.214609408304926,
+     "angularRateMagRadPerS": 0.40670178708125826,
+     "fuelRemainingKg": 0,
+     "distanceToTargetM": 917.3497485514486
+    },
+    "durationS": 268.94799999982797,
+    "runtimeMs": 1096.6767497062683,
+    "fuelUsedKg": 327374.37485630484
+   },
+   {
+    "seed": 29,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.881989888718705,
+      "y": 94.99943444068685,
+      "z": -0.31359489869487656
+     },
+     "velocity": {
+      "x": 0.07947184843974464,
+      "y": -0.619922282852472,
+      "z": -0.1535349159132388
+     },
+     "verticalSpeedMps": -0.619922282852472,
+     "horizontalSpeedMps": 0.17288361720797912,
+     "tiltRad": 0.014378262411741134,
+     "angularRateMagRadPerS": 0.0012514498811627781,
+     "fuelRemainingKg": 98052.59110578246,
+     "distanceToTargetM": 5.24706329418992
+    },
+    "durationS": 204.13999999988704,
+    "runtimeMs": 830.7467908859253,
+    "fuelUsedKg": 229321.7837505224
+   }
+  ],
+  "summary": {
+   "successRate": 0.8666666666666667,
+   "medianFinalPosErrM": 5.236031839463348,
+   "medianFuelKg": 231032.98155377834,
+   "p99RuntimeMs": 11486.603707790375
+  }
+ },
+ {
+  "scenarioId": "booster-descent-standard",
+  "windScale": 1,
+  "runs": [
+   {
+    "seed": 0,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.152477799078646,
+      "y": 94.99983676108936,
+      "z": 0.5952239351303813
+     },
+     "velocity": {
+      "x": -0.33195065619741365,
+      "y": -0.6476528913453219,
+      "z": -0.4526079418017018
+     },
+     "verticalSpeedMps": -0.6476528913453219,
+     "horizontalSpeedMps": 0.5612888624691088,
+     "tiltRad": 0.010090018575771876,
+     "angularRateMagRadPerS": 0.010691030106030586,
+     "fuelRemainingKg": 97828.07314121828,
+     "distanceToTargetM": 4.836178669457837
+    },
+    "durationS": 203.5079999998885,
+    "runtimeMs": 824.5194997787476,
+    "fuelUsedKg": 229546.30171508656
+   },
+   {
+    "seed": 1,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.675543688450059,
+      "y": 94.99949630019638,
+      "z": -0.27037085302536545
+     },
+     "velocity": {
+      "x": 0.13622624506355802,
+      "y": -0.5827858334381604,
+      "z": 0.06101789136097582
+     },
+     "verticalSpeedMps": -0.5827858334381604,
+     "horizontalSpeedMps": 0.14926745429013122,
+     "tiltRad": 0.020995228054626558,
+     "angularRateMagRadPerS": 0.004174217642298055,
+     "fuelRemainingKg": 96001.57612885592,
+     "distanceToTargetM": 4.560927690043454
+    },
+    "durationS": 204.5439999998861,
+    "runtimeMs": 819.6772079467773,
+    "fuelUsedKg": 231372.7987274489
+   },
+   {
+    "seed": 2,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.305799876791285,
+      "y": 94.99979175002737,
+      "z": 0.3725670423990619
+     },
+     "velocity": {
+      "x": 0.048079842666512274,
+      "y": -0.7662628918020223,
+      "z": -0.39888000621092395
+     },
+     "verticalSpeedMps": -0.7662628918020223,
+     "horizontalSpeedMps": 0.401767259275396,
+     "tiltRad": 0.022386955191559255,
+     "angularRateMagRadPerS": 0.007031487972200629,
+     "fuelRemainingKg": 98529.83706541915,
+     "distanceToTargetM": 4.404322131689327
+    },
+    "durationS": 201.70399999989272,
+    "runtimeMs": 811.6093330383301,
+    "fuelUsedKg": 228844.5377908857
+   },
+   {
+    "seed": 3,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.537593902862293,
+      "y": 94.99740003707075,
+      "z": 0.11786335006232136
+     },
+     "velocity": {
+      "x": 0.12890862264103017,
+      "y": -0.7072653268836865,
+      "z": -0.3502443373164732
+     },
+     "verticalSpeedMps": -0.7072653268836865,
+     "horizontalSpeedMps": 0.37321378432938807,
+     "tiltRad": 0.019879817332902096,
+     "angularRateMagRadPerS": 0.006189044847185012,
+     "fuelRemainingKg": 96900.36384549418,
+     "distanceToTargetM": 4.488305664573517
+    },
+    "durationS": 204.64799999988585,
+    "runtimeMs": 820.8011250495911,
+    "fuelUsedKg": 230474.01101081067
+   },
+   {
+    "seed": 4,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -407.6927610922607,
+      "y": -0.6643579108578497,
+      "z": -212.79192275087667
+     },
+     "velocity": {
+      "x": -188.47996299288872,
+      "y": -221.72041670976964,
+      "z": -41.88004070729097
+     },
+     "verticalSpeedMps": -221.72041670976964,
+     "horizontalSpeedMps": 193.07675742938363,
+     "tiltRad": 2.865810416979162,
+     "angularRateMagRadPerS": 0.4100018527167687,
+     "fuelRemainingKg": 62970.81166380313,
+     "distanceToTargetM": 476.3393446743871
+    },
+    "durationS": 215.46799999986064,
+    "runtimeMs": 860.9857921600342,
+    "fuelUsedKg": 264403.5631925017
+   },
+   {
+    "seed": 5,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.716496538125332,
+      "y": 94.99767348561673,
+      "z": -0.19613404080388272
+     },
+     "velocity": {
+      "x": 0.06995427916465023,
+      "y": -0.6839085964149444,
+      "z": 0.0024933417199686416
+     },
+     "verticalSpeedMps": -0.6839085964149444,
+     "horizontalSpeedMps": 0.06999869946204967,
+     "tiltRad": 0.018236963052991745,
+     "angularRateMagRadPerS": 0.002333104871888133,
+     "fuelRemainingKg": 97496.24878705217,
+     "distanceToTargetM": 4.575228820844554
+    },
+    "durationS": 202.2199999998915,
+    "runtimeMs": 853.7246670722961,
+    "fuelUsedKg": 229878.12606925267
+   },
+   {
+    "seed": 6,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.783325863430903,
+      "y": 94.99934936673284,
+      "z": -0.18175212310914385
+     },
+     "velocity": {
+      "x": -0.035752639277398385,
+      "y": -0.6895087441374216,
+      "z": -0.05595891807737786
+     },
+     "verticalSpeedMps": -0.6895087441374216,
+     "horizontalSpeedMps": 0.0664052085885622,
+     "tiltRad": 0.01778266963402674,
+     "angularRateMagRadPerS": 0.00035580257055914556,
+     "fuelRemainingKg": 97487.95098202673,
+     "distanceToTargetM": 4.608840004822642
+    },
+    "durationS": 202.41599999989106,
+    "runtimeMs": 955.1482915878296,
+    "fuelUsedKg": 229886.42387427812
+   },
+   {
+    "seed": 7,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -220.30444876907146,
+      "y": -0.19755623201499628,
+      "z": -751.8465846868453
+     },
+     "velocity": {
+      "x": -118.46686560200804,
+      "y": -229.97293432139872,
+      "z": -142.88560894967316
+     },
+     "verticalSpeedMps": -229.97293432139872,
+     "horizontalSpeedMps": 185.60898547883707,
+     "tiltRad": 2.8927936625006185,
+     "angularRateMagRadPerS": 0.3735259377872478,
+     "fuelRemainingKg": 42385.18822588297,
+     "distanceToTargetM": 791.1648102288699
+    },
+    "durationS": 243.1199999997962,
+    "runtimeMs": 1099.1890420913696,
+    "fuelUsedKg": 284989.1866304219
+   },
+   {
+    "seed": 8,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.868267793703248,
+      "y": 94.99989693147106,
+      "z": -0.3003267414103548
+     },
+     "velocity": {
+      "x": -0.42119925689425747,
+      "y": -0.4965507642744718,
+      "z": -0.1894184746650435
+     },
+     "verticalSpeedMps": -0.4965507642744718,
+     "horizontalSpeedMps": 0.4618313247850414,
+     "tiltRad": 0.024395289769435054,
+     "angularRateMagRadPerS": 0.006688719264673376,
+     "fuelRemainingKg": 95733.698105958,
+     "distanceToTargetM": 4.658118070282224
+    },
+    "durationS": 205.87999999988298,
+    "runtimeMs": 1074.6447496414185,
+    "fuelUsedKg": 231640.67675034684
+   },
+   {
+    "seed": 9,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.667669929592945,
+      "y": 94.99785870121484,
+      "z": 0.036618410239568765
+     },
+     "velocity": {
+      "x": -0.1828893513022989,
+      "y": -0.5869795623248271,
+      "z": -0.36900900868851483
+     },
+     "verticalSpeedMps": -0.5869795623248271,
+     "horizontalSpeedMps": 0.41184482916877335,
+     "tiltRad": 0.0218810252139519,
+     "angularRateMagRadPerS": 0.006147428429461584,
+     "fuelRemainingKg": 95575.5858793086,
+     "distanceToTargetM": 4.547857520471496
+    },
+    "durationS": 207.34399999987957,
+    "runtimeMs": 1016.0996670722961,
+    "fuelUsedKg": 231798.78897699626
+   },
+   {
+    "seed": 10,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.909695378048504,
+      "y": 94.9981607110508,
+      "z": -0.030078605006734357
+     },
+     "velocity": {
+      "x": -0.33921892646366375,
+      "y": -0.5778658188099096,
+      "z": -0.32337595891673954
+     },
+     "verticalSpeedMps": -0.5778658188099096,
+     "horizontalSpeedMps": 0.4686592481499553,
+     "tiltRad": 0.018618989648759358,
+     "angularRateMagRadPerS": 0.007322601559167424,
+     "fuelRemainingKg": 96679.93555548458,
+     "distanceToTargetM": 4.668278655870676
+    },
+    "durationS": 204.79199999988552,
+    "runtimeMs": 1038.8552918434143,
+    "fuelUsedKg": 230694.43930082026
+   },
+   {
+    "seed": 11,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.912542567383296,
+      "y": 94.9990320929111,
+      "z": -0.05490081037252727
+     },
+     "velocity": {
+      "x": -0.414706707867533,
+      "y": -0.5420165221725902,
+      "z": -0.33197360953226807
+     },
+     "verticalSpeedMps": -0.5420165221725902,
+     "horizontalSpeedMps": 0.5312138279226267,
+     "tiltRad": 0.020248660854281335,
+     "angularRateMagRadPerS": 0.008319478737710202,
+     "fuelRemainingKg": 95897.95702193136,
+     "distanceToTargetM": 4.670720867119853
+    },
+    "durationS": 206.28799999988203,
+    "runtimeMs": 975.6686673164368,
+    "fuelUsedKg": 231476.41783437348
+   },
+   {
+    "seed": 12,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.82679565285443,
+      "y": 94.99921445017631,
+      "z": -0.17523104788516652
+     },
+     "velocity": {
+      "x": -0.24857762529411814,
+      "y": -0.5886041215064426,
+      "z": -0.22497558322014322
+     },
+     "verticalSpeedMps": -0.5886041215064426,
+     "horizontalSpeedMps": 0.3352683236485466,
+     "tiltRad": 0.02044128818675473,
+     "angularRateMagRadPerS": 0.004620811475497454,
+     "fuelRemainingKg": 96401.2101306166,
+     "distanceToTargetM": 4.630162000274312
+    },
+    "durationS": 205.019999999885,
+    "runtimeMs": 968.190375328064,
+    "fuelUsedKg": 230973.16472568823
+   },
+   {
+    "seed": 13,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.781988840912094,
+      "y": 94.9994851085207,
+      "z": 0.004072484186821804
+     },
+     "velocity": {
+      "x": -0.20384328248343497,
+      "y": -0.598493782150682,
+      "z": -0.3411390789484193
+     },
+     "verticalSpeedMps": -0.598493782150682,
+     "horizontalSpeedMps": 0.39740150351929643,
+     "tiltRad": 0.01944768624939724,
+     "angularRateMagRadPerS": 0.005954171957203193,
+     "fuelRemainingKg": 96866.70961017309,
+     "distanceToTargetM": 4.604711802974604
+    },
+    "durationS": 204.57599999988602,
+    "runtimeMs": 988.143208026886,
+    "fuelUsedKg": 230507.66524613177
+   },
+   {
+    "seed": 14,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.001690655316182,
+      "y": 94.99783066545578,
+      "z": 0.18312790597024461
+     },
+     "velocity": {
+      "x": -0.4697667525941752,
+      "y": -0.5600846726484521,
+      "z": -0.4226945068299601
+     },
+     "verticalSpeedMps": -0.5600846726484521,
+     "horizontalSpeedMps": 0.6319425986172321,
+     "tiltRad": 0.017084539830391352,
+     "angularRateMagRadPerS": 0.010657234282804792,
+     "fuelRemainingKg": 95907.89244452614,
+     "distanceToTargetM": 4.719601889407618
+    },
+    "durationS": 206.8559999998807,
+    "runtimeMs": 940.9996666908264,
+    "fuelUsedKg": 231466.4824117787
+   },
+   {
+    "seed": 15,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.01078902265941,
+      "y": 94.99961338406274,
+      "z": 0.22481879223777804
+     },
+     "velocity": {
+      "x": -0.4308584222788373,
+      "y": -0.5711822925103289,
+      "z": -0.4175636394355264
+     },
+     "verticalSpeedMps": -0.5711822925103289,
+     "horizontalSpeedMps": 0.5999986441878441,
+     "tiltRad": 0.01615542721254669,
+     "angularRateMagRadPerS": 0.010228973977143951,
+     "fuelRemainingKg": 95671.51522725442,
+     "distanceToTargetM": 4.727738595525778
+    },
+    "durationS": 207.15599999988,
+    "runtimeMs": 883.3070831298828,
+    "fuelUsedKg": 231702.85962905042
+   },
+   {
+    "seed": 16,
+    "caught": false,
+    "outcomeKind": "none",
+    "terminalMetrics": {
+     "position": {
+      "x": 13.381589969647369,
+      "y": 148.89908795355345,
+      "z": 5.031618989199629
+     },
+     "velocity": {
+      "x": 0.0006460304382372045,
+      "y": -0.0349985371755894,
+      "z": -0.001265677847391049
+     },
+     "verticalSpeedMps": -0.0349985371755894,
+     "horizontalSpeedMps": 0.0014210192611310356,
+     "tiltRad": 0.0006044438653554171,
+     "angularRateMagRadPerS": 0.0003999794310027425,
+     "fuelRemainingKg": 0,
+     "distanceToTargetM": 58.3219640970497
+    },
+    "durationS": 600.0000000014087,
+    "runtimeMs": 2578.598291873932,
+    "fuelUsedKg": 327374.37485630484
+   },
+   {
+    "seed": 17,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.745859439936288,
+      "y": 94.99980392913069,
+      "z": -0.3053782501096474
+     },
+     "velocity": {
+      "x": -0.20316195400832218,
+      "y": -0.5505655138884521,
+      "z": -0.1323870515485385
+     },
+     "verticalSpeedMps": -0.5505655138884521,
+     "horizontalSpeedMps": 0.24248940383900286,
+     "tiltRad": 0.023465107108218582,
+     "angularRateMagRadPerS": 0.002736413258047199,
+     "fuelRemainingKg": 95810.73238038301,
+     "distanceToTargetM": 4.597344012696928
+    },
+    "durationS": 205.62399999988358,
+    "runtimeMs": 860.7098751068115,
+    "fuelUsedKg": 231563.64247592184
+   },
+   {
+    "seed": 18,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -325.2365120569693,
+      "y": -0.0995929770417262,
+      "z": -167.3554790097299
+     },
+     "velocity": {
+      "x": -165.48346946961803,
+      "y": -236.78870544479327,
+      "z": -21.92526583130446
+     },
+     "verticalSpeedMps": -236.78870544479327,
+     "horizontalSpeedMps": 166.92961375824052,
+     "tiltRad": 2.887713088063383,
+     "angularRateMagRadPerS": 0.3842369974251437,
+     "fuelRemainingKg": 63247.24261194012,
+     "distanceToTargetM": 384.30073077618573
+    },
+    "durationS": 214.72799999986236,
+    "runtimeMs": 892.7154583930969,
+    "fuelUsedKg": 264127.1322443647
+   },
+   {
+    "seed": 19,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.615569007905492,
+      "y": 94.99731219108133,
+      "z": 0.4487283035379993
+     },
+     "velocity": {
+      "x": -0.05856257546711609,
+      "y": -0.7541002447424711,
+      "z": -0.41808220357398246
+     },
+     "verticalSpeedMps": -0.7541002447424711,
+     "horizontalSpeedMps": 0.42216383572094207,
+     "tiltRad": 0.01747041913086456,
+     "angularRateMagRadPerS": 0.0074451798356481025,
+     "fuelRemainingKg": 97964.24361868927,
+     "distanceToTargetM": 4.544831577800632
+    },
+    "durationS": 202.92799999988986,
+    "runtimeMs": 836.2384157180786,
+    "fuelUsedKg": 229410.13123761557
+   },
+   {
+    "seed": 20,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.952992672182788,
+      "y": 94.9988992947076,
+      "z": 0.2667144068487106
+     },
+     "velocity": {
+      "x": -0.3376810273964734,
+      "y": -0.6133635859194339,
+      "z": -0.42698905886982397
+     },
+     "verticalSpeedMps": -0.6133635859194339,
+     "horizontalSpeedMps": 0.5443786666081578,
+     "tiltRad": 0.015131912466227115,
+     "angularRateMagRadPerS": 0.009333743360380101,
+     "fuelRemainingKg": 97701.17954104507,
+     "distanceToTargetM": 4.698883398618872
+    },
+    "durationS": 203.36799999988884,
+    "runtimeMs": 821.1531667709351,
+    "fuelUsedKg": 229673.19531525977
+   },
+   {
+    "seed": 21,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.07869063048823,
+      "y": 94.99793351268805,
+      "z": 0.5410611509945937
+     },
+     "velocity": {
+      "x": -0.37072428948296987,
+      "y": -0.598115713234789,
+      "z": -0.475987385533119
+     },
+     "verticalSpeedMps": -0.598115713234789,
+     "horizontalSpeedMps": 0.603324531242769,
+     "tiltRad": 0.012505168825335809,
+     "angularRateMagRadPerS": 0.011184923163616778,
+     "fuelRemainingKg": 97235.57653047932,
+     "distanceToTargetM": 4.788096167450858
+    },
+    "durationS": 204.6759999998858,
+    "runtimeMs": 840.15625,
+    "fuelUsedKg": 230138.79832582554
+   },
+   {
+    "seed": 22,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.998020712252346,
+      "y": 91.82627789918631,
+      "z": 0.24686143065277927
+     },
+     "velocity": {
+      "x": -1.649885884090283,
+      "y": -0.8151749804230517,
+      "z": -0.019198960115706633
+     },
+     "verticalSpeedMps": -0.8151749804230517,
+     "horizontalSpeedMps": 1.6499975850254749,
+     "tiltRad": 0.014112681928504296,
+     "angularRateMagRadPerS": 0.027747913242391883,
+     "fuelRemainingKg": 84006.23192276878,
+     "distanceToTargetM": 3.6027523695050276
+    },
+    "durationS": 215.21599999986122,
+    "runtimeMs": 873.2853751182556,
+    "fuelUsedKg": 243368.14293353606
+   },
+   {
+    "seed": 23,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.988621984472582,
+      "y": 94.99884461506733,
+      "z": 0.6443035944216744
+     },
+     "velocity": {
+      "x": -0.24277311273528998,
+      "y": -0.6559776547375078,
+      "z": -0.4630222484343537
+     },
+     "verticalSpeedMps": -0.6559776547375078,
+     "horizontalSpeedMps": 0.5228081740106845,
+     "tiltRad": 0.012897194320833928,
+     "angularRateMagRadPerS": 0.009966978414353839,
+     "fuelRemainingKg": 96690.83386560158,
+     "distanceToTargetM": 4.753853674529529
+    },
+    "durationS": 205.7839999998832,
+    "runtimeMs": 858.4659581184387,
+    "fuelUsedKg": 230683.54099070327
+   },
+   {
+    "seed": 24,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.792840637129364,
+      "y": 94.99844364635481,
+      "z": 0.011914786385578694
+     },
+     "velocity": {
+      "x": -0.12789400755615066,
+      "y": -0.6683731854515753,
+      "z": -0.3090580417354935
+     },
+     "verticalSpeedMps": -0.6683731854515753,
+     "horizontalSpeedMps": 0.3344753359070752,
+     "tiltRad": 0.017962677802200306,
+     "angularRateMagRadPerS": 0.004818324427020913,
+     "fuelRemainingKg": 96907.52623124511,
+     "distanceToTargetM": 4.609209448753831
+    },
+    "durationS": 204.38399999988647,
+    "runtimeMs": 946.9529161453247,
+    "fuelUsedKg": 230466.84862505973
+   },
+   {
+    "seed": 25,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.054821997652494,
+      "y": 94.99993837442817,
+      "z": 0.8601369384187136
+     },
+     "velocity": {
+      "x": -0.1290336477026095,
+      "y": -0.6824328779994286,
+      "z": -0.43962424574015463
+     },
+     "verticalSpeedMps": -0.6824328779994286,
+     "horizontalSpeedMps": 0.4581693569871746,
+     "tiltRad": 0.012227688855208477,
+     "angularRateMagRadPerS": 0.009583596945158812,
+     "fuelRemainingKg": 97366.06378729624,
+     "distanceToTargetM": 4.823531692830935
+    },
+    "durationS": 204.7559999998856,
+    "runtimeMs": 931.9207091331482,
+    "fuelUsedKg": 230008.3110690086
+   },
+   {
+    "seed": 26,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.739797644544545,
+      "y": 94.99805253494104,
+      "z": -0.20640951664939525
+     },
+     "velocity": {
+      "x": -0.04915731433625515,
+      "y": -0.670923210490747,
+      "z": -0.07035778510467387
+     },
+     "verticalSpeedMps": -0.670923210490747,
+     "horizontalSpeedMps": 0.08582924605045103,
+     "tiltRad": 0.019119431964454446,
+     "angularRateMagRadPerS": 0.000323507481026234,
+     "fuelRemainingKg": 97420.01037118312,
+     "distanceToTargetM": 4.587343724773542
+    },
+    "durationS": 202.30399999989132,
+    "runtimeMs": 1058.429458141327,
+    "fuelUsedKg": 229954.36448512174
+   },
+   {
+    "seed": 27,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.682900771480755,
+      "y": 94.99813110811554,
+      "z": 0.565558690422518
+     },
+     "velocity": {
+      "x": -0.08180618749099838,
+      "y": -0.6958646042510641,
+      "z": -0.44636091532712685
+     },
+     "verticalSpeedMps": -0.6958646042510641,
+     "horizontalSpeedMps": 0.4537954594786983,
+     "tiltRad": 0.017113973438845985,
+     "angularRateMagRadPerS": 0.008370725630741321,
+     "fuelRemainingKg": 96404.71025627873,
+     "distanceToTargetM": 4.590203129287956
+    },
+    "durationS": 206.14799999988236,
+    "runtimeMs": 1028.343415737152,
+    "fuelUsedKg": 230969.6646000261
+   },
+   {
+    "seed": 28,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.99884192105876,
+      "y": 91.37915888156348,
+      "z": 0.26185224019382114
+     },
+     "velocity": {
+      "x": -1.7753947360317106,
+      "y": -0.7692899883076612,
+      "z": -0.07930258221336212
+     },
+     "verticalSpeedMps": -0.7692899883076612,
+     "horizontalSpeedMps": 1.7771649806010739,
+     "tiltRad": 0.01693673391069244,
+     "angularRateMagRadPerS": 0.029189263022167056,
+     "fuelRemainingKg": 84567.00349724566,
+     "distanceToTargetM": 3.529054100140879
+    },
+    "durationS": 216.33599999985861,
+    "runtimeMs": 1088.293125152588,
+    "fuelUsedKg": 242807.37135905918
+   },
+   {
+    "seed": 29,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.794119960757138,
+      "y": 94.99812390471338,
+      "z": 0.029633327571696396
+     },
+     "velocity": {
+      "x": -0.1360100769999105,
+      "y": -0.6851408505272812,
+      "z": -0.3049031017305466
+     },
+     "verticalSpeedMps": -0.6851408505272812,
+     "horizontalSpeedMps": 0.3338632092495812,
+     "tiltRad": 0.017388059425858228,
+     "angularRateMagRadPerS": 0.0048820852461625005,
+     "fuelRemainingKg": 97858.61973032868,
+     "distanceToTargetM": 4.60964849916866
+    },
+    "durationS": 202.47599999989092,
+    "runtimeMs": 955.2097091674805,
+    "fuelUsedKg": 229515.75512597617
+   }
+  ],
+  "summary": {
+   "successRate": 0.8666666666666667,
+   "medianFinalPosErrM": 4.619905249721485,
+   "medianFuelKg": 230832.05195042316,
+   "p99RuntimeMs": 2578.598291873932
+  }
+ },
+ {
+  "scenarioId": "booster-descent-stormy",
+  "windScale": 1,
+  "runs": [
+   {
+    "seed": 0,
+    "caught": false,
+    "outcomeKind": "none",
+    "terminalMetrics": {
+     "position": {
+      "x": 15.993795361153062,
+      "y": 136.138257675272,
+      "z": 9.503140658350368
+     },
+     "velocity": {
+      "x": -0.10815714900774534,
+      "y": -0.040109068995016255,
+      "z": -0.08980430819128593
+     },
+     "verticalSpeedMps": -0.040109068995016255,
+     "horizontalSpeedMps": 0.14058016450125208,
+     "tiltRad": 0.014862889233355263,
+     "angularRateMagRadPerS": 0.0010933340721218181,
+     "fuelRemainingKg": 0,
+     "distanceToTargetM": 46.7325256887158
+    },
+    "durationS": 600.0000000014087,
+    "runtimeMs": 2875.992833137512,
+    "fuelUsedKg": 327374.37485630484
+   },
+   {
+    "seed": 1,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.833529670946122,
+      "y": 94.99829975832915,
+      "z": 0.05332842030404824
+     },
+     "velocity": {
+      "x": 0.20218937828326225,
+      "y": -0.6587031240022586,
+      "z": 0.16917434895726716
+     },
+     "verticalSpeedMps": -0.6587031240022586,
+     "horizontalSpeedMps": 0.26362948438231887,
+     "tiltRad": 0.014890460034831464,
+     "angularRateMagRadPerS": 0.005529303423995984,
+     "fuelRemainingKg": 96176.84256038451,
+     "distanceToTargetM": 4.629752218321518
+    },
+    "durationS": 204.8919999998853,
+    "runtimeMs": 876.9018750190735,
+    "fuelUsedKg": 231197.53229592033
+   },
+   {
+    "seed": 2,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.547304682069749,
+      "y": 94.9993177316961,
+      "z": -0.04242600638478173
+     },
+     "velocity": {
+      "x": -0.4611189826777166,
+      "y": -0.8125290607328756,
+      "z": -0.06939432537470192
+     },
+     "verticalSpeedMps": -0.8125290607328756,
+     "horizontalSpeedMps": 0.46631136441217286,
+     "tiltRad": 0.008430499560669498,
+     "angularRateMagRadPerS": 0.009139898353823835,
+     "fuelRemainingKg": 97864.58533392669,
+     "distanceToTargetM": 5.028161504013249
+    },
+    "durationS": 202.92799999988986,
+    "runtimeMs": 845.8404169082642,
+    "fuelUsedKg": 229509.78952237815
+   },
+   {
+    "seed": 3,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.913674380014893,
+      "y": 94.99737760476405,
+      "z": -0.00548035801710212
+     },
+     "velocity": {
+      "x": -0.2019499479701579,
+      "y": -0.787073019046424,
+      "z": -0.07329327129205294
+     },
+     "verticalSpeedMps": -0.787073019046424,
+     "horizontalSpeedMps": 0.21483874208773415,
+     "tiltRad": 0.01616858046952862,
+     "angularRateMagRadPerS": 0.003274848633697844,
+     "fuelRemainingKg": 96358.63425061712,
+     "distanceToTargetM": 4.669569761994511
+    },
+    "durationS": 205.79599999988318,
+    "runtimeMs": 873.2560839653015,
+    "fuelUsedKg": 231015.74060568772
+   },
+   {
+    "seed": 4,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.935630776055698,
+      "y": 94.9978754235193,
+      "z": 0.2617696858005513
+     },
+     "velocity": {
+      "x": -0.3881584361778161,
+      "y": -0.8603989928358685,
+      "z": -0.22740142249342418
+     },
+     "verticalSpeedMps": -0.8603989928358685,
+     "horizontalSpeedMps": 0.4498648447345497,
+     "tiltRad": 0.015162993941797803,
+     "angularRateMagRadPerS": 0.007646561339346414,
+     "fuelRemainingKg": 96591.22250027875,
+     "distanceToTargetM": 4.688691560302666
+    },
+    "durationS": 205.67999999988345,
+    "runtimeMs": 846.7664999961853,
+    "fuelUsedKg": 230783.1523560261
+   },
+   {
+    "seed": 5,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.991098725477267,
+      "y": 94.99955175437103,
+      "z": -0.06314169144051276
+     },
+     "velocity": {
+      "x": -0.24390931773419347,
+      "y": -0.7758632484728014,
+      "z": 0.11998732251915631
+     },
+     "verticalSpeedMps": -0.7758632484728014,
+     "horizontalSpeedMps": 0.27182478334926674,
+     "tiltRad": 0.014085166406861917,
+     "angularRateMagRadPerS": 0.005201265539279575,
+     "fuelRemainingKg": 98046.48753572578,
+     "distanceToTargetM": 4.712321505284289
+    },
+    "durationS": 202.04399999989192,
+    "runtimeMs": 837.495041847229,
+    "fuelUsedKg": 229327.88732057906
+   },
+   {
+    "seed": 6,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.12996956472558,
+      "y": 94.99708854425377,
+      "z": -0.11667426951761875
+     },
+     "velocity": {
+      "x": -0.3336343014509441,
+      "y": -0.7849752584869958,
+      "z": 0.08085255113755904
+     },
+     "verticalSpeedMps": -0.7849752584869958,
+     "horizontalSpeedMps": 0.3432913953627603,
+     "tiltRad": 0.013048442103905045,
+     "angularRateMagRadPerS": 0.006551325765698306,
+     "fuelRemainingKg": 98049.89770432241,
+     "distanceToTargetM": 4.7861330557303825
+    },
+    "durationS": 202.20799999989154,
+    "runtimeMs": 837.7525410652161,
+    "fuelUsedKg": 229324.47715198243
+   },
+   {
+    "seed": 7,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.208476636354364,
+      "y": 94.99843780980493,
+      "z": -0.0635193346274655
+     },
+     "velocity": {
+      "x": -0.35789944117763556,
+      "y": -0.818152761993201,
+      "z": -0.005772019895524287
+     },
+     "verticalSpeedMps": -0.818152761993201,
+     "horizontalSpeedMps": 0.35794598225002916,
+     "tiltRad": 0.01214884051517405,
+     "angularRateMagRadPerS": 0.006693906629371719,
+     "fuelRemainingKg": 96932.9058744154,
+     "distanceToTargetM": 4.829843197705965
+    },
+    "durationS": 204.98399999988507,
+    "runtimeMs": 849.3206667900085,
+    "fuelUsedKg": 230441.46898188943
+   },
+   {
+    "seed": 8,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.814024226081107,
+      "y": 94.99994150599447,
+      "z": -0.10908574770524641
+     },
+     "velocity": {
+      "x": 0.042239447071532966,
+      "y": -0.6026501089133345,
+      "z": 0.1140723528429763
+     },
+     "verticalSpeedMps": -0.6026501089133345,
+     "horizontalSpeedMps": 0.12164157419254866,
+     "tiltRad": 0.018773727407711216,
+     "angularRateMagRadPerS": 0.0033913033333984885,
+     "fuelRemainingKg": 94704.79549615487,
+     "distanceToTargetM": 4.622352201057379
+    },
+    "durationS": 207.57199999987904,
+    "runtimeMs": 859.9019589424133,
+    "fuelUsedKg": 232669.57936014998
+   },
+   {
+    "seed": 9,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.73340836504255,
+      "y": 94.9973629634473,
+      "z": -0.061743682818652175
+     },
+     "velocity": {
+      "x": -0.04488219113853977,
+      "y": -0.6852850625654058,
+      "z": -0.11049195345727131
+     },
+     "verticalSpeedMps": -0.6852850625654058,
+     "horizontalSpeedMps": 0.1192597285767506,
+     "tiltRad": 0.020295540138495778,
+     "angularRateMagRadPerS": 0.000992651713888614,
+     "fuelRemainingKg": 94630.06604312314,
+     "distanceToTargetM": 4.579392521825382
+    },
+    "durationS": 208.90399999987594,
+    "runtimeMs": 847.8116250038147,
+    "fuelUsedKg": 232744.3088131817
+   },
+   {
+    "seed": 10,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.862546116677692,
+      "y": 94.99740840784905,
+      "z": -0.09291100187570908
+     },
+     "velocity": {
+      "x": -0.18848747370372432,
+      "y": -0.6825318328042665,
+      "z": -0.03264041914460739
+     },
+     "verticalSpeedMps": -0.6825318328042665,
+     "horizontalSpeedMps": 0.19129277222401223,
+     "tiltRad": 0.018416663689512707,
+     "angularRateMagRadPerS": 0.0028819170512110123,
+     "fuelRemainingKg": 95713.14367197349,
+     "distanceToTargetM": 4.644300871696478
+    },
+    "durationS": 206.3479999998819,
+    "runtimeMs": 858.8112082481384,
+    "fuelUsedKg": 231661.23118433135
+   },
+   {
+    "seed": 11,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.775620734811142,
+      "y": 94.99972507140218,
+      "z": -0.12280797206543685
+     },
+     "velocity": {
+      "x": -0.10308320585745472,
+      "y": -0.6528366551539814,
+      "z": -0.05981380536288923
+     },
+     "verticalSpeedMps": -0.6528366551539814,
+     "horizontalSpeedMps": 0.11917985837313275,
+     "tiltRad": 0.02040985638827285,
+     "angularRateMagRadPerS": 0.00122431989885318,
+     "fuelRemainingKg": 94933.31194975103,
+     "distanceToTargetM": 4.603404411249181
+    },
+    "durationS": 207.86399999987836,
+    "runtimeMs": 841.5558748245239,
+    "fuelUsedKg": 232441.0629065538
+   },
+   {
+    "seed": 12,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.848711708736195,
+      "y": 94.99918392311913,
+      "z": -0.10124585389763609
+     },
+     "velocity": {
+      "x": -0.14306436708988354,
+      "y": -0.6844351504482158,
+      "z": 0.030143873360642545
+     },
+     "verticalSpeedMps": -0.6844351504482158,
+     "horizontalSpeedMps": 0.14620556156320252,
+     "tiltRad": 0.018114535047123202,
+     "angularRateMagRadPerS": 0.002607163100237272,
+     "fuelRemainingKg": 95766.2548630392,
+     "distanceToTargetM": 4.638983667207775
+    },
+    "durationS": 206.2199999998822,
+    "runtimeMs": 849.5244174003601,
+    "fuelUsedKg": 231608.11999326566
+   },
+   {
+    "seed": 13,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.870466565237459,
+      "y": 94.99818518605693,
+      "z": -0.08514875437268801
+     },
+     "velocity": {
+      "x": -0.1768849240612794,
+      "y": -0.6927604779726096,
+      "z": -0.023811691672963646
+     },
+     "verticalSpeedMps": -0.6927604779726096,
+     "horizontalSpeedMps": 0.17848045557005077,
+     "tiltRad": 0.01796892018638156,
+     "angularRateMagRadPerS": 0.002751994939051072,
+     "fuelRemainingKg": 95797.59679030711,
+     "distanceToTargetM": 4.648854356643686
+    },
+    "durationS": 206.23599999988215,
+    "runtimeMs": 847.4551248550415,
+    "fuelUsedKg": 231576.77806599773
+   },
+   {
+    "seed": 14,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.801271577331677,
+      "y": 94.99959483328307,
+      "z": -0.0484257259107118
+     },
+     "velocity": {
+      "x": -0.18994253023715998,
+      "y": -0.6768702769120146,
+      "z": -0.13671314600699339
+     },
+     "verticalSpeedMps": -0.6768702769120146,
+     "horizontalSpeedMps": 0.23402702639657655,
+     "tiltRad": 0.019988453455738447,
+     "angularRateMagRadPerS": 0.0029653218298530304,
+     "fuelRemainingKg": 94796.74621826212,
+     "distanceToTargetM": 4.614645680221748
+    },
+    "durationS": 208.5719999998767,
+    "runtimeMs": 848.7069578170776,
+    "fuelUsedKg": 232577.62863804272
+   },
+   {
+    "seed": 15,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.635112939265625,
+      "y": 94.99827718965395,
+      "z": 0.1415549778014005
+     },
+     "velocity": {
+      "x": -0.1575720554719512,
+      "y": -0.7087983617972656,
+      "z": -0.2697649401936867
+     },
+     "verticalSpeedMps": -0.7087983617972656,
+     "horizontalSpeedMps": 0.31241330897283975,
+     "tiltRad": 0.02147600250916658,
+     "angularRateMagRadPerS": 0.0043292508061008525,
+     "fuelRemainingKg": 95117.13918411155,
+     "distanceToTargetM": 4.534861140152685
+    },
+    "durationS": 208.21199999987755,
+    "runtimeMs": 855.46466588974,
+    "fuelUsedKg": 232257.2356721933
+   },
+   {
+    "seed": 16,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -2240.104722376492,
+      "y": -0.11697320840607467,
+      "z": -197.4835146304238
+     },
+     "velocity": {
+      "x": -149.19164678076535,
+      "y": -66.18191102789335,
+      "z": 94.96132997308425
+     },
+     "verticalSpeedMps": -66.18191102789335,
+     "horizontalSpeedMps": 176.84965835254994,
+     "tiltRad": 0.752846718234091,
+     "angularRateMagRadPerS": 0.34024603289806254,
+     "fuelRemainingKg": 54540.13019721686,
+     "distanceToTargetM": 2259.098324299168
+    },
+    "durationS": 217.60799999985565,
+    "runtimeMs": 963.6684999465942,
+    "fuelUsedKg": 272834.24465908797
+   },
+   {
+    "seed": 17,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.796643381343047,
+      "y": 94.99814250160335,
+      "z": -0.0903638807254737
+     },
+     "velocity": {
+      "x": 0.07268021994699228,
+      "y": -0.6432722757294473,
+      "z": 0.10149324003397875
+     },
+     "verticalSpeedMps": -0.6432722757294473,
+     "horizontalSpeedMps": 0.12483305709682033,
+     "tiltRad": 0.01801487952261324,
+     "angularRateMagRadPerS": 0.003534632586619476,
+     "fuelRemainingKg": 95219.30818182055,
+     "distanceToTargetM": 4.611711169959987
+    },
+    "durationS": 206.8159999998808,
+    "runtimeMs": 949.7707920074463,
+    "fuelUsedKg": 232155.0666744843
+   },
+   {
+    "seed": 18,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.141781138617073,
+      "y": 94.9969433806478,
+      "z": 0.3389073407143813
+     },
+     "velocity": {
+      "x": -0.46173307611088465,
+      "y": -0.8518171088955193,
+      "z": -0.2376008322247598
+     },
+     "verticalSpeedMps": -0.8518171088955193,
+     "horizontalSpeedMps": 0.5192798754513008,
+     "tiltRad": 0.011447602841461199,
+     "angularRateMagRadPerS": 0.00944262610880922,
+     "fuelRemainingKg": 96490.17858194232,
+     "distanceToTargetM": 4.8030638303115785
+    },
+    "durationS": 205.8319999998831,
+    "runtimeMs": 1015.7096247673035,
+    "fuelUsedKg": 230884.1962743625
+   },
+   {
+    "seed": 19,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.422494657227894,
+      "y": 94.99731398056163,
+      "z": 0.043179622522659514
+     },
+     "velocity": {
+      "x": -0.42441951515532045,
+      "y": -0.8212797764762393,
+      "z": -0.10972521941746678
+     },
+     "verticalSpeedMps": -0.8212797764762393,
+     "horizontalSpeedMps": 0.43837375448455906,
+     "tiltRad": 0.00867490885352636,
+     "angularRateMagRadPerS": 0.00835418868090871,
+     "fuelRemainingKg": 97323.33947301799,
+     "distanceToTargetM": 4.951904538712377
+    },
+    "durationS": 204.17999999988695,
+    "runtimeMs": 1028.5142087936401,
+    "fuelUsedKg": 230051.03538328686
+   },
+   {
+    "seed": 20,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.057202053031869,
+      "y": 94.99717659546283,
+      "z": -0.0706406324424642
+     },
+     "velocity": {
+      "x": -0.3646825231816795,
+      "y": -0.7075405900942685,
+      "z": -0.05093589645506988
+     },
+     "verticalSpeedMps": -0.7075405900942685,
+     "horizontalSpeedMps": 0.3682224983102442,
+     "tiltRad": 0.01567745633236066,
+     "angularRateMagRadPerS": 0.006345794582573351,
+     "fuelRemainingKg": 96238.10170374501,
+     "distanceToTargetM": 4.745702600700777
+    },
+    "durationS": 205.41199999988407,
+    "runtimeMs": 1033.3493328094482,
+    "fuelUsedKg": 231136.27315255982
+   },
+   {
+    "seed": 21,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.99763346985296,
+      "y": 94.99746993774141,
+      "z": 0.020676071146025963
+     },
+     "velocity": {
+      "x": -0.4555945934146836,
+      "y": -0.6860653789385621,
+      "z": -0.16605558367625034
+     },
+     "verticalSpeedMps": -0.6860653789385621,
+     "horizontalSpeedMps": 0.48491328133878847,
+     "tiltRad": 0.01744886451071467,
+     "angularRateMagRadPerS": 0.008039190401985011,
+     "fuelRemainingKg": 95473.33619635616,
+     "distanceToTargetM": 4.713636213454971
+    },
+    "durationS": 206.97999999988042,
+    "runtimeMs": 1030.3495831489563,
+    "fuelUsedKg": 231901.03865994868
+   },
+   {
+    "seed": 22,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.998494042459294,
+      "y": 92.58110219480706,
+      "z": -0.394184207827959
+     },
+     "velocity": {
+      "x": -0.7832073622823358,
+      "y": -0.860746772308908,
+      "z": 0.22380637086496935
+     },
+     "verticalSpeedMps": -0.860746772308908,
+     "horizontalSpeedMps": 0.8145569740496991,
+     "tiltRad": 0.009459355744873462,
+     "angularRateMagRadPerS": 0.015910812421795255,
+     "fuelRemainingKg": 97665.41506699548,
+     "distanceToTargetM": 3.8593685889336644
+    },
+    "durationS": 202.00399999989202,
+    "runtimeMs": 974.8303747177124,
+    "fuelUsedKg": 229708.95978930936
+   },
+   {
+    "seed": 23,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.724114336548654,
+      "y": 94.99817582613237,
+      "z": 0.338371666188418
+     },
+     "velocity": {
+      "x": -0.4647982160007453,
+      "y": -0.7663167886819074,
+      "z": -0.3167474527436357
+     },
+     "verticalSpeedMps": -0.7663167886819074,
+     "horizontalSpeedMps": 0.5624645148069851,
+     "tiltRad": 0.020297880316846807,
+     "angularRateMagRadPerS": 0.00916340238617537,
+     "fuelRemainingKg": 95736.96208076202,
+     "distanceToTargetM": 4.587656253817371
+    },
+    "durationS": 207.21199999987988,
+    "runtimeMs": 1009.799084186554,
+    "fuelUsedKg": 231637.41277554282
+   },
+   {
+    "seed": 24,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.92966666122259,
+      "y": 94.99756404266917,
+      "z": -0.007300838406883431
+     },
+     "velocity": {
+      "x": -0.21523702134530748,
+      "y": -0.7719012338006777,
+      "z": -0.062967459552322
+     },
+     "verticalSpeedMps": -0.7719012338006777,
+     "horizontalSpeedMps": 0.22425850333950248,
+     "tiltRad": 0.015967077759061064,
+     "angularRateMagRadPerS": 0.0035324850300506383,
+     "fuelRemainingKg": 96465.69226709398,
+     "distanceToTargetM": 4.67801792024565
+    },
+    "durationS": 205.38799999988413,
+    "runtimeMs": 979.8720827102661,
+    "fuelUsedKg": 230908.68258921086
+   },
+   {
+    "seed": 25,
+    "caught": false,
+    "outcomeKind": "crash",
+    "terminalMetrics": {
+     "position": {
+      "x": -3890.086166307514,
+      "y": -0.817998109052547,
+      "z": -80.25392518434596
+     },
+     "velocity": {
+      "x": -69.37986290578056,
+      "y": -252.2463085378828,
+      "z": 11.767658032555303
+     },
+     "verticalSpeedMps": -252.2463085378828,
+     "horizontalSpeedMps": 70.37075495115899,
+     "tiltRad": 2.6033726657840477,
+     "angularRateMagRadPerS": 0.14685727461581186,
+     "fuelRemainingKg": 45447.41101027351,
+     "distanceToTargetM": 3900.4929603075257
+    },
+    "durationS": 218.45999999985366,
+    "runtimeMs": 984.6662921905518,
+    "fuelUsedKg": 281926.96384603134
+   },
+   {
+    "seed": 26,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.054225827285588,
+      "y": 94.99915684680316,
+      "z": -0.10174601606196455
+     },
+     "velocity": {
+      "x": -0.2878409850268525,
+      "y": -0.7621675318003077,
+      "z": 0.1214599746278341
+     },
+     "verticalSpeedMps": -0.7621675318003077,
+     "horizontalSpeedMps": 0.31241792217768627,
+     "tiltRad": 0.01377445522455535,
+     "angularRateMagRadPerS": 0.005983047322697869,
+     "fuelRemainingKg": 97768.35279320096,
+     "distanceToTargetM": 4.746333038661512
+    },
+    "durationS": 202.3919999998911,
+    "runtimeMs": 858.819833278656,
+    "fuelUsedKg": 229606.02206310388
+   },
+   {
+    "seed": 27,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 10.209643975915013,
+      "y": 94.99958169458608,
+      "z": 0.5014612922342727
+     },
+     "velocity": {
+      "x": -0.561744820798719,
+      "y": -0.8063717062179653,
+      "z": -0.3502702758797122
+     },
+     "verticalSpeedMps": -0.8063717062179653,
+     "horizontalSpeedMps": 0.6620018956612093,
+     "tiltRad": 0.029962784360037843,
+     "angularRateMagRadPerS": 0.009992522861643151,
+     "fuelRemainingKg": 96048.32286393204,
+     "distanceToTargetM": 4.378470016302481
+    },
+    "durationS": 206.9079999998806,
+    "runtimeMs": 859.2621660232544,
+    "fuelUsedKg": 231326.05199237278
+   },
+   {
+    "seed": 28,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.997607420694955,
+      "y": 93.5759174181876,
+      "z": -0.3333941757732454
+     },
+     "velocity": {
+      "x": -0.711891134230943,
+      "y": -0.8679709630438529,
+      "z": 0.129524716763305
+     },
+     "verticalSpeedMps": -0.8679709630438529,
+     "horizontalSpeedMps": 0.7235783573665211,
+     "tiltRad": 0.010391340581918547,
+     "angularRateMagRadPerS": 0.014480013455473638,
+     "fuelRemainingKg": 96844.48245962997,
+     "distanceToTargetM": 4.356576625179708
+    },
+    "durationS": 204.55599999988607,
+    "runtimeMs": 849.4387497901917,
+    "fuelUsedKg": 230529.89239667487
+   },
+   {
+    "seed": 29,
+    "caught": true,
+    "outcomeKind": "caught",
+    "terminalMetrics": {
+     "position": {
+      "x": 11.27681513382228,
+      "y": 94.99843118892063,
+      "z": -0.06514082911922071
+     },
+     "velocity": {
+      "x": -0.4039931475606949,
+      "y": -0.7693296105461699,
+      "z": -0.020762028225301286
+     },
+     "verticalSpeedMps": -0.7693296105461699,
+     "horizontalSpeedMps": 0.4045262971575836,
+     "tiltRad": 0.011538955826281153,
+     "angularRateMagRadPerS": 0.007592054406091624,
+     "fuelRemainingKg": 97395.86898876149,
+     "distanceToTargetM": 4.868510818266306
+    },
+    "durationS": 203.4639999998886,
+    "runtimeMs": 856.1918749809265,
+    "fuelUsedKg": 229978.50586754334
+   }
+  ],
+  "summary": {
+   "successRate": 0.9,
+   "medianFinalPosErrM": 4.67379384112008,
+   "medianFuelKg": 231261.79214414657,
+   "p99RuntimeMs": 2875.992833137512
+  }
+ }
+]
