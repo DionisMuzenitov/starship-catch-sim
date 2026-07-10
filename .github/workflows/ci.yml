@@ -18,6 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # SLS-65: stop large binaries (chiefly RL training .npz datasets) from
+      # being committed and bloating every clone. Runs first — fails fast,
+      # needs only the checkout. See tools/ci/check-blob-sizes.sh.
+      - name: Big-blob guard
+        run: bash tools/ci/check-blob-sizes.sh
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
