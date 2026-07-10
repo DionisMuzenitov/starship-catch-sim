@@ -13,6 +13,10 @@
 
 A real-time, 6-DOF simulation of SpaceX's Starship booster catch manoeuvre — and a test bench for the guidance that flies it. The headline result: an **imitation-learned neural policy that catches the booster 87–90 % of the time, versus 50 % for a convex-MPC baseline**, running a pure-TypeScript forward pass entirely in your browser. The simulator models rigid-body dynamics, Mach-dependent aero, grid-fin and engine-gimbal control, and the tower ("Mechazilla") catch mechanism, so you can fly it by hand, pit PID / MPC / neural controllers against each other, and benchmark them over seeded Monte-Carlo dispersions.
 
+### Who this is for
+
+This is a **portfolio project** — a from-scratch 6-DOF flight simulator and controls test-bench built to demonstrate end-to-end engineering judgment: real vehicle physics, three generations of guidance (PID → convex MPC → an imitation-learned neural policy that catches 87–90 % of the time in the browser), and the decision trail behind every non-trivial choice ([17 ADRs](docs/adr/)). It's built to be evaluated by engineers and hiring managers for depth and follow-through, and to be enjoyable for the RL/GNC-curious and the SpaceX community.
+
 ## Results
 
 Three controller generations, benchmarked on the TypeScript physics core (250 Hz) across the three `booster-descent-*` wind scenarios — 30 seeded Monte-Carlo runs per cell against the standard catch envelope (10 m / 5 m·s⁻¹ vertical / 2 m·s⁻¹ horizontal / 3° tilt / 5°·s⁻¹):
