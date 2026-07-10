@@ -63,6 +63,10 @@ Before writing or changing any code for a ticket, you MUST:
    metrics block: wall-clock duration, tickets touched, PRs opened/merged,
    test-count delta, cost/tokens if known. A stale snapshot is this
    project's worst recorded process failure — do not skip this step.
+   When a milestone outcome gate flips (or its status/scope changes), also
+   refresh the **README milestone table + Results section** in the same pass
+   — the public README is the project's front door and went stale for a full
+   milestone once (M6 shipped while the README still said "Planned", SLS-63).
 
 Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 
