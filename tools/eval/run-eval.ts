@@ -11,17 +11,31 @@
  * The output JSON is the input format for `tools/eval/plot.ts`.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   DEFAULT_PID_GAINS,
   PIDController,
+  RLController,
+  type RLPolicyArtifact,
   runMonteCarlo,
   type MonteCarloResult,
 } from "../../packages/controllers/src/index.js";
 import type { Controller } from "../../packages/controllers/src/types.js";
 import type { Scenario } from "../../packages/physics/src/index.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, "../..");
+
+/** The deployed neural policy — the same artifact the browser ships. */
+const RL_POLICY: RLPolicyArtifact = JSON.parse(
+  readFileSync(
+    join(repoRoot, "apps/web/public/models/booster_policy.json"),
+    "utf8",
+  ),
+) as RLPolicyArtifact;
 
 const FULL_SCENARIOS = [
   "booster-descent-calm",
@@ -40,6 +54,13 @@ type ControllerSpec = {
   key: string;
   label: string;
   factory: (scenario: Scenario) => Controller;
+  /**
+   * Minimum catch success rate on the `--quick` calm cell (deterministic
+   * seeds 0–2). CI asserts this so a *collapsed* policy — decode/physics
+   * regression driving catches toward zero — fails the PR (SLS-66). Omit
+   * for baselines that legitimately never catch (PID).
+   */
+  quickCalmFloor?: number;
 };
 
 const CONTROLLERS: ControllerSpec[] = [
@@ -52,6 +73,21 @@ const CONTROLLERS: ControllerSpec[] = [
         scenario.targetCatch.targetPosition,
         () => DEFAULT_PID_GAINS,
       ),
+  },
+  {
+    key: "rl",
+    label: "Imitation-learned neural policy",
+    factory: (scenario) =>
+      new RLController(
+        scenario.vehicle,
+        scenario.targetCatch.targetPosition,
+        RL_POLICY,
+      ),
+    // Full-bench calm is ~87 % over 30 seeds; on the 3 deterministic
+    // `--quick` seeds a healthy policy catches at least 2/3. Floor sits
+    // one seed below that so a genuine collapse fails CI while a single
+    // cross-platform float flip does not. Tightened/loosened in one place.
+    quickCalmFloor: 1 / 3,
   },
 ];
 
@@ -135,6 +171,43 @@ function printSummary(reports: EvalRunReport[]): void {
   }
 }
 
+/**
+ * Regression floor (SLS-66). Fails the process — and therefore the CI
+ * `eval:all --quick` step — if any controller with a declared
+ * `quickCalmFloor` catches below it on the calm cell. Guards the deployed
+ * neural policy against a silent collapse (e.g. a physics or action-decode
+ * change) that the forward-pass parity test cannot see.
+ */
+function assertQuickFloors(reports: EvalRunReport[]): void {
+  const failures: string[] = [];
+  for (const spec of CONTROLLERS) {
+    if (spec.quickCalmFloor === undefined) continue;
+    const calm = reports
+      .find((r) => r.controllerKey === spec.key)
+      ?.cells.find((c) => c.scenarioId === "booster-descent-calm");
+    if (!calm) {
+      failures.push(`${spec.key}: no calm cell in the quick sweep`);
+      continue;
+    }
+    const rate = calm.summary.successRate;
+    if (rate < spec.quickCalmFloor) {
+      failures.push(
+        `${spec.key}: calm catch ${(rate * 100).toFixed(0)} % < floor ${(
+          spec.quickCalmFloor * 100
+        ).toFixed(0)} %`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    console.error(
+      `\n✗ RL regression floor FAILED (SLS-66):\n  ${failures.join("\n  ")}\n` +
+        `A controller that should catch is collapsing — investigate before merge.`,
+    );
+    process.exit(1);
+  }
+  console.log("\n✓ regression floors OK (SLS-66)");
+}
+
 function main(): void {
   const argv = process.argv.slice(2);
   const quick = parseFlag(argv, "--quick");
@@ -146,6 +219,10 @@ function main(): void {
   console.log(
     `\nWrote ${reports.length} report(s) to ${outDir}. Wall ${(elapsedMs / 1000).toFixed(2)} s.`,
   );
+  // The floor guards the neural policy; assert it whenever it ran (quick is
+  // the CI path). The full sweep also includes the calm cell, so it holds there
+  // too — the 3-seed quick rate is just the coarser, per-PR signal.
+  assertQuickFloors(reports);
 }
 
 const invokedDirectly =

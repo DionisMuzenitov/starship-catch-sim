@@ -4,7 +4,7 @@
  * the expected structure.
  */
 
-import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -20,17 +20,21 @@ describe("runEvalSweep --quick", () => {
       outDir: dir,
       stamp: "test-stamp",
     });
-    expect(reports).toHaveLength(1);
-    const r = reports[0]!;
-    expect(r.controllerKey).toBe("pid");
-    expect(r.seedsPerCell).toBe(3);
-    expect(r.cells).toHaveLength(1);
-    expect(r.cells[0]?.runs).toHaveLength(3);
+    // Both the PID baseline and the neural policy run in the quick sweep.
+    expect(reports.map((r) => r.controllerKey)).toEqual(["pid", "rl"]);
+    for (const r of reports) {
+      expect(r.seedsPerCell).toBe(3);
+      expect(r.cells).toHaveLength(1);
+      expect(r.cells[0]?.runs).toHaveLength(3);
+    }
 
     const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
-    expect(files).toHaveLength(1);
-    const payload = JSON.parse(readFileSync(join(dir, files[0]!), "utf8"));
-    expect(payload.controllerKey).toBe("pid");
-    expect(payload.cells[0].summary.successRate).toBeGreaterThanOrEqual(0);
+    expect(files).toHaveLength(2);
+
+    // The neural policy must actually catch on the calm quick seeds — this is
+    // the unit-level twin of the CI regression floor (SLS-66): a collapsed
+    // policy (decode/physics regression) drops to ~0 and fails here too.
+    const rl = reports.find((r) => r.controllerKey === "rl")!;
+    expect(rl.cells[0]!.summary.successRate).toBeGreaterThanOrEqual(1 / 3);
   }, 120_000);
 });
