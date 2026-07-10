@@ -47,7 +47,11 @@ playwright/.cache/
 .claude/settings.local.json
 
 # Eval outputs (CI uploads them as artifacts; not versioned)
-eval/results/
+eval/results/*
+# …but the curated milestone-gate records (SLS-67) are durable provenance and
+# ARE tracked. Uses eval/results/* above (not eval/results/) so git descends
+# into this re-included subdir.
+!eval/results/gate-records/
 eval/plots/
 
 # RL training artifacts (SLS-29) — checkpoints & TB logs stay local

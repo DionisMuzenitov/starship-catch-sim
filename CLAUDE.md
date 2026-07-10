@@ -67,6 +67,11 @@ Before writing or changing any code for a ticket, you MUST:
    refresh the **README milestone table + Results section** in the same pass
    — the public README is the project's front door and went stale for a full
    milestone once (M6 shipped while the README still said "Planned", SLS-63).
+   And **cut a `vX.Y` GitHub release** at the gate-meeting commit (SLS-67):
+   tag it, attach the winning checkpoint + the committed
+   `eval/results/gate-records/` for that gate, and paste the bench numbers +
+   seed/config into the notes — the release is the durable, citable pin for
+   the claim (`git`/main moves on; a shallow clone won't have the history).
 
 Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 

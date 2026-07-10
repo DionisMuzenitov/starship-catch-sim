@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+title: Starship Catch Simulator
+message: >-
+  If you use this simulator, its neural policy, or its benchmark results,
+  please cite it using this metadata.
+type: software
+authors:
+  - given-names: Dionis
+    family-names: Muzenitov
+    alias: DionisMuzenitov
+repository-code: "https://github.com/DionisMuzenitov/starship-catch-sim"
+url: "https://dionismuzenitov.github.io/starship-catch-sim/"
+abstract: >-
+  An open-source, 6-DOF browser simulation of SpaceX's Super Heavy booster
+  catch manoeuvre, and a test bench for the guidance that flies it. Ships an
+  imitation-learned neural policy that catches the booster 87-90% of the time
+  (vs 50% for a convex-MPC baseline) as a pure-TypeScript in-browser forward
+  pass, with a numpy<->TypeScript physics port whose parity is CI-enforced.
+keywords:
+  - reinforcement-learning
+  - imitation-learning
+  - model-predictive-control
+  - 6-dof-simulation
+  - starship
+  - spacex
+  - three.js
+  - typescript
+license: MIT
+version: 0.6.0
+date-released: "2026-07-10"

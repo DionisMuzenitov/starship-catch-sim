@@ -20,6 +20,7 @@
  * eval/plots/ (zero-dep, same rationale as tools/eval/plot.ts).
  */
 
+import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -34,6 +35,16 @@ import {
 } from "../../packages/controllers/src/index.js";
 
 const DEFAULT_URL = "http://localhost:8100";
+
+/** Short commit the benchmark ran against — stamps each record so a gate
+ *  result is self-describing (SLS-67). "unknown" outside a git checkout. */
+function gitCommit(): string {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 // Warm-re-plan IC for the solve-time bench: the drag-feasible final-descent
 // case from services/mpc/tests (2091 m, −160 m/s — hot enough that the
@@ -418,7 +429,10 @@ async function main(): Promise<void> {
   const reports = await benchSuccessVsWind(args.url, windScales, seeds, stamp);
   for (const r of reports) {
     const file = resolve(resultsDir, `mpc-bench-${r.controllerKey}-${stamp}.json`);
-    writeFileSync(file, JSON.stringify(r, null, 2));
+    writeFileSync(
+      file,
+      JSON.stringify({ gitCommit: gitCommit(), seeds, ...r }, null, 2),
+    );
     console.log(`  wrote ${file}`);
   }
   const successSvg = resolve(plotsDir, "mpc-bench-success.svg");
