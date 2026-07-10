@@ -63,6 +63,10 @@ Before writing or changing any code for a ticket, you MUST:
    metrics block: wall-clock duration, tickets touched, PRs opened/merged,
    test-count delta, cost/tokens if known. A stale snapshot is this
    project's worst recorded process failure — do not skip this step.
+   **Loop-closure guard:** before ending a session that touched board or
+   repo state, verify the newest SLS-43 comment is dated *today* — if the
+   latest comment is on an earlier date, the run-report was never posted and
+   the loop is not closed.
    When a milestone outcome gate flips (or its status/scope changes), also
    refresh the **README milestone table + Results section** in the same pass
    — the public README is the project's front door and went stale for a full

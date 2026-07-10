@@ -38,3 +38,10 @@ After approval:
     block (duration, tickets touched, PRs opened/merged, test-count delta,
     cost if known) and refresh the description snapshot if board state
     changed (counts, phase, blockers).
+11. **Loop-closure guard — do not end the session until this passes.**
+    Confirm the newest SLS-43 comment is dated **today**: i.e. step 10's
+    run-report was actually appended. A session that changed board or repo
+    state but left SLS-43's latest comment on an earlier date has NOT closed
+    the loop — this is the project's worst recorded process failure (a stale
+    snapshot went undetected for a full milestone). If the dates don't match,
+    post the run-report before stopping.
