@@ -36,22 +36,22 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 
 ## Index
 
-| #   | Title                                                                                              | Status   |
-| --- | -------------------------------------------------------------------------------------------------- | -------- |
-| 001 | [Tech stack](001-tech-stack.md)                                                                    | Accepted |
-| 002 | [6-DOF state and 3D rendering from day one](002-6dof-and-3d-from-day-one.md)                       | Accepted |
-| 003 | [Controller interface](003-controller-interface.md)                                                | Accepted |
-| 004 | [Engine-agnostic physics core](004-engine-agnostic-physics.md)                                     | Accepted |
-| 005 | [Community-sourced 3D assets, CC0/CC-BY only](005-community-assets-licence-policy.md)              | Accepted |
-| 006 | [Cascaded PID as the controller baseline](006-cascaded-pid-baseline.md)                            | Accepted |
-| 007 | [Convex MPC guidance — 3-DOF SOCP + PID inner loop](007-convex-mpc-guidance.md)                    | Accepted |
-| 008 | [MPC in the browser — WASM port plan](008-mpc-wasm-port.md)                                        | Accepted |
-| 009 | [Coast-phase ignition planning (coast+burn)](009-coast-burn-guidance.md)                           | Accepted |
-| 010 | [Terminal-dock control laws for dispersion robustness](010-terminal-dock-dispersion-robustness.md) | Accepted |
-| 011 | [Static demo hosting on GitHub Pages](011-static-demo-hosting.md)                                  | Accepted |
-| 012 | [Headless GLB pipeline & named-node articulation](012-glb-asset-pipeline-and-articulation.md)      | Accepted |
-| 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md)        | Accepted |
-| 014 | [PPO training pipeline — vectorized plant, curriculum, DR](014-ppo-training-pipeline.md)           | Accepted |
-| 015 | [Attitude inner loop, cascade teacher & BC campaign](015-attitude-inner-loop-and-bc-campaign.md)   | Accepted |
-| 016 | [Pure-TS policy runtime (JSON weights, no ONNX)](016-ts-policy-runtime.md)                         | Accepted |
-| 017 | [Defer the global leaderboard to post-launch demand](017-leaderboard-defer.md)                     | Accepted |
+| #   | Title                                                                                              | Status                                      |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 001 | [Tech stack](001-tech-stack.md)                                                                    | Accepted                                    |
+| 002 | [6-DOF state and 3D rendering from day one](002-6dof-and-3d-from-day-one.md)                       | Accepted                                    |
+| 003 | [Controller interface](003-controller-interface.md)                                                | Accepted (RL-runtime detail amended by 016) |
+| 004 | [Engine-agnostic physics core](004-engine-agnostic-physics.md)                                     | Accepted                                    |
+| 005 | [Community-sourced 3D assets, CC0/CC-BY only](005-community-assets-licence-policy.md)              | Accepted                                    |
+| 006 | [Cascaded PID as the controller baseline](006-cascaded-pid-baseline.md)                            | Accepted                                    |
+| 007 | [Convex MPC guidance — 3-DOF SOCP + PID inner loop](007-convex-mpc-guidance.md)                    | Accepted (extended by 009/010/015)          |
+| 008 | [MPC in the browser — WASM port plan](008-mpc-wasm-port.md)                                        | Accepted                                    |
+| 009 | [Coast-phase ignition planning (coast+burn)](009-coast-burn-guidance.md)                           | Accepted                                    |
+| 010 | [Terminal-dock control laws for dispersion robustness](010-terminal-dock-dispersion-robustness.md) | Accepted                                    |
+| 011 | [Static demo hosting on GitHub Pages](011-static-demo-hosting.md)                                  | Accepted                                    |
+| 012 | [Headless GLB pipeline & named-node articulation](012-glb-asset-pipeline-and-articulation.md)      | Accepted                                    |
+| 013 | [RL numpy physics port, single-sourced constants & parity](013-rl-numpy-port-and-parity.md)        | Accepted                                    |
+| 014 | [PPO training pipeline — vectorized plant, curriculum, DR](014-ppo-training-pipeline.md)           | Accepted                                    |
+| 015 | [Attitude inner loop, cascade teacher & BC campaign](015-attitude-inner-loop-and-bc-campaign.md)   | Accepted                                    |
+| 016 | [Pure-TS policy runtime (JSON weights, no ONNX)](016-ts-policy-runtime.md)                         | Accepted                                    |
+| 017 | [Defer the global leaderboard to post-launch demand](017-leaderboard-defer.md)                     | Accepted                                    |

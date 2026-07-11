@@ -1,8 +1,16 @@
 # ADR-007: Convex MPC guidance — 3-DOF lossless-convex SOCP outer loop + PID inner loop
 
-- **Status:** Accepted
+- **Status:** Accepted, extended by [ADR-009](009-coast-burn-guidance.md) / [ADR-010](010-terminal-dock-dispersion-robustness.md) / [ADR-015](015-attitude-inner-loop-and-bc-campaign.md)
 - **Date:** 2026-07-04
 - **Tickets:** SLS-25 (formulation), SLS-26 (service), SLS-27 (SCvx upgrade + benchmarks + WASM ADR)
+
+> **Amendment:** the 3-DOF SOCP formulation below is sound but did **not** close
+> the catch on its own — it needed coast-phase ignition planning
+> ([ADR-009](009-coast-burn-guidance.md)), terminal-dock control laws for
+> dispersion robustness ([ADR-010](010-terminal-dock-dispersion-robustness.md)),
+> and a fast attitude inner loop ([ADR-015](015-attitude-inner-loop-and-bc-campaign.md))
+> before MPC reached the M5 gate (53/50/50 %). Read this ADR as the base layer
+> of that stack, not the whole guidance solution.
 
 ## Context
 
@@ -77,7 +85,7 @@ Formulation (per re-plan, following Açıkmese & Blackmore 2013):
 - **Objective:** minimum fuel (∑ σ_k Δt); matches operational reality and
   makes the fuel-margin comparison against PID meaningful.
 - **Inner loop:** feedforward u* plus a small PD correction on
-  (r*, v*) error, clamped to 3 m/s² (larger divergence is the re-plan's
+  (r*, v\*) error, clamped to 3 m/s² (larger divergence is the re-plan's
   job), feeding the ADR-006 attitude PIDs at 250 Hz. The full cascaded
   PID flies as the FALLBACK whenever no usable plan exists.
 

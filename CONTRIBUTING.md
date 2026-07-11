@@ -5,32 +5,29 @@ Thanks for your interest in the Starship Catch Simulator! This guide covers the 
 ## Branching
 
 - `main` is the stable trunk. All work targets `main` via pull request.
-- Create feature branches from `main` using the pattern: `<type>/<SLS-ticket>-<short-description>`
-  - Example: `feat/SLS-12-add-gravity-model`
+- Create one feature branch per ticket from `main`, named `sls-XX-short-slug`.
+  - Example: `sls-12-add-gravity-model`
 - Keep branches short-lived. Rebase on `main` before requesting review.
 
 ## Commit style
 
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+We use **Jira smart commits** so commits auto-link and transition their ticket.
+Reference the ticket key + a workflow tag in every message:
 
 ```
-<type>(<scope>): <description>
-
-[optional body]
-
-[optional footer(s)]
+SLS-XX #in-progress <what this commit does>
 ```
 
-Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`.
-
-Scope is typically the package name (e.g., `physics`, `web`, `mpc`).
+Use `#in-progress` on work-in-progress commits and `#done` on the final commit
+of the ticket (`#comment <text>` appends a Jira comment). Keep the summary line
+imperative and concise.
 
 Examples:
 
 ```
-feat(physics): add RK4 integrator
-fix(web): correct camera FOV on resize
-docs: update repo layout in README
+SLS-11 #in-progress add RK4 integrator
+SLS-17 #in-progress correct camera FOV on resize
+SLS-63 #done README overhaul. #comment surfaced the M6 neural-policy result
 ```
 
 ## Running the tests
@@ -49,10 +46,12 @@ pnpm playwright:install   # one-time, ~92 MB
 pnpm test:e2e
 ```
 
-The perf harness is a stub today; real benchmarks land with the integrator in M1:
+Controller benchmarks (Monte-Carlo catch rate across scenarios) run from
+`tools/`:
 
 ```bash
-pnpm bench
+pnpm bench:rl     # neural policy + PID on the TS core (30 seeds)
+pnpm bench:mpc    # MPC vs PID (needs the local MPC service — see README)
 ```
 
 ## Pull request checklist
@@ -65,8 +64,8 @@ Before requesting review, make sure:
 - [ ] `pnpm lint` passes at root
 - [ ] `pnpm typecheck` passes at root
 - [ ] New code has tests where applicable
-- [ ] PR title follows conventional commit format
-- [ ] PR description links the relevant Jira ticket (e.g., `Closes SLS-12`)
+- [ ] Commits use smart-commit syntax referencing the ticket (`SLS-XX #…`)
+- [ ] PR description links the relevant Jira ticket
 
 ## How to add an ADR
 
