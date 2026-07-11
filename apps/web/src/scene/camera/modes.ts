@@ -69,8 +69,12 @@ function chaseTarget(world: World, env: CameraEnv): CameraTarget {
 }
 
 function towerTarget(world: World): CameraTarget {
+  // Perched just above and outboard of the truss on the chopstick (+X) side:
+  // the tower structure is mounted in the main scene now (SLS-57), so a
+  // camera at the exact top-centre would sit inside the lattice and clip
+  // through beams when looking down at the catch.
   return {
-    position: Vec3.of(0, MECHAZILLA_TOWER_HEIGHT_M, 0),
+    position: Vec3.of(10, MECHAZILLA_TOWER_HEIGHT_M + 3, 0),
     lookAt: world.rigidBody.position,
   };
 }

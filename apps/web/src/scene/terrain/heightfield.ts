@@ -28,6 +28,9 @@ export async function loadHeightfield(
     premultiplyAlpha: "none",
   });
   const px = bmp.width; // capture BEFORE close() — a closed bitmap reports 0
+  if (bmp.height !== px) {
+    throw new Error(`heightmap must be square, got ${px}x${bmp.height}: ${url}`);
+  }
   const canvas = document.createElement("canvas");
   canvas.width = px;
   canvas.height = bmp.height;

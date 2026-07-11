@@ -27,7 +27,7 @@
  *   node tools/assets/bake-terrain.mjs [--out apps/web/public/assets/terrain] [--skip-b]
  */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { fromArrayBuffer, fromUrl } from "geotiff";
@@ -40,9 +40,15 @@ const repo = join(here, "../..");
 const args = process.argv.slice(2);
 function argValue(flag, fallback) {
   const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : fallback;
+  if (i < 0) return fallback;
+  const v = args[i + 1];
+  if (v === undefined || v.startsWith("--")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return v;
 }
-const outDir = join(repo, argValue("--out", "apps/web/public/assets/terrain"));
+const outArg = argValue("--out", "apps/web/public/assets/terrain");
+const outDir = isAbsolute(outArg) ? outArg : join(repo, outArg);
 const skipB = args.includes("--skip-b");
 
 // --- site georeference (docs/reference/starbase-site.md) ---
@@ -302,7 +308,8 @@ function fillNodata(px, w, h) {
   for (const i of queue) {
     const x = i % w;
     const y = (i / w) | 0;
-    const n = ((Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1) * 6 - 3;
+    const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    const n = (s - Math.floor(s)) * 6 - 3; // fract(), not %: JS % keeps sign
     for (let c = 0; c < 3; c++) {
       px[i * 4 + c] = Math.max(0, Math.min(255, px[i * 4 + c] + n));
     }
@@ -359,7 +366,7 @@ function boxBlur(px, w, h, r) {
 // bakes
 // ---------------------------------------------------------------------------
 
-async function bakeHeight(tier, { sizeM, demPx }) {
+async function fetchDemRaster(tier, { sizeM, demPx }) {
   const url = wmsUrl(DEM_WMS, {
     layers: "3DEPElevation:None",
     format: "image/tiff",
@@ -371,10 +378,20 @@ async function bakeHeight(tier, { sizeM, demPx }) {
   const tiff = await fromArrayBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const image = await tiff.getImage();
   const [raster] = await image.readRasters();
+  return raster;
+}
 
-  // Split-channel encoding (R = high byte, G = low byte) instead of a 16-bit
-  // grayscale PNG: browsers can only read canvas pixels at 8 bits/channel,
-  // so this keeps the full 16-bit height precision web-decodable.
+/**
+ * Encode a DEM raster as the committed heightmap PNG. `datumM` is the DEM
+ * elevation at the tower base: heights are stored relative to it so that
+ * terrain y=0 coincides with the world origin the tower/OLM/physics ground
+ * plane all sit on (the raw DEM is ~+2.3 m ASL at the pad).
+ *
+ * Split-channel encoding (R = high byte, G = low byte) instead of a 16-bit
+ * grayscale PNG: browsers can only read canvas pixels at 8 bits/channel,
+ * so this keeps the full 16-bit height precision web-decodable.
+ */
+function encodeHeight(tier, raster, demPx, datumM) {
   const png = new PNG({ width: demPx, height: demPx });
   let hMin = Infinity;
   let hMax = -Infinity;
@@ -382,6 +399,7 @@ async function bakeHeight(tier, { sizeM, demPx }) {
     let h = raster[i];
     // nodata (ocean, Mexico side): clamp implausible sentinels to sea level
     if (!Number.isFinite(h) || h < -100 || h > 1000) h = 0;
+    h -= datumM;
     hMin = Math.min(hMin, h);
     hMax = Math.max(hMax, h);
     const v = Math.max(0, Math.min(65535, Math.round(((h - HEIGHT_MIN_M) / HEIGHT_RANGE_M) * 65535)));
@@ -392,7 +410,7 @@ async function bakeHeight(tier, { sizeM, demPx }) {
   }
   const out = PNG.sync.write(png);
   writeFileSync(join(outDir, `${tier}.height.png`), out);
-  console.log(`${tier}.height.png   ${demPx}x${demPx}  h[${hMin.toFixed(1)}, ${hMax.toFixed(1)}] m  ${(out.length / 1024).toFixed(0)} KB`);
+  console.log(`${tier}.height.png   ${demPx}x${demPx}  h[${hMin.toFixed(1)}, ${hMax.toFixed(1)}] m rel. tower base  ${(out.length / 1024).toFixed(0)} KB`);
   return { hMin, hMax };
 }
 
@@ -478,8 +496,19 @@ async function main() {
   const tciList = skipB
     ? []
     : await Promise.all(S2_SCENES.map(async (scene) => ({ scene, tci: await fromUrl(scene.tci) })));
+
+  // datum: DEM elevation at the tower base (centre pixel of the near tier),
+  // shared by both tiers so their surfaces agree where they overlap
+  const rasters = {};
   for (const [tier, cfg] of Object.entries(TIERS)) {
-    const { hMin, hMax } = await bakeHeight(tier, cfg);
+    rasters[tier] = await fetchDemRaster(tier, cfg);
+  }
+  const nearPx = TIERS.near.demPx;
+  const datumM = rasters.near[Math.floor(nearPx / 2) * nearPx + Math.floor(nearPx / 2)];
+  console.log(`tower-base datum: ${datumM.toFixed(2)} m ASL (subtracted from all heights)`);
+
+  for (const [tier, cfg] of Object.entries(TIERS)) {
+    const { hMin, hMax } = encodeHeight(tier, rasters[tier], cfg.demPx, datumM);
     const aBytes = await bakeDrapeA(tier, cfg);
     const bBytes = skipB ? 0 : await bakeDrapeB(tier, cfg, tciList);
     stats[tier] = { hMin, hMax, aBytes, bBytes };
@@ -492,7 +521,8 @@ async function main() {
     heightEncoding: {
       minM: HEIGHT_MIN_M,
       rangeM: HEIGHT_RANGE_M,
-      formula: "v = R*256 + G; h = minM + (v/65535)*rangeM",
+      datumM,
+      formula: "v = R*256 + G; h = minM + (v/65535)*rangeM  (relative to the tower-base datum: h=0 at world origin)",
     },
     tiers: Object.fromEntries(
       Object.entries(TIERS).map(([tier, cfg]) => [
@@ -502,7 +532,8 @@ async function main() {
     ),
     provenance: {
       dem: "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
-      drapeA: "USDA NAIP (USDA_CONUS_PRIME ImageServer WMS) — US public domain; courtesy credit: USDA FSA. Vintage at this site is pre-catch-era; nodata (open Gulf / Mexico) filled procedurally.",
+      drapeA:
+        "near tier: USDA NAIP (USDA_CONUS_PRIME ImageServer WMS); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS; APFO stops rendering at wide-tier scales). Both US public domain per TNM/USDA terms; courtesy credit: USDA FSA / U.S. Geological Survey. Vintage at this site is pre-catch-era; no-coverage areas (open Gulf / Mexico side) filled procedurally.",
       drapeB: `Sentinel-2 L2A true-colour, scenes ${S2_SCENES.map((s) => s.id).join(" + ")} (${S2_DATE}, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).`,
       policy: "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md",
     },
