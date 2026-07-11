@@ -76,6 +76,10 @@ Before writing or changing any code for a ticket, you MUST:
    refresh the **README milestone table + Results section** in the same pass
    — the public README is the project's front door and went stale for a full
    milestone once (M6 shipped while the README still said "Planned", SLS-63).
+   If the gate produced a new controller-generation bench, **regenerate the
+   north-star progression chart** (add the generation to `GENERATIONS` in
+   `tools/eval/progression-chart.ts`, run `pnpm chart:progression`, commit
+   `docs/media/progression.svg` — SLS-72).
    And **cut a `vX.Y` GitHub release** at the gate-meeting commit (SLS-67):
    tag it, attach the winning checkpoint + the committed
    `eval/results/gate-records/` for that gate, and paste the bench numbers +
