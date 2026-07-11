@@ -1,0 +1,42 @@
+{
+  "generated": "2026-07-11T17:49:20.170Z",
+  "origin": {
+    "lat": 25.99613,
+    "lon": -97.15474,
+    "note": "Pad A tower base = world origin"
+  },
+  "frame": "+X east, +Z south (north-up images: row 0 = north, col 0 = west), +Y up, metres",
+  "heightEncoding": {
+    "minM": -16,
+    "rangeM": 112,
+    "formula": "v = R*256 + G; h = minM + (v/65535)*rangeM"
+  },
+  "tiers": {
+    "near": {
+      "sizeM": 10240,
+      "demPx": 256,
+      "drapeApx": 4096,
+      "drapeBpx": 1024,
+      "hMin": -1.0099999904632568,
+      "hMax": 10.008843421936035,
+      "aBytes": 2601367,
+      "bBytes": 196488
+    },
+    "wide": {
+      "sizeM": 102400,
+      "demPx": 256,
+      "drapeApx": 2048,
+      "drapeBpx": 2048,
+      "hMin": -1.009009838104248,
+      "hMax": 24.746231079101562,
+      "aBytes": 608533,
+      "bBytes": 1140906
+    }
+  },
+  "provenance": {
+    "dem": "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
+    "drapeA": "USDA NAIP (USDA_CONUS_PRIME ImageServer WMS) — US public domain; courtesy credit: USDA FSA. Vintage at this site is pre-catch-era; nodata (open Gulf / Mexico) filled procedurally.",
+    "drapeB": "Sentinel-2 L2A true-colour, scenes S2B_14RPQ_20241121_0_L2A + S2B_14RPP_20241121_0_L2A (2024-11-21, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).",
+    "policy": "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md"
+  }
+}

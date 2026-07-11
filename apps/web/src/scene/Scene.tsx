@@ -19,10 +19,11 @@ import { CameraRig } from "./camera/CameraRig";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "./constants";
 import { DebugHud, DebugSampler, type DebugSample } from "./DebugOverlay";
 import { Fog } from "./Fog";
-import { Ground } from "./Ground";
+import { LaunchSite } from "./LaunchSite";
 import { PostFX } from "./PostFX";
 import { Sky } from "./Sky";
 import { Sun } from "./Sun";
+import { Terrain } from "./terrain/Terrain";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
 
@@ -50,7 +51,8 @@ export function Scene() {
         <Fog />
         <Sun />
         <Sky />
-        <Ground />
+        <Terrain />
+        <LaunchSite />
         <BoosterFlight />
         <CameraRig />
         <ImpactReticle />
