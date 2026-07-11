@@ -58,8 +58,14 @@ const TOWER_LON = -97.15474;
 const M_PER_DEG_LAT = 110_922;
 const M_PER_DEG_LON = 100_120;
 
-// --- tiers ---
+// --- levels (nested resolution pyramid, sharpest at the catch site) ---
+// drapeApx is chosen so each level samples the PD source at (or near) its
+// native resolution: l0 hits ~0.63 m/px — NAIP-native — where the terminal
+// phase and the catch happen. drapeBpx (Sentinel-2, 10 m source) only exists
+// where it adds information.
 const TIERS = {
+  l0: { sizeM: 1_280, demPx: 64, drapeApx: 2048 },
+  l1: { sizeM: 5_120, demPx: 128, drapeApx: 4096 },
   near: { sizeM: 10_240, demPx: 256, drapeApx: 4096, drapeBpx: 1024 },
   wide: { sizeM: 102_400, demPx: 256, drapeApx: 2048, drapeBpx: 2048 },
 };
@@ -69,11 +75,14 @@ const HEIGHT_MIN_M = -16;
 const HEIGHT_RANGE_M = 112;
 
 const DEM_WMS = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer";
-// USDA's NAIP mosaic — sharpest keyless PD imagery found; vintage at this
-// site is pre-catch-era (flagged in launch-site-sourcing.md §5).
-const NAIP_WMS = "https://gis.apfo.usda.gov/arcgis/services/NAIP/USDA_CONUS_PRIME/ImageServer/WMSServer";
 // USGS base map — coarser/older, but renders at wide-tier scales.
 const IMG_WMS = "https://basemap.nationalmap.gov/arcgis/services/USGSImageryOnly/MapServer/WMSServer";
+// Variant A inner levels: NAIP DOQQ COGs via Microsoft Planetary Computer —
+// anonymous SAS tokens, US public domain. Year pinned to the newest with
+// coverage here (2022-06-10: tower + OLM + tank farm are in the imagery).
+const MPC_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1/search";
+const MPC_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/naip";
+const NAIP_YEAR = 2022;
 // Variant B: pinned cloud-free (<0.01 %) Sentinel-2 scenes from the catch era
 // (between the Flight 5 and Flight 7 catches). Found via earth-search STAC:
 // collections=sentinel-2-l2a, bbox around the site, 2024-09..11, cloud<5 %.
@@ -414,75 +423,163 @@ function encodeHeight(tier, raster, demPx, datumM) {
   return { hMin, hMax };
 }
 
-async function bakeDrapeA(tier, { sizeM, drapeApx }) {
-  // APFO's NAIP mosaic is the sharpest keyless PD source but stops rendering
-  // beyond its max scale (returns black), so the wide tier falls back to the
-  // USGS Imagery-Only base map.
-  const source = tier === "near" ? NAIP_WMS : IMG_WMS;
-  const url = wmsUrl(source, {
-    layers: "0",
-    format: "image/jpeg",
-    box: bbox(sizeM),
-    w: drapeApx,
-    h: drapeApx,
+/**
+ * Colour grade for the NAIP-sourced drapes: raw NAIP reads washed-out and
+ * hazy next to consumer map imagery. Saturation boost + gentle contrast
+ * about mid-grey, applied before JPEG encode.
+ */
+function gradeColour(px, w, h) {
+  for (let i = 0; i < w * h; i++) {
+    const o = i * 4;
+    const r = px[o];
+    const g = px[o + 1];
+    const b = px[o + 2];
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    for (let c = 0; c < 3; c++) {
+      let v = lum + (px[o + c] - lum) * 1.22;
+      v = (v - 128) * 1.1 + 128;
+      px[o + c] = Math.max(0, Math.min(255, v));
+    }
+  }
+}
+
+/**
+ * Open the NAIP DOQQ COGs (pinned NAIP_YEAR) that intersect the largest
+ * inner level, via Planetary Computer's anonymous STAC + SAS token.
+ */
+async function openNaipScenes(sizeM) {
+  const tokenRes = await fetch(MPC_SAS);
+  if (!tokenRes.ok) throw new Error(`MPC SAS token: HTTP ${tokenRes.status}`);
+  const { token } = await tokenRes.json();
+
+  const res = await fetch(MPC_STAC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      collections: ["naip"],
+      bbox: bbox(sizeM),
+      query: { "naip:year": { eq: String(NAIP_YEAR) } },
+      limit: 20,
+    }),
   });
-  const buf = await fetchBuf(url, `${tier} drape A`);
-  const img = jpeg.decode(buf, { maxMemoryUsageInMB: 1024, formatAsRGBA: true });
-  const filledPx = fillNodata(img.data, img.width, img.height);
-  const enc = jpeg.encode({ data: img.data, width: img.width, height: img.height }, 82);
+  if (!res.ok) throw new Error(`MPC STAC search: HTTP ${res.status}`);
+  const { features } = await res.json();
+  if (!features?.length) throw new Error(`no NAIP ${NAIP_YEAR} items found`);
+
+  const scenes = [];
+  for (const f of features) {
+    const transform = f.properties["proj:transform"];
+    const shape = f.properties["proj:shape"];
+    const tci = await fromUrl(`${f.assets.image.href}?${token}`);
+    scenes.push({
+      id: f.id,
+      tci,
+      pxM: transform[0],
+      originE: transform[2],
+      originN: transform[5],
+      shapeH: shape[0],
+      shapeW: shape[1],
+      samples: [0, 1, 2], // NAIP COGs are 4-band RGBN
+    });
+  }
+  console.log(`NAIP ${NAIP_YEAR} via Planetary Computer: ${scenes.length} DOQQs (${scenes.map((s) => s.id).join(", ")})`);
+  return scenes;
+}
+
+async function bakeDrapeA(tier, { sizeM, drapeApx }, naipScenes) {
+  let px;
+  let w = drapeApx;
+  if (tier === "wide") {
+    // NAIP DOQQs don't cover 102 km — the wide tier uses the USGS base map
+    const url = wmsUrl(IMG_WMS, {
+      layers: "0",
+      format: "image/jpeg",
+      box: bbox(sizeM),
+      w: drapeApx,
+      h: drapeApx,
+    });
+    const buf = await fetchBuf(url, `${tier} drape A`);
+    const img = jpeg.decode(buf, { maxMemoryUsageInMB: 1024, formatAsRGBA: true });
+    px = img.data;
+    w = img.width;
+  } else {
+    px = await mosaicScenes(naipScenes, sizeM, drapeApx);
+  }
+  const filledPx = fillNodata(px, w, w);
+  gradeColour(px, w, w);
+  const enc = jpeg.encode({ data: px, width: w, height: w }, 82);
   writeFileSync(join(outDir, `${tier}.drape.a.jpg`), enc.data);
-  console.log(`${tier}.drape.a.jpg  ${drapeApx}x${drapeApx}  ${(enc.data.length / 1024 / 1024).toFixed(2)} MB  (${((filledPx / (img.width * img.height)) * 100).toFixed(0)}% nodata filled)`);
+  console.log(`${tier}.drape.a.jpg  ${w}x${w}  ${(enc.data.length / 1024 / 1024).toFixed(2)} MB  (${((filledPx / (w * w)) * 100).toFixed(0)}% nodata filled)`);
   return enc.data.length;
 }
 
-async function bakeDrapeB(tier, { sizeM, drapeBpx }, tciList) {
+/**
+ * Mosaic a list of georeferenced COG scenes (UTM 14N) into an RGBA canvas
+ * covering the level's square around the tower. Later scenes win overlaps;
+ * near-black source pixels are treated as scene nodata and skipped. Returns
+ * the canvas (white = still-uncovered, handled by fillNodata).
+ *
+ * Each scene: { tci, originE, originN, pxM, shapeW, shapeH, samples? }.
+ */
+async function mosaicScenes(scenes, sizeM, outPx) {
   const half = sizeM / 2;
   const t = utmForward(TOWER_LAT, TOWER_LON, 14);
-  // start from a white canvas (white = nodata, handled by fillNodata);
-  // paste every scene's clamped window — later scenes win overlaps
-  const px = new Uint8Array(drapeBpx * drapeBpx * 4).fill(255);
+  const px = new Uint8Array(outPx * outPx * 4).fill(255);
 
-  for (const { scene, tci } of tciList) {
-    // window in this tile's pixel coords for the tier's square
-    const x0 = (t.easting - half - scene.originE) / S2_PX_M;
-    const y0 = (scene.originN - (t.northing + half)) / S2_PX_M;
-    const x1 = (t.easting + half - scene.originE) / S2_PX_M;
-    const y1 = (scene.originN - (t.northing - half)) / S2_PX_M;
+  for (const scene of scenes) {
+    // window in this scene's pixel coords for the level's square
+    const x0 = (t.easting - half - scene.originE) / scene.pxM;
+    const y0 = (scene.originN - (t.northing + half)) / scene.pxM;
+    const x1 = (t.easting + half - scene.originE) / scene.pxM;
+    const y1 = (scene.originN - (t.northing - half)) / scene.pxM;
     const cx0 = Math.max(0, Math.round(x0));
     const cy0 = Math.max(0, Math.round(y0));
-    const cx1 = Math.min(S2_SHAPE_PX, Math.round(x1));
-    const cy1 = Math.min(S2_SHAPE_PX, Math.round(y1));
-    if (cx1 <= cx0 || cy1 <= cy0) continue; // tile doesn't intersect this tier
+    const cx1 = Math.min(scene.shapeW, Math.round(x1));
+    const cy1 = Math.min(scene.shapeH, Math.round(y1));
+    if (cx1 <= cx0 || cy1 <= cy0) continue; // scene doesn't intersect
 
     // read the clamped window, resampled to its fraction of the output
-    const outW = Math.round(((cx1 - cx0) / (x1 - x0)) * drapeBpx);
-    const outH = Math.round(((cy1 - cy0) / (y1 - y0)) * drapeBpx);
-    const rasters = await tci.readRasters({
+    const outW = Math.round(((cx1 - cx0) / (x1 - x0)) * outPx);
+    const outH = Math.round(((cy1 - cy0) / (y1 - y0)) * outPx);
+    const rasters = await scene.tci.readRasters({
       window: [cx0, cy0, cx1, cy1],
       width: outW,
       height: outH,
       interleave: true,
+      ...(scene.samples ? { samples: scene.samples } : {}),
     });
-    const offX = Math.round(((cx0 - x0) / (x1 - x0)) * drapeBpx);
-    const offY = Math.round(((cy0 - y0) / (y1 - y0)) * drapeBpx);
+    const offX = Math.round(((cx0 - x0) / (x1 - x0)) * outPx);
+    const offY = Math.round(((cy0 - y0) / (y1 - y0)) * outPx);
     for (let y = 0; y < outH; y++) {
       const ty = y + offY;
-      if (ty < 0 || ty >= drapeBpx) continue;
+      if (ty < 0 || ty >= outPx) continue;
       for (let x = 0; x < outW; x++) {
         const tx = x + offX;
-        if (tx < 0 || tx >= drapeBpx) continue;
+        if (tx < 0 || tx >= outPx) continue;
         const s = (y * outW + x) * 3;
-        // Sentinel tiles carry black nodata at swath edges — don't let a
-        // black edge from one tile stomp a valid pixel from another
+        // scenes carry black nodata at their edges — don't let one scene's
+        // edge stomp a valid pixel from another
         if (rasters[s] < 4 && rasters[s + 1] < 4 && rasters[s + 2] < 4) continue;
-        const d = (ty * drapeBpx + tx) * 4;
+        const d = (ty * outPx + tx) * 4;
         px[d] = rasters[s];
         px[d + 1] = rasters[s + 1];
         px[d + 2] = rasters[s + 2];
       }
     }
   }
+  return px;
+}
 
+async function bakeDrapeB(tier, { sizeM, drapeBpx }, tciList) {
+  const scenes = tciList.map(({ scene, tci }) => ({
+    tci,
+    originE: scene.originE,
+    originN: scene.originN,
+    pxM: S2_PX_M,
+    shapeW: S2_SHAPE_PX,
+    shapeH: S2_SHAPE_PX,
+  }));
+  const px = await mosaicScenes(scenes, sizeM, drapeBpx);
   const filledPx = fillNodata(px, drapeBpx, drapeBpx);
   const enc = jpeg.encode({ data: px, width: drapeBpx, height: drapeBpx }, 85);
   writeFileSync(join(outDir, `${tier}.drape.b.jpg`), enc.data);
@@ -507,10 +604,14 @@ async function main() {
   const datumM = rasters.near[Math.floor(nearPx / 2) * nearPx + Math.floor(nearPx / 2)];
   console.log(`tower-base datum: ${datumM.toFixed(2)} m ASL (subtracted from all heights)`);
 
+  const naipScenes = await openNaipScenes(TIERS.near.sizeM);
+
   for (const [tier, cfg] of Object.entries(TIERS)) {
     const { hMin, hMax } = encodeHeight(tier, rasters[tier], cfg.demPx, datumM);
-    const aBytes = await bakeDrapeA(tier, cfg);
-    const bBytes = skipB ? 0 : await bakeDrapeB(tier, cfg, tciList);
+    const aBytes = await bakeDrapeA(tier, cfg, naipScenes);
+    // Sentinel-2 is 10 m/px — variant B only exists at levels where that
+    // resolution adds information (near/wide), not the sharp inner levels
+    const bBytes = skipB || !cfg.drapeBpx ? 0 : await bakeDrapeB(tier, cfg, tciList);
     stats[tier] = { hMin, hMax, aBytes, bBytes };
   }
 
@@ -533,7 +634,7 @@ async function main() {
     provenance: {
       dem: "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
       drapeA:
-        "near tier: USDA NAIP (USDA_CONUS_PRIME ImageServer WMS); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS; APFO stops rendering at wide-tier scales). Both US public domain per TNM/USDA terms; courtesy credit: USDA FSA / U.S. Geological Survey. Vintage at this site is pre-catch-era; no-coverage areas (open Gulf / Mexico side) filled procedurally.",
+        `l0/l1/near levels: USDA NAIP ${NAIP_YEAR} DOQQ COGs via Microsoft Planetary Computer (anonymous SAS; tower/OLM/tank farm visible in the imagery); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS). All US public domain; courtesy credit: USDA FSA / U.S. Geological Survey. No-coverage areas (open Gulf / Mexico side) filled procedurally; colour-graded (saturation 1.22, contrast 1.10).`,
       drapeB: `Sentinel-2 L2A true-colour, scenes ${S2_SCENES.map((s) => s.id).join(" + ")} (${S2_DATE}, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).`,
       policy: "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md",
     },

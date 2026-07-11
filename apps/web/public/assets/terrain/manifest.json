@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-11T22:51:28.230Z",
+  "generated": "2026-07-11T23:39:43.670Z",
   "origin": {
     "lat": 25.99613,
     "lon": -97.15474,
@@ -13,6 +13,24 @@
     "formula": "v = R*256 + G; h = minM + (v/65535)*rangeM  (relative to the tower-base datum: h=0 at world origin)"
   },
   "tiers": {
+    "l0": {
+      "sizeM": 1280,
+      "demPx": 64,
+      "drapeApx": 2048,
+      "hMin": -3.0050058364868164,
+      "hMax": 4.336327075958252,
+      "aBytes": 857507,
+      "bBytes": 0
+    },
+    "l1": {
+      "sizeM": 5120,
+      "demPx": 128,
+      "drapeApx": 4096,
+      "hMin": -3.336176633834839,
+      "hMax": 3.101635456085205,
+      "aBytes": 3958496,
+      "bBytes": 0
+    },
     "near": {
       "sizeM": 10240,
       "demPx": 256,
@@ -20,7 +38,7 @@
       "drapeBpx": 1024,
       "hMin": -3.336176633834839,
       "hMax": 7.682666778564453,
-      "aBytes": 2426702,
+      "aBytes": 3371695,
       "bBytes": 196464
     },
     "wide": {
@@ -30,13 +48,13 @@
       "drapeBpx": 2048,
       "hMin": -3.33518648147583,
       "hMax": 22.42005443572998,
-      "aBytes": 466739,
+      "aBytes": 520776,
       "bBytes": 1033410
     }
   },
   "provenance": {
     "dem": "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
-    "drapeA": "near tier: USDA NAIP (USDA_CONUS_PRIME ImageServer WMS); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS; APFO stops rendering at wide-tier scales). Both US public domain per TNM/USDA terms; courtesy credit: USDA FSA / U.S. Geological Survey. Vintage at this site is pre-catch-era; no-coverage areas (open Gulf / Mexico side) filled procedurally.",
+    "drapeA": "l0/l1/near levels: USDA NAIP 2022 DOQQ COGs via Microsoft Planetary Computer (anonymous SAS; tower/OLM/tank farm visible in the imagery); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS). All US public domain; courtesy credit: USDA FSA / U.S. Geological Survey. No-coverage areas (open Gulf / Mexico side) filled procedurally; colour-graded (saturation 1.22, contrast 1.10).",
     "drapeB": "Sentinel-2 L2A true-colour, scenes S2B_14RPQ_20241121_0_L2A + S2B_14RPP_20241121_0_L2A (2024-11-21, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).",
     "policy": "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md"
   }

@@ -1,16 +1,19 @@
 /**
- * Baked launch-site terrain (SLS-57, ADR-018): two tiers of heightfield mesh
- * draped with public-domain aerial/satellite imagery, replacing the flat
- * placeholder grid. Assets are produced by `tools/assets/bake-terrain.mjs`
- * (`pnpm bake:terrain`) and committed under `apps/web/public/assets/terrain/`.
+ * Baked launch-site terrain (SLS-57, ADR-018): a nested resolution pyramid of
+ * heightfield meshes draped with public-domain aerial/satellite imagery,
+ * replacing the flat placeholder grid. Assets are produced by
+ * `tools/assets/bake-terrain.mjs` (`pnpm bake:terrain`) and committed under
+ * `apps/web/public/assets/terrain/`.
  *
- *   near tier: 10.24 km around the tower, 4096-px NAIP drape (variant A)
- *   wide tier: 102.4 km, satellite drape, sits 3 m below the near tier
+ * Levels (see terrain/constants.ts): 1.28 km @ ~0.63 m/px (NAIP-native, the
+ * catch site) → 5.12 km → 10.24 km → 102.4 km, each stacked slightly above
+ * the coarser one below. Earth curvature is applied to vertex heights
+ * (drop = d²/2R) so the horizon reads correctly from high altitude.
  *
- * Drape variant A/B (owner assessment, ADR-018 §2): `?drape=b` switches to
- * the Sentinel-2 catch-era drape; default is the public-domain NAIP one.
- * Earth curvature is applied to vertex heights (drop = d²/2R) so the wide
- * tier's horizon reads correctly from high altitude.
+ * Drape variants (owner assessment, ADR-018 §2), `?drape=`:
+ *   a — USDA NAIP / USGS imagery (public domain, sharp, pre-buildout vintage)
+ *   b — Sentinel-2 2024-11-21 (catch-era layout, 10 m, near+wide levels only)
+ *   h — hybrid (default): sharp NAIP inner levels + catch-era Sentinel wide
  *
  * Every failure path (software GL, heightfield fetch/decode failure, drape
  * texture failure) falls back to the zero-network placeholder <Ground/> —
@@ -30,19 +33,26 @@ import {
 
 import { Ground } from "../Ground";
 
-import { HEIGHT_MIN_M, HEIGHT_RANGE_M, NEAR_SIZE_M, WIDE_SIZE_M } from "./constants";
+import {
+  type DrapeSource,
+  HEIGHT_MIN_M,
+  HEIGHT_RANGE_M,
+  TERRAIN_LEVELS,
+  type TerrainLevel,
+} from "./constants";
 import { type Heightfield, loadHeightfield } from "./heightfield";
 
-/** wide tier sits this far below the near tier to avoid z-fighting */
-const WIDE_Y_OFFSET_M = -3;
 const EARTH_RADIUS_M = 6_371_000;
 
 const TERRAIN_BASE = `${import.meta.env.BASE_URL}assets/terrain/`;
 
-/** Drape variant for the ADR-018 owner A/B — `?drape=b` selects Sentinel-2. */
-function drapeVariant(): "a" | "b" {
-  if (typeof window === "undefined") return "a";
-  return new URLSearchParams(window.location.search).get("drape") === "b" ? "b" : "a";
+type Variant = "a" | "b" | "h";
+
+/** Drape variant for the ADR-018 owner A/B — default is the hybrid. */
+function drapeVariant(): Variant {
+  if (typeof window === "undefined") return "h";
+  const v = new URLSearchParams(window.location.search).get("drape");
+  return v === "a" || v === "b" ? v : "h";
 }
 
 /** `?terrain=force` renders terrain even on software GL; `?terrain=off` never. */
@@ -50,6 +60,19 @@ function terrainMode(): "auto" | "force" | "off" {
   if (typeof window === "undefined") return "auto";
   const v = new URLSearchParams(window.location.search).get("terrain");
   return v === "force" || v === "off" ? v : "auto";
+}
+
+/** The levels a variant renders, with the drape source each level uses. */
+function levelsFor(variant: Variant): Array<{ level: TerrainLevel; source: DrapeSource }> {
+  return TERRAIN_LEVELS.flatMap((level) => {
+    if (variant === "h") {
+      // hybrid: catch-era Sentinel wide field, sharp NAIP everywhere else
+      const source: DrapeSource = level.key === "wide" ? "b" : "a";
+      return [{ level, source }];
+    }
+    if (!level.variants.includes(variant)) return [];
+    return [{ level, source: variant }];
+  });
 }
 
 /**
@@ -95,12 +118,12 @@ function useHeightfield(url: string): HeightfieldState {
 }
 
 /**
- * Build a terrain tier geometry from a heightfield: a size×size grid centred
+ * Build a terrain level geometry from a heightfield: a size×size grid centred
  * on the tower origin, +X east / +Z south (heightmap row 0 = north = -Z),
  * with earth-curvature drop applied. Heights are already relative to the
  * tower-base datum (bake-terrain.mjs), so terrain y=0 = world origin.
  */
-function buildTierGeometry(hf: Heightfield, sizeM: number): BufferGeometry {
+function buildLevelGeometry(hf: Heightfield, sizeM: number): BufferGeometry {
   const n = hf.px;
   const positions = new Float32Array(n * n * 3);
   const uvs = new Float32Array(n * n * 2);
@@ -144,20 +167,20 @@ function buildTierGeometry(hf: Heightfield, sizeM: number): BufferGeometry {
   return geo;
 }
 
-function TerrainTier({
+function TerrainLevelMesh({
   hf,
   sizeM,
   drape,
-  yOffset = 0,
+  yOffset,
   receiveShadow = false,
 }: {
   hf: Heightfield;
   sizeM: number;
   drape: Texture;
-  yOffset?: number;
+  yOffset: number;
   receiveShadow?: boolean;
 }) {
-  const geometry = useMemo(() => buildTierGeometry(hf, sizeM), [hf, sizeM]);
+  const geometry = useMemo(() => buildLevelGeometry(hf, sizeM), [hf, sizeM]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <mesh
@@ -171,37 +194,38 @@ function TerrainTier({
 }
 
 /** Suspends on the drape textures — mounted only once heightfields are in. */
-function TerrainTiers({
-  nearHf,
-  wideHf,
-  variant,
+function TerrainLevels({
+  levels,
+  heightfields,
 }: {
-  nearHf: Heightfield;
-  wideHf: Heightfield;
-  variant: "a" | "b";
+  levels: Array<{ level: TerrainLevel; source: DrapeSource }>;
+  heightfields: Record<string, Heightfield>;
 }) {
-  const [nearDrape, wideDrape] = useTexture([
-    `${TERRAIN_BASE}near.drape.${variant}.jpg`,
-    `${TERRAIN_BASE}wide.drape.${variant}.jpg`,
-  ]);
+  const drapes = useTexture(
+    levels.map(({ level, source }) => `${TERRAIN_BASE}${level.key}.drape.${source}.jpg`),
+  );
 
   useEffect(() => {
-    for (const tex of [nearDrape, wideDrape]) {
+    for (const tex of drapes) {
       tex.colorSpace = SRGBColorSpace;
       tex.anisotropy = 8;
       tex.needsUpdate = true;
     }
-  }, [nearDrape, wideDrape]);
+  }, [drapes]);
 
+  const innermost = levels[levels.length - 1]?.level.key;
   return (
     <group>
-      <TerrainTier
-        hf={wideHf}
-        sizeM={WIDE_SIZE_M}
-        drape={wideDrape}
-        yOffset={WIDE_Y_OFFSET_M}
-      />
-      <TerrainTier hf={nearHf} sizeM={NEAR_SIZE_M} drape={nearDrape} receiveShadow />
+      {levels.map(({ level }, i) => (
+        <TerrainLevelMesh
+          key={level.key}
+          hf={heightfields[level.key]}
+          sizeM={level.sizeM}
+          drape={drapes[i]}
+          yOffset={level.yOffsetM}
+          receiveShadow={level.key === innermost}
+        />
+      ))}
     </group>
   );
 }
@@ -210,16 +234,25 @@ function TerrainTiers({
  *  parallel with the drapes and every failure path can render <Ground/>. */
 function TerrainLoader() {
   const variant = useMemo(drapeVariant, []);
-  const nearHf = useHeightfield(`${TERRAIN_BASE}near.height.png`);
-  const wideHf = useHeightfield(`${TERRAIN_BASE}wide.height.png`);
+  // one hook per pyramid level (fixed count), regardless of variant
+  const states: Record<string, HeightfieldState> = {
+    wide: useHeightfield(`${TERRAIN_BASE}wide.height.png`),
+    near: useHeightfield(`${TERRAIN_BASE}near.height.png`),
+    l1: useHeightfield(`${TERRAIN_BASE}l1.height.png`),
+    l0: useHeightfield(`${TERRAIN_BASE}l0.height.png`),
+  };
+  const levels = useMemo(() => levelsFor(variant), [variant]);
 
-  if (typeof nearHf === "string" || typeof wideHf === "string") {
+  if (levels.some(({ level }) => typeof states[level.key] === "string")) {
     // still loading, or failed — either way the placeholder grid stands in
     return <Ground />;
   }
+  const heightfields = Object.fromEntries(
+    levels.map(({ level }) => [level.key, states[level.key] as Heightfield]),
+  );
   return (
     <Suspense fallback={<Ground />}>
-      <TerrainTiers nearHf={nearHf} wideHf={wideHf} variant={variant} />
+      <TerrainLevels levels={levels} heightfields={heightfields} />
     </Suspense>
   );
 }
