@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Starship Catch Simulator</title>
+    <meta
+      name="description"
+      content="A real-time 6-DOF browser simulation of SpaceX's Super Heavy booster catch — with an imitation-learned neural policy that catches the booster 87–90% of the time in your browser (vs ~50% for a convex-MPC baseline). Fly it by hand or pit PID / MPC / neural controllers against each other."
+    />
+
+    <!-- Open Graph / Twitter — text card. The og:image / twitter:image
+         (a demo-video-grade catch screenshot with engines lit) is deferred
+         until the M8 landing-site visuals land — SLS-74 / blocked by M8.
+         Add both here + upload the same shot as the repo social preview then;
+         also bump twitter:card to summary_large_image. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Starship Catch Simulator" />
+    <meta property="og:url" content="https://dionismuzenitov.github.io/starship-catch-sim/" />
+    <meta property="og:title" content="Starship Catch Simulator — a neural policy that catches the booster in your browser" />
+    <meta
+      property="og:description"
+      content="Open-source 6-DOF sim of the Super Heavy catch. An imitation-learned neural policy catches 87–90% of the time in-browser, vs ~50% for convex MPC. PID / MPC / RL on one physics core."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Starship Catch Simulator" />
+    <meta
+      name="twitter:description"
+      content="A neural policy that catches SpaceX's Super Heavy booster 87–90% of the time, running a pure-TypeScript forward pass in your browser."
+    />
   </head>
   <body class="m-0 h-screen w-screen overflow-hidden bg-black">
     <div id="root" class="h-full w-full"></div>
