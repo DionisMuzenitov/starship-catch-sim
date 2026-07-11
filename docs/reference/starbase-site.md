@@ -76,13 +76,38 @@ Re-sourcing to 36 m is a physics change, out of M8 scope.
 
 ## Sources (retrieved 2026-07-11)
 
-FAA 469 ft + 10 ft rod via CNBC 2021-07-14; Wikipedia (SpaceX Starbase,
-flight-test articles — as citation index); NASASpaceflight 2025-08-19
-(Pad 2 advancements), 2025-10 (Pad 1 demolition ×2), 2025-11 (pad
-realignment), 2026-02 (site doubling), 2026-03 (Block 3 progress), 2026-05
-(Flight 12, Block 3 booster); Teslarati 2021-10-10 (36 m arms), 2021-08-29
-(QD install); SpaceNexus 2026-03-18 (catch mechanism); skyatnightmagazine /
-acs.org.au (Flight 5 catch numbers); OSM ways 968227813 / 1207227015 +
-Overpass (coordinates, tank positions); topographic-map.com (site
-elevation); starship-spacex.fandom.com (pointer only). Full URLs in the
-SLS-56 Jira comment and Confluence KB page "Starbase catch site — Pad A/B".
+- FAA 469 ft tower + 10 ft rod:
+  <https://www.cnbc.com/2021/07/14/faa-warns-spacex-it-has-not-approved-new-texas-launch-site-tower.html>
+- Tower/site overview + 370 t OLM, tank capacities, catch dates (citation
+  index): <https://en.wikipedia.org/wiki/SpaceX_Starbase>,
+  <https://en.wikipedia.org/wiki/Starship_flight_test_5>,
+  <https://en.wikipedia.org/wiki/Starship_flight_test_12>
+- Pad 2 design, arm differences, deluge figures:
+  <https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/>
+- Pad 1 demolition / rebuild series:
+  <https://www.nasaspaceflight.com/2025/10/starbase-pad-1-demolition-upgrades/>,
+  <https://www.nasaspaceflight.com/2025/10/pad-1-era-preparations-next-phase/>,
+  <https://www.nasaspaceflight.com/2025/11/spacex-starship-pad-realignment-future/>,
+  <https://www.nasaspaceflight.com/2026/02/starbases-launch-site-double-size/>,
+  <https://www.nasaspaceflight.com/2026/03/progress-starbase-pads-block-3-starships/>
+- Block 3 booster / Flight 12:
+  <https://www.nasaspaceflight.com/2026/05/starship-flight-12-block-3-pad-2/>,
+  <https://www.nasaspaceflight.com/2026/05/super-heavy-block-3-booster-future/>
+- 36 m arms, arm install:
+  <https://www.teslarati.com/spacex-starship-launch-tower-mechazilla-catch-arm-installation/>;
+  QD arm install:
+  <https://www.teslarati.com/spacex-starship-launch-tower-mechazilla-arm-installed/>
+- Catch mechanism walkthrough:
+  <https://spacenexus.us/blog/how-spacex-catches-rockets-mechazilla>
+- Flight 5 catch numbers:
+  <https://www.skyatnightmagazine.com/news/spacex-starship-test-5-chopsticks>,
+  <https://ia.acs.org.au/article/2024/spacex-catches-starship-booster-mid-air.html>
+- Coordinates / footprints / tank positions (insubstantial extract):
+  <https://www.openstreetmap.org/way/968227813> (Pad A),
+  <https://www.openstreetmap.org/way/1207227015> (Pad B), Overpass API
+- Site elevation: <https://en-us.topographic-map.com/map-483wgp/Starbase/>
+- Fandom (pointer only, CC-BY-SA — nothing copied):
+  <https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_(OLIT)>
+
+Narrative history + the same table with commentary: Confluence KB page
+"Starbase catch site — Pad A/B, dimensions, and catch history" (SLS space).

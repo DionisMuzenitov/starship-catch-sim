@@ -41,9 +41,10 @@ break forks/offline. Hence: bake, don't stream.
 
 ### Sizes that drive the bake (raw → committed)
 
-- 10×10 km @ 1 m DEM ≈ 400 MB raw float32 → committed as 16-bit PNG
-  heightmap at 2–30 m posting (0.2–10 MB; the site is tidal flats at ~2 m
-  ASL, so coarse posting is visually safe — relief is carried by texture).
+- 10×10 km @ 1 m DEM ≈ 400 MB raw float32 → committed as a 16-bit PNG
+  heightmap at 8–30 m posting (≤ ~1 MB — the site is tidal flats at ~2 m
+  ASL, so coarse posting is visually safe; relief is carried by texture,
+  and finer posting would fight the 5 MB blob guard for nothing).
 - 10×10 km @ 60 cm NAIP ≈ 1.1 GB raw → committed as a mip pyramid,
   ~2.4 m/px at 4096² (~2–4 MB KTX2/JPEG per level), near-pad crop at
   higher px density.
@@ -59,7 +60,7 @@ break forks/offline. Hence: bake, don't stream.
 | Model | Author / platform | What it has | Caveats |
 | --- | --- | --- | --- |
 | "Starship Launch Tower & Launch Pad with Functional Chopsticks" ([thing:5908857](https://www.thingiverse.com/thing:5908857)) | MikeNotBrick / Thingiverse | Tower, pad, articulated chopsticks + QD arm (1:144 print kit) | Untextured STL solids; tri count unpublished; remove print-only features |
-| "High detail, mechanized Mechazilla tower and OLM" ([thing:5403074](https://www.thingiverse.com/thing:5403074)) | herbys / Thingiverse | Highest-detail free tower found; **only CC-BY OLM** (pulleys, carriage, QD) | Resin-detail STLs — likely multi-million tris; aggressive decimation required |
+| "High detail, mechanized Mechazilla tower and OLM" ([thing:5403074](https://www.thingiverse.com/thing:5403074)) | herbys / Thingiverse | Highest-detail free tower found; the only CC-BY model that includes an OLM (whole kit is CC-BY 4.0); pulleys, carriage, QD modelled | Resin-detail STLs — likely multi-million tris; aggressive decimation required |
 | Starbase Orbital Launch Tower v4.0.1 ([thing:4932584](https://www.thingiverse.com/thing:4932584)) | EvelynH97 / Thingiverse | 2021-era tower | Author notes arms don't match IRL design — fallback only |
 | Ship 24 & Booster 7 V4 / Ship S25 & Booster 9 ([Sketchfab](https://sketchfab.com/3d-models/spacex-starship-ship-24-booster-7-v4-97875d14b63e4b9ca9ed425ef4253306)) | Clarence365 / Sketchfab | Textured glTF stacks, ~885 k faces, correct 20-fixed/13-gimbal engine split | S25+B9 already shipped (ADR-012); S24+B7 is the upgrade path |
 | "Orbital tank farm Starbase v1" ([printables 133305](https://www.printables.com/model/133305-orbital-tank-farm-starbase-v1)) | Kosmopark / Printables | GSE tank farm | CC-BY per Printables API (single-source read — re-verify at import); 2022 layout; untextured |
@@ -91,13 +92,12 @@ usable table.)
 ### Route decision (ADR-018 §3)
 
 Physics constants stay canonical (`tower.ts`: 146 m tower, arms at 91 m,
-catch point ≈ (8.5, 91, 0)); real Pad A values differ slightly (143 m
-structure + rod, 36 m arms, catch ≈ 85–90 m — see starbase-site.md). Visual
-hardware is built **to the sim constants**, with CC-BY kit geometry adapted
-for detail and CC0 PBR texturing (ambientCG / Poly Haven class libraries,
-triplanar-mapped to avoid UV-unwrapping print solids). Re-sourcing
-`ARM_LENGTH_M` 30 → 36 would change catch dynamics under the trained policy
-— out of M8 scope; file separately if wanted.
+catch point ≈ (8.5, 91, 0)); real Pad A values differ slightly — see the
+**arm-length delta note in [starbase-site.md](starbase-site.md)**, which
+owns that table. Visual hardware is built **to the sim constants**, with
+CC-BY kit geometry adapted for detail and CC0 PBR texturing (ambientCG /
+Poly Haven class libraries, triplanar-mapped to avoid UV-unwrapping print
+solids).
 
 ## 3. Rendering technique (for SLS-57)
 
@@ -118,10 +118,12 @@ triplanar-mapped to avoid UV-unwrapping print solids). Re-sourcing
 - **LOD:** drei `<Detailed>` for discrete objects (tower/OLM/tanks);
   `gltf-transform simplify` (meshoptimizer) for offline decimation ratios.
 
-## 4. Payload budget (ADR-018 §4)
+## 4. Payload budget
 
-≤ ~20 MB env total, ≤ 5 MB/file (CI blob guard), ≤ ~10 MB critical path,
-lazy-load hi-res drape. GitHub Pages limits (primary-source, 2026-07-11):
+The normative budget lives in [ADR-018 §4](../adr/018-launch-site-environment-sourcing.md)
+(env total / per-file / critical-path caps — the per-file cap is the
+existing CI blob guard). Context behind it — GitHub Pages limits
+(primary-source, 2026-07-11):
 1 GB site, 100 GB/month soft bandwidth, 100 MB/file hard — at 25 MB cold
 load that's ~4 000 uncached loads/month, comfortable. Current shipped
 payload for context: stack GLB 2.24 MB + policy JSON 1.53 MB + Draco

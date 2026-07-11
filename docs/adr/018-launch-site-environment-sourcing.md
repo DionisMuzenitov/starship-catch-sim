@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-11
 - **Tickets:** SLS-56 (research spike), SLS-57 (implementation)
+- **Amends:** [ADR-005](005-community-assets-licence-policy.md) (tower-model premise; licence gate unchanged)
 - **Backing data:** [launch-site sourcing comparison](../reference/launch-site-sourcing.md) ·
   [Starbase site reference](../reference/starbase-site.md)
 
@@ -54,8 +55,8 @@ Can this meet "full descent at frame budget, physics unchanged"? Payload:
 heightmap ≤ 1 MB (the site is tidal flats at ~2 m ASL — relief is texture's
 job, not geometry's), drape 3–8 MB, wide tier ~3 MB, hardware detail is
 code + small GLBs — fits the budget with headroom. Geometry: ~100–300 k added
-triangles on top of the existing 168 k booster — comfortable for integrated
-GPUs at 1080p. Known risk: `logarithmicDepthBuffer` is already enabled and
+triangles on top of the existing 168 k-triangle vehicle stack (ship +
+booster, ADR-012) — comfortable for integrated GPUs at 1080p. Known risk: `logarithmicDepthBuffer` is already enabled and
 disables early-z; if SLS-61's measurement misses 60 fps, the documented
 levers are dynamic-near-plane instead of log depth, drape resolution, and
 detail-mesh LOD — none of which invalidate this sourcing decision.
