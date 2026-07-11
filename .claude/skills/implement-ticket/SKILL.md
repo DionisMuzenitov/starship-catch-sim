@@ -29,7 +29,10 @@ After approval:
    a new ticket mid-build, search the board for an existing one first, and
    label anything you file `organic`.
 7. Verify: typecheck + related tests green (the PostToolUse hook enforces
-   this), full suite before finishing.
+   this), full suite before finishing. **Then run local `/code-review` on
+   the diff before opening the PR** and address its findings (or note why
+   deferred) — this is the mandatory review gate that replaces the removed
+   cloud PR-reviewer workflow (SLS-73).
 8. Commit with smart-commit syntax (`$ARGUMENTS #in-progress …`,
    final: `$ARGUMENTS #done …`).
 9. Update docs: comment on the ticket (what was learned/decided), KB page if

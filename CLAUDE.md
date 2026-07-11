@@ -88,6 +88,10 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
   red tests.
 - New physics/control code needs property tests (fast-check) where invariants
   exist, and must not break the numpy ↔ TS snapshot equivalence suite.
+- **Run local `/code-review` on the diff before opening a PR** and resolve (or
+  consciously defer) its findings. This is the review gate — there is no cloud
+  PR-reviewer workflow (removed in SLS-73; a silent reviewer that never posted
+  was worse than none). Merges still require explicit owner approval.
 
 ## Git / Jira conventions (smart commits)
 
