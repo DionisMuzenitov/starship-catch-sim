@@ -27,6 +27,10 @@ Three controller generations, benchmarked on the TypeScript physics core (250 Hz
 | Convex MPC (M5)        | 53 %     | 50 %     | 50 %     |
 | **Neural policy (M6)** | **87 %** | **87 %** | **90 %** |
 
+![Booster catch rate by controller generation — cascaded PID catches 0 % across all wind scenarios, convex MPC 53/50/50 %, and the imitation-learned neural policy 87/87/90 % (calm/standard/stormy), 30-seed Monte-Carlo per cell.](docs/media/progression.svg)
+
+_Progression across controller generations (regenerate with `pnpm chart:progression` from the committed [gate records](eval/results/gate-records/MANIFEST.md))._
+
 The shipped policy is a 578 KB, 17→256→256→4 tanh MLP. It runs a dependency-free TypeScript forward pass in the browser (no ONNX, no WASM — [ADR-016](docs/adr/016-ts-policy-runtime.md)), commanding thrust and lean targets at 25 Hz over a 250 Hz body-frame attitude-PD inner loop — the same guidance/control layering real boosters use. It is **imitation-learned** (behaviour cloning on a scripted-cascade teacher), _not_ RL-trained: direct PPO and SAC never produced a catching policy at laptop compute, and that honest diagnosis trail is part of the write-up. TypeScript↔Python parity is CI-tested to 1e-4 on every push.
 
 Reproduce the benchmark with `pnpm bench:rl` (30 seeds). Full protocol, per-scenario accuracy/fuel, provenance, and caveats (e.g. the stormy profile was never trained on): **[controller comparison report →](eval/reports/v1-controller-comparison.md)**.
