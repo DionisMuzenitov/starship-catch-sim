@@ -10,7 +10,7 @@ shared between TS and a numpy port (parity is load-bearing — SLS-28).
 - **Project key:** `SLS` (default project — assume SLS unless told otherwise).
 - **Board:** https://yanismuzenitov.atlassian.net/jira/software/projects/SLS/boards/67
 
-When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net"`. All `mcp__claude_ai_Atlassian_Rovo__*` tools are pre-allowed in `.claude/settings.local.json` — do not ask for permission per call.
+When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net"`. Two Atlassian MCP servers are wired locally: the official remote server (`mcp__atlassian__*` and the `mcp__claude_ai_Atlassian_Rovo__*` connector) for reads + most writes, and the community **sooperset/mcp-atlassian** server (`mcp__mcp-atlassian__*`, local scope, Jira-only, credentials in `~/.config/sls-atlassian.env`) for write ops the official one lacks — notably deleting issue links. All three are pre-allowed in `.claude/settings.local.json` (edit/overwrite + merge/push prompt via `ask`; `jira_delete_issue` prompts too) — do not ask for permission per call.
 
 ## Project memory (reconstruct context from here, not chat history)
 
@@ -27,7 +27,7 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
 - **Owner:** `DionisMuzenitov` (note: differs in case from local Mac user `dionismuzenitov`)
 - `gh` CLI is installed and authenticated for this account with scopes `gist, read:org, repo, workflow`. Git uses `gh` as credential helper (`gh auth setup-git` already run).
 - For GitHub operations (issues, PRs, CI status) use the `gh` CLI — it is already authenticated.
-- Workflow: from SLS-5 onward, each ticket gets its own feature branch + PR. Direct commits to `main` are only for bootstrap.
+- Workflow: each ticket gets its own feature branch + PR (`sls-XX-short-slug`). Direct commits to `main` are not used (the bootstrap-only exception applied to SLS-1–4, long closed).
 
 ## Implementation protocol (research-first — applies to EVERY ticket)
 
@@ -48,6 +48,11 @@ Before writing or changing any code for a ticket, you MUST:
    physically meet the gate? (Past example: ADR-007's 3-DOF planner could
    never close a metres-scale catch through seconds-scale attitude lag —
    predictable at design time, found at bench time.)
+   When an ADR supersedes or extends an earlier one, wire **two-way links**:
+   the new ADR names what it supersedes, and the old ADR gets a back-link
+   amendment + an updated index status — so a reader landing on the stale ADR
+   is never misled (past miss: ADR-003 still described the ONNX runtime after
+   ADR-016 replaced it — SLS-75).
 3. **PROPOSE.** Give a short implementation plan: approach, key decisions and
    trade-offs, test strategy, and what you will NOT do. Note any deviation
    from the ticket and why.
@@ -64,7 +69,7 @@ Before writing or changing any code for a ticket, you MUST:
    test-count delta, cost/tokens if known. A stale snapshot is this
    project's worst recorded process failure — do not skip this step.
    **Loop-closure guard:** before ending a session that touched board or
-   repo state, verify the newest SLS-43 comment is dated *today* — if the
+   repo state, verify the newest SLS-43 comment is dated _today_ — if the
    latest comment is on an earlier date, the run-report was never posted and
    the loop is not closed.
    When a milestone outcome gate flips (or its status/scope changes), also
@@ -95,8 +100,8 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 
 ## Git / Jira conventions (smart commits)
 
-- Branch per ticket: `sls-XX-short-slug` (from SLS-5 onward; direct commits to
-  `main` are only for bootstrap).
+- Branch per ticket: `sls-XX-short-slug`. Direct commits to `main` are not
+  used (the bootstrap-only exception applied to the SLS-1–4 era, long closed).
 - Reference the ticket in every commit message so Jira auto-links and
   transitions, e.g.:
   - `SLS-23 #in-progress cascaded PID skeleton`
@@ -124,7 +129,8 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
   PR.
 - **Milestone-done = outcome gate met.** Closing a milestone's tickets does
   not close the milestone. Each milestone's quantitative gate is recorded in
-  the SLS-43 snapshot (e.g. M5: ≥50 % catch rate on the MC bench); a
+  the SLS-43 snapshot (e.g. the open M8 gate: ≥60 fps at the default tier on
+  the owner laptop with Earth+tower+plumes + a demo-grade screenshot set); a
   milestone with green tickets and a red gate is still open.
 - **Organic tickets.** Before filing a new ticket from the build seat,
   search the board for an existing one covering the scope (SLS-46 duplicated

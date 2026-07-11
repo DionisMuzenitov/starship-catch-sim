@@ -1,8 +1,16 @@
 # ADR-003: Controller interface
 
-- **Status:** Accepted
+- **Status:** Accepted (RL-runtime detail amended by [ADR-016](016-ts-policy-runtime.md))
 - **Date:** 2026-05-23
 - **Tickets:** SLS-5
+
+> **Amendment (ADR-016, 2026-07-09):** the RL runtime is **not** ONNX. The
+> shipped policy runs a dependency-free pure-TypeScript forward pass from JSON
+> weights — see [ADR-016](016-ts-policy-runtime.md). The `Controller<TInput>`
+> interface below is unchanged; wherever this ADR says "ONNX in-browser" /
+> "load ONNX weights", read "synchronous TS forward pass". (MPC's async
+> service handshake still justifies the async `init`, so that consequence
+> stands.)
 
 ## Context
 
