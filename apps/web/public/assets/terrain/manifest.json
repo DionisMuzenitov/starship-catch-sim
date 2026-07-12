@@ -1,0 +1,61 @@
+{
+  "generated": "2026-07-12T00:16:47.250Z",
+  "origin": {
+    "lat": 25.99613,
+    "lon": -97.15474,
+    "note": "Pad A tower base = world origin"
+  },
+  "frame": "+X east, +Z south (north-up images: row 0 = north, col 0 = west), +Y up, metres",
+  "heightEncoding": {
+    "minM": -16,
+    "rangeM": 112,
+    "datumM": 2.326176643371582,
+    "formula": "v = R*256 + G; h = minM + (v/65535)*rangeM  (relative to the tower-base datum: h=0 at world origin)"
+  },
+  "tiers": {
+    "l0": {
+      "sizeM": 1280,
+      "demPx": 64,
+      "drapeApx": 2048,
+      "hMin": -3.0050058364868164,
+      "hMax": 4.336327075958252,
+      "aBytes": 803364,
+      "bBytes": 0
+    },
+    "l1": {
+      "sizeM": 5120,
+      "demPx": 128,
+      "drapeApx": 4096,
+      "hMin": -3.336176633834839,
+      "hMax": 3.101635456085205,
+      "aBytes": 2696021,
+      "bBytes": 0
+    },
+    "near": {
+      "sizeM": 10240,
+      "demPx": 256,
+      "drapeApx": 4096,
+      "drapeBpx": 1024,
+      "hMin": -3.336176633834839,
+      "hMax": 7.682666778564453,
+      "aBytes": 2767483,
+      "bBytes": 196464
+    },
+    "wide": {
+      "sizeM": 102400,
+      "demPx": 256,
+      "drapeApx": 2048,
+      "drapeBpx": 2048,
+      "hMin": -3.33518648147583,
+      "hMax": 22.42005443572998,
+      "aBytes": 520776,
+      "bBytes": 1033410
+    }
+  },
+  "provenance": {
+    "dem": "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
+    "drapeA": "l0/l1/near levels: USDA NAIP 2024 via TxGIO DataHub Cameron County mosaic (explicitly CC0-1.0; catch-era, flown May–Nov 2024), window decoded locally from MrSID with mrsiddecode; wide tier: USGS The National Map Imagery-Only base map (US public domain). Courtesy credit: USDA FSA / TxGIO / U.S. Geological Survey. No-coverage areas filled procedurally; colour-graded (saturation 1.22, contrast 1.10).",
+    "drapeB": "Sentinel-2 L2A true-colour, scenes S2B_14RPQ_20241121_0_L2A + S2B_14RPP_20241121_0_L2A (2024-11-21, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).",
+    "policy": "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md"
+  }
+}

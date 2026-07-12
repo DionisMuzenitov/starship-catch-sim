@@ -48,9 +48,9 @@ describe("modeTargetFor", () => {
     expect(high.position.y - 5000).toBeLessThanOrEqual(200 + 1e-6);
   });
 
-  it("tower camera sits at the live MechazillaTower top", () => {
+  it("tower camera perches above and outboard of the MechazillaTower top", () => {
     const t = modeTargetFor("tower", worldAtAltitude(800), DEFAULT_ENV, 0)!;
-    expect(t.position).toEqual(Vec3.of(0, MECHAZILLA_TOWER_HEIGHT_M, 0));
+    expect(t.position).toEqual(Vec3.of(10, MECHAZILLA_TOWER_HEIGHT_M + 3, 0));
     expect(t.lookAt).toEqual(worldAtAltitude(800).rigidBody.position);
   });
 
