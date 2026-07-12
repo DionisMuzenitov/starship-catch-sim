@@ -1,11 +1,13 @@
 /**
  * Launch-site dressing around the tower (SLS-57, ADR-018): orbital launch
- * mount, tank farm and concrete apron, placed per the sourced site layout in
- * docs/reference/starbase-site.md (Pad A 2024–25 catch era). All positions
- * are scenery — the physics tower/capture constants remain canonical.
+ * mount, tank farms and concrete apron. Positions and heights are MEASURED
+ * from the CC0 2023 USGS Lower Rio Grande lidar (30 pts/m² point cloud,
+ * structures extracted at 0.25 m — see docs/reference/starbase-site.md).
+ * All of this is scenery — the physics tower/capture constants remain
+ * canonical.
  *
  * Frame: origin = tower base, +X = east (rocket/chopstick side), -Z = north
- * (Hwy 4 / tank-farm side), metres.
+ * (Hwy 4 side), metres.
  */
 import { useEffect, useRef } from "react";
 
@@ -13,8 +15,9 @@ import { MeshStandardMaterial } from "three";
 
 import { type MechazillaApi, MechazillaTower } from "./MechazillaTower";
 
-// tower → OLM offset ~25–30 m (derived estimate, starbase-site.md)
-const OLM_POS_X = 28;
+// OLM centre measured at (18, -21), deck ~21 m (2023 lidar)
+const OLM_POS_X = 18;
+const OLM_POS_Z = -21;
 const OLM_DECK_HEIGHT_M = 18;
 const OLM_RING_RADIUS_M = 7.5;
 const OLM_LEG_COUNT = 6;
@@ -47,7 +50,7 @@ function Olm() {
     return [Math.cos(a) * OLM_RING_RADIUS_M, Math.sin(a) * OLM_RING_RADIUS_M] as const;
   });
   return (
-    <group position={[OLM_POS_X, 0, 0]}>
+    <group position={[OLM_POS_X, 0, OLM_POS_Z]}>
       {legs.map(([lx, lz], i) => (
         <mesh key={`olm-leg-${i}`} position={[lx, OLM_DECK_HEIGHT_M / 2, lz]} material={concreteMat}>
           <cylinderGeometry args={[1.2, 1.4, OLM_DECK_HEIGHT_M, 10]} />
@@ -69,17 +72,19 @@ function Olm() {
   );
 }
 
-/** OLS tank farm: a row along the north side (Hwy 4), NE of the tower
- *  stretching west — CH₄ / LOX / LN₂ / water groups (starbase-site.md). */
+/** Orbital (GSE) tank farm — measured as a compact two-row block centred
+ *  ~(43, -88), ~30 m tall, NNE of the tower (2023 lidar). Eight big cryo
+ *  shells in two rows plus smaller service tanks on the west edge. */
 function TankFarm() {
   const tanks: Array<{ x: number; z: number; r: number; h: number; water?: boolean }> = [];
-  // CH4 + LOX + LN2: 14 vertical cryo tanks marching west along the row
-  for (let i = 0; i < 14; i++) {
-    tanks.push({ x: 40 - i * 22, z: -135 - (i % 2) * 9, r: 2.6, h: 24 });
+  // two rows of four sleeved cryo tanks
+  for (let i = 0; i < 4; i++) {
+    tanks.push({ x: 20 + i * 22, z: -72, r: 4.6, h: 29 });
+    tanks.push({ x: 20 + i * 22, z: -100, r: 4.6, h: 29 });
   }
-  // deluge/water tanks at the west end
+  // smaller service/water tanks on the block's west side
   for (let i = 0; i < 3; i++) {
-    tanks.push({ x: -300 - i * 16, z: -140, r: 4.2, h: 13, water: true });
+    tanks.push({ x: -2, z: -70 - i * 14, r: 2.6, h: 14, water: true });
   }
   return (
     <group>
@@ -92,6 +97,30 @@ function TankFarm() {
           <cylinderGeometry args={[t.r, t.r, t.h, 14]} />
         </mesh>
       ))}
+    </group>
+  );
+}
+
+/** Western support area — measured blocks at ~(-260, -140) (structural/test
+ *  stands, ~33 m) and the tall mast/water tower at ~(-264, -54), ~59 m
+ *  (2023 lidar). Coarse massing so the west skyline reads right. */
+function WestSupportArea() {
+  return (
+    <group>
+      <mesh position={[-262, 16, -139]} material={tankMat}>
+        <boxGeometry args={[80, 32, 60]} />
+      </mesh>
+      <mesh position={[-252, 14, -82]} material={waterTankMat}>
+        <boxGeometry args={[18, 28, 26]} />
+      </mesh>
+      {/* tall mast / water tower */}
+      <mesh position={[-264, 27, -54]} material={waterTankMat}>
+        <cylinderGeometry args={[4.5, 5.5, 54, 12]} />
+      </mesh>
+      {/* production row along Hwy 4 to the north-west */}
+      <mesh position={[-170, 9, -189]} material={tankMat}>
+        <boxGeometry args={[150, 18, 40]} />
+      </mesh>
     </group>
   );
 }
@@ -120,6 +149,7 @@ export function LaunchSite() {
       <MechazillaTower ref={towerRef} />
       <Olm />
       <TankFarm />
+      <WestSupportArea />
       <Apron />
     </group>
   );
