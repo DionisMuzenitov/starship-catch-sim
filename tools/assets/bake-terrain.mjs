@@ -25,12 +25,23 @@
  * Images are baked north-up: row 0 = north edge, col 0 = west edge.
  *
  *   node tools/assets/bake-terrain.mjs [--out apps/web/public/assets/terrain] [--skip-b]
+ *       [--naip-local <window.tif>]
+ *
+ * --naip-local feeds the variant-A inner levels from a locally decoded NAIP
+ * GeoTIFF instead of the Planetary Computer 2022 COGs. Used for the TxGIO
+ * NAIP 2024 Cameron County mosaic (CC0-1.0, catch-era):
+ *   1. download naip24-60cm_48061_nccir-ccm.zip from the TxGIO DataHub
+ *      (data.geographic.texas.gov; needs a browser User-Agent header)
+ *   2. decode the pad window with Extensis mrsiddecode (free DSDK):
+ *      mrsiddecode -i naip24-nc-cir-60cm-cameron_48061.sid -o window.tif \
+ *        -of tifg -coord geo -ulxy 679479 2881776 -lrxy 689919 2871336
+ *   3. node tools/assets/bake-terrain.mjs --naip-local window.tif
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { fromArrayBuffer, fromUrl } from "geotiff";
+import { fromArrayBuffer, fromFile, fromUrl } from "geotiff";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
 
@@ -444,6 +455,33 @@ function gradeColour(px, w, h) {
 }
 
 /**
+ * Open a locally-decoded NAIP GeoTIFF (e.g. the TxGIO 2024 county mosaic
+ * window extracted with mrsiddecode) as the variant-A scene list:
+ *   node tools/assets/bake-terrain.mjs --naip-local <window.tif>
+ * The file must be a GeoTIFF in UTM 14N covering the near tier.
+ */
+async function openLocalNaipScene(path) {
+  const tci = await fromFile(path);
+  const img = await tci.getImage();
+  const [originE, originN] = img.getOrigin();
+  const [pxM] = img.getResolution();
+  const scene = {
+    id: `local:${path}`,
+    tci,
+    pxM,
+    originE,
+    originN,
+    shapeW: img.getWidth(),
+    shapeH: img.getHeight(),
+    samples: [0, 1, 2],
+  };
+  console.log(
+    `local NAIP window: ${scene.shapeW}x${scene.shapeH} @ ${pxM} m/px, origin (${originE.toFixed(0)}, ${originN.toFixed(0)})`,
+  );
+  return [scene];
+}
+
+/**
  * Open the NAIP DOQQ COGs (pinned NAIP_YEAR) that intersect the largest
  * inner level, via Planetary Computer's anonymous STAC + SAS token.
  */
@@ -604,7 +642,10 @@ async function main() {
   const datumM = rasters.near[Math.floor(nearPx / 2) * nearPx + Math.floor(nearPx / 2)];
   console.log(`tower-base datum: ${datumM.toFixed(2)} m ASL (subtracted from all heights)`);
 
-  const naipScenes = await openNaipScenes(TIERS.near.sizeM);
+  const naipLocal = argValue("--naip-local", null);
+  const naipScenes = naipLocal
+    ? await openLocalNaipScene(naipLocal)
+    : await openNaipScenes(TIERS.near.sizeM);
 
   for (const [tier, cfg] of Object.entries(TIERS)) {
     const { hMin, hMax } = encodeHeight(tier, rasters[tier], cfg.demPx, datumM);
@@ -633,8 +674,9 @@ async function main() {
     ),
     provenance: {
       dem: "USGS 3DEP via 3DEPElevation ImageServer WMS — US public domain; courtesy credit: U.S. Geological Survey",
-      drapeA:
-        `l0/l1/near levels: USDA NAIP ${NAIP_YEAR} DOQQ COGs via Microsoft Planetary Computer (anonymous SAS; tower/OLM/tank farm visible in the imagery); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS). All US public domain; courtesy credit: USDA FSA / U.S. Geological Survey. No-coverage areas (open Gulf / Mexico side) filled procedurally; colour-graded (saturation 1.22, contrast 1.10).`,
+      drapeA: naipLocal
+        ? "l0/l1/near levels: USDA NAIP 2024 via TxGIO DataHub Cameron County mosaic (explicitly CC0-1.0; catch-era, flown May–Nov 2024), window decoded locally from MrSID with mrsiddecode; wide tier: USGS The National Map Imagery-Only base map (US public domain). Courtesy credit: USDA FSA / TxGIO / U.S. Geological Survey. No-coverage areas filled procedurally; colour-graded (saturation 1.22, contrast 1.10)."
+        : `l0/l1/near levels: USDA NAIP ${NAIP_YEAR} DOQQ COGs via Microsoft Planetary Computer (anonymous SAS; tower/OLM/tank farm visible in the imagery); wide tier: USGS The National Map Imagery-Only base map (NAIP-derived over CONUS). All US public domain; courtesy credit: USDA FSA / U.S. Geological Survey. No-coverage areas (open Gulf / Mexico side) filled procedurally; colour-graded (saturation 1.22, contrast 1.10).`,
       drapeB: `Sentinel-2 L2A true-colour, scenes ${S2_SCENES.map((s) => s.id).join(" + ")} (${S2_DATE}, <0.01 % cloud — catch era). Contains modified Copernicus Sentinel data 2024. ESA licence is permissive but NOT CC — ships only with a recorded ADR-005 exception (owner A/B pending).`,
       policy: "docs/adr/018-launch-site-environment-sourcing.md, docs/reference/launch-site-sourcing.md",
     },
