@@ -1,9 +1,16 @@
 # ADR-005: Community-sourced 3D assets, CC0/CC-BY only
 
-- **Status:** Accepted
+- **Status:** Accepted (tower-model premise amended by [ADR-018](018-launch-site-environment-sourcing.md))
 - **Date:** 2026-07-05 (backfill — decision made ~2026-05-28 with SLS-44;
   the file was never committed, rediscovered in the 2026-07-05 PM audit)
 - **Tickets:** SLS-44
+
+> **Amendment (ADR-018, 2026-07-11):** the premise "no licence-clean tower
+> model exists" is no longer true — the SLS-56 spike verified two CC-BY 4.0
+> Mechazilla kits (Thingiverse `thing:5908857`, `thing:5403074`). The
+> licence gate itself is unchanged. The tower nevertheless stays built to
+> the physics constants, with CC-BY kit geometry adapted only for visual
+> detail — see [ADR-018](018-launch-site-environment-sourcing.md) for why.
 
 ## Context
 

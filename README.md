@@ -15,7 +15,7 @@ A real-time, 6-DOF simulation of SpaceX's Starship booster catch manoeuvre — a
 
 ### Who this is for
 
-This is a **portfolio project** — a from-scratch 6-DOF flight simulator and controls test-bench built to demonstrate end-to-end engineering judgment: real vehicle physics, three generations of guidance (PID → convex MPC → an imitation-learned neural policy that catches 87–90 % of the time in the browser), and the decision trail behind every non-trivial choice ([17 ADRs](docs/adr/)). It's built to be evaluated by engineers and hiring managers for depth and follow-through, and to be enjoyable for the RL/GNC-curious and the SpaceX community.
+This is a **portfolio project** — a from-scratch 6-DOF flight simulator and controls test-bench built to demonstrate end-to-end engineering judgment: real vehicle physics, three generations of guidance (PID → convex MPC → an imitation-learned neural policy that catches 87–90 % of the time in the browser), and the decision trail behind every non-trivial choice (the [ADR index](docs/adr/)). It's built to be evaluated by engineers and hiring managers for depth and follow-through, and to be enjoyable for the RL/GNC-curious and the SpaceX community.
 
 ## Results
 
@@ -110,7 +110,7 @@ server, and docs site remain planned (SLS-31/32/33).
 
 ## Deep dives
 
-The engineering-judgment trail lives in 16 [Architecture Decision Records](docs/adr/README.md) — _why_ each non-trivial choice was made, and what was rejected. A few flagships:
+The engineering-judgment trail lives in the [Architecture Decision Records](docs/adr/README.md) — _why_ each non-trivial choice was made, and what was rejected. A few flagships:
 
 - **[ADR-007](docs/adr/007-convex-mpc-guidance.md) → [ADR-009](docs/adr/009-coast-burn-guidance.md)** — why the first MPC formulation could never close a metres-scale catch through seconds-scale attitude lag, and the coast-phase ignition planning that fixed it.
 - **[ADR-013](docs/adr/013-rl-numpy-port-and-parity.md)** — the numpy↔TypeScript physics port: single-sourced constants and CI-enforced parity, so the RL env and the browser fly the same dynamics.
