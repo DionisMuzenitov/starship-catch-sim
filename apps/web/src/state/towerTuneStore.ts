@@ -8,7 +8,11 @@
  */
 import { create } from "zustand";
 
-import { DEFAULT_ARM_HEIGHT_M } from "@starship-catch-sim/physics";
+import {
+  chopstickCaptureVolume,
+  DEFAULT_ARM_HEIGHT_M,
+  DEFAULT_TOWER_STATE,
+} from "@starship-catch-sim/physics";
 
 export type TowerTuneState = {
   /** Yaw of the whole tower about the vertical axis (degrees). */
@@ -36,6 +40,12 @@ export type TowerTuneState = {
   olmYawDeg: number;
   olmDx: number;
   olmDz: number;
+  /** Ghost booster (landing-target alignment, SLS-76): world position of a
+   *  static booster the owner nests into the visual chopsticks. Baked as the
+   *  visual catch point → SITE_OFFSET shifts the scenery onto the physics one. */
+  ghostX: number;
+  ghostY: number;
+  ghostZ: number;
   setYaw: (v: number) => void;
   setTowerDx: (v: number) => void;
   setTowerDz: (v: number) => void;
@@ -51,7 +61,23 @@ export type TowerTuneState = {
   setOlmYaw: (v: number) => void;
   setOlmDx: (v: number) => void;
   setOlmDz: (v: number) => void;
+  setGhostX: (v: number) => void;
+  setGhostY: (v: number) => void;
+  setGhostZ: (v: number) => void;
 };
+
+/** Physics catch point (capture-volume centre, ≈(8.5, 91, 0)) — the fixed
+ *  frame the visual site must align to; also the ghost's starting position. */
+export const PHYSICS_CATCH_POINT = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
+
+/**
+ * World shift applied to ALL site visuals (tower, OLM, scenery, terrain) so
+ * the owner-nested visual catch cradle coincides with PHYSICS_CATCH_POINT
+ * while preserving the owner's tower↔terrain shadow alignment. Baked as
+ * PHYSICS_CATCH_POINT − ghost once the owner places the ghost booster.
+ * Zero until then.
+ */
+export const SITE_OFFSET: readonly [number, number, number] = [0, 0, 0];
 
 /**
  * Owner-aligned tower placement (SLS-76), dialled in against the satellite
@@ -90,6 +116,9 @@ export const useTowerTuneStore = create<TowerTuneState>((set) => ({
   olmYawDeg: DEFAULT_OLM_YAW_DEG,
   olmDx: DEFAULT_OLM_DX,
   olmDz: DEFAULT_OLM_DZ,
+  ghostX: PHYSICS_CATCH_POINT.x,
+  ghostY: PHYSICS_CATCH_POINT.y,
+  ghostZ: PHYSICS_CATCH_POINT.z,
   setYaw: (yawDeg) => set({ yawDeg }),
   setTowerDx: (towerDx) => set({ towerDx }),
   setTowerDz: (towerDz) => set({ towerDz }),
@@ -105,6 +134,9 @@ export const useTowerTuneStore = create<TowerTuneState>((set) => ({
   setOlmYaw: (olmYawDeg) => set({ olmYawDeg }),
   setOlmDx: (olmDx) => set({ olmDx }),
   setOlmDz: (olmDz) => set({ olmDz }),
+  setGhostX: (ghostX) => set({ ghostX }),
+  setGhostY: (ghostY) => set({ ghostY }),
+  setGhostZ: (ghostZ) => set({ ghostZ }),
 }));
 
 /** `?tune=1` shows the tuning panel (GLB tower only — no effect with `?tower=proc`). */

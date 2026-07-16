@@ -27,7 +27,8 @@ import { Terrain } from "./terrain/Terrain";
 import { TowerTunePanel } from "./TowerTunePanel";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
-import { towerTuneEnabled } from "../state/towerTuneStore";
+import { LandingGhost } from "./LandingGhost";
+import { SITE_OFFSET, towerTuneEnabled } from "../state/towerTuneStore";
 
 export function Scene() {
   useSimRunner();
@@ -53,8 +54,14 @@ export function Scene() {
         <Fog />
         <Sun />
         <Sky />
-        <Terrain />
-        <LaunchSite />
+        {/* site visuals shifted as one so the visual catch cradle sits on the
+            physics catch point without disturbing the tower↔terrain alignment
+            (SLS-76; zero until the owner bakes the ghost position) */}
+        <group position={[...SITE_OFFSET]}>
+          <Terrain />
+          <LaunchSite />
+        </group>
+        {towerTuneEnabled() && <LandingGhost />}
         <BoosterFlight />
         <CameraRig />
         <ImpactReticle />
