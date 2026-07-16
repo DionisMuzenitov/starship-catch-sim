@@ -18,8 +18,14 @@ import { MathUtils, Vector3 } from "three";
 
 import { useCameraStore, type CameraMode } from "../../state/cameraStore";
 import { useSimStore } from "../../state/simStore";
+import { towerTuneEnabled } from "../../state/towerTuneStore";
 
 import { DEFAULT_ENV, modeTargetFor } from "./modes";
+
+/** Where the free camera jumps to when entered from the tuning panel — a
+ *  close SE vantage looking at the tower catch point, so O lands you on the
+ *  chopsticks instead of wherever the previous mode left the camera (SLS-76). */
+const TUNE_FREE_START = new Vector3(70, 110, 70);
 
 /** Per-mode damping time constants (seconds). */
 const TAU_BY_MODE: Record<Exclude<CameraMode, "free">, number> = {
@@ -40,6 +46,13 @@ export function CameraRig() {
   useFrame(({ camera }, dt) => {
     const mode = useCameraStore.getState().mode;
     if (mode === "free") {
+      // On entering free mode from the tuning panel, jump next to the tower
+      // (OrbitControls then pivots on the catch point) so the owner isn't
+      // stranded wherever the descent view left the camera (km away).
+      if (prevModeRef.current !== "free" && towerTuneEnabled()) {
+        camera.position.copy(TUNE_FREE_START);
+        camera.lookAt(8.5, 91, 0);
+      }
       prevModeRef.current = mode;
       return;
     }
