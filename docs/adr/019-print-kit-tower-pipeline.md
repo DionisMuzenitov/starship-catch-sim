@@ -67,5 +67,14 @@ Two further constraints surfaced during the build:
 - The kit's arm geometry vindicates the physics constants: with arms closed,
   the mirrored pair's inner faces sit at ±4.5 m — exactly flanking a 9 m
   booster.
-- Landing/catch *target* alignment to the moved OLM is tracked inside SLS-76
-  (in progress at time of writing).
+- Landing/catch alignment: the owner-tuned tower sits offset from the physics
+  catch point, so the site would show the booster caught in mid-air. Solution
+  (no physics change): a **ghost booster** the owner nests into the visual
+  chopsticks (`?tune=1`); the baked position yields `SITE_OFFSET = catch −
+  ghost`, a single world shift applied to the whole site group (tower + OLM +
+  terrain) so the physics catch drops into the visual cradle. Its +63 m
+  vertical component is the "caught too high" fix (the booster's body now runs
+  alongside the tower instead of floating base-at-arms). numpy↔TS parity safe.
+- The GLB chopstick meshes open to a **visual** max of ARM_ANGLE_OPEN_RAD/2;
+  the real print-kit arms over-rotate past that. Mesh-only — catch happens
+  closed, where the visual pose and the physics catch points coincide.

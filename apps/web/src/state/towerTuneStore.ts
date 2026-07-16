@@ -71,13 +71,27 @@ export type TowerTuneState = {
 export const PHYSICS_CATCH_POINT = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
 
 /**
- * World shift applied to ALL site visuals (tower, OLM, scenery, terrain) so
- * the owner-nested visual catch cradle coincides with PHYSICS_CATCH_POINT
- * while preserving the owner's tower↔terrain shadow alignment. Baked as
- * PHYSICS_CATCH_POINT − ghost once the owner places the ghost booster.
- * Zero until then.
+ * Owner-baked ideal-catch pose (2026-07-17): the world position where the
+ * ghost booster visually nests in the chopsticks, dialled in with `?tune=1`.
+ * The real booster renders at PHYSICS_CATCH_POINT, so shifting the whole site
+ * by (catch − ghost) drops the physics catch exactly into this visual cradle
+ * — the +63 m up component is the "caught too high" correction the owner
+ * noted (the booster was floating with its base at the arms; now its body
+ * runs alongside the tower with the arms gripping near its top).
  */
-export const SITE_OFFSET: readonly [number, number, number] = [0, 0, 0];
+const BAKED_GHOST_AT_CATCH = { x: 32.7, y: 27.7, z: -1.3 };
+
+/**
+ * World shift applied to ALL site visuals (tower, OLM, scenery, terrain) as
+ * one, so the owner-nested visual catch cradle coincides with
+ * PHYSICS_CATCH_POINT while preserving the owner's tower↔terrain shadow
+ * alignment. Physics is never touched (numpy↔TS parity safe).
+ */
+export const SITE_OFFSET: readonly [number, number, number] = [
+  PHYSICS_CATCH_POINT.x - BAKED_GHOST_AT_CATCH.x,
+  PHYSICS_CATCH_POINT.y - BAKED_GHOST_AT_CATCH.y,
+  PHYSICS_CATCH_POINT.z - BAKED_GHOST_AT_CATCH.z,
+];
 
 /**
  * Owner-aligned tower placement (SLS-76), dialled in against the satellite
@@ -91,7 +105,7 @@ export const DEFAULT_TOWER_DZ = 0;
 export const DEFAULT_ARM_YAW_DEG = -44;
 export const DEFAULT_OLM_YAW_DEG = -13;
 export const DEFAULT_OLM_DX = 15;
-export const DEFAULT_OLM_DZ = 19;
+export const DEFAULT_OLM_DZ = 20;
 /** Carriage pose, owner-aligned in the tuning panel (2026-07-16). */
 export const DEFAULT_CARRIAGE_DX = 4.0;
 export const DEFAULT_CARRIAGE_DY = 0;

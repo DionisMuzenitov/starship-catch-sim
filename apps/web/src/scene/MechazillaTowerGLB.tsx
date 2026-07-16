@@ -42,6 +42,14 @@ const ARM_HEIGHT_MAX = 130;
 const TAU_OPENING = 0.5; // s
 const TAU_HEIGHT = 0.5; // s
 
+// Visual max open angle for the GLB chopstick meshes. The physics abstract
+// arm swings ARM_ANGLE_OPEN_RAD (110°) at armOpeningT=1, but the real
+// print-kit arms reach their full mechanical open at ~half that — beyond it
+// they over-rotate (owner note, 2026-07-17). This governs the MESH pose only;
+// getCatchPoints stays physics-sourced and the catch happens closed
+// (opening→0), where visual and physics coincide exactly.
+const VISUAL_OPEN_RAD = ARM_ANGLE_OPEN_RAD / 2;
+
 const clampHeight = (y: number) =>
   Math.min(ARM_HEIGHT_MAX, Math.max(ARM_HEIGHT_MIN, y));
 
@@ -125,7 +133,7 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
       const b = 1 - Math.exp(-dt / TAU_HEIGHT);
       s.heightReal += (s.heightCmd - s.heightReal) * b;
 
-      const swing = ARM_ANGLE_OPEN_RAD * s.openingReal;
+      const swing = VISUAL_OPEN_RAD * s.openingReal;
       if (left) left.rotation.y = swing;
       if (right) right.rotation.y = -swing;
       // the whole chopstick assembly (arms + carriage) rides the tower

@@ -117,7 +117,7 @@ export function TowerTunePanel() {
       <Slider label="olm south (z)" value={olmDz} min={-60} max={60} step={1} format={(v) => `${v.toFixed(0)} m`} onChange={setOlmDz} />
       <div className="mb-1 mt-2 text-white/50">landing (ghost booster)</div>
       <Slider label="ghost east (x)" value={ghostX} min={-10} max={50} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostX} />
-      <Slider label="ghost up (y)" value={ghostY} min={60} max={120} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostY} />
+      <Slider label="ghost up (y)" value={ghostY} min={0} max={150} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostY} />
       <Slider label="ghost south (z)" value={ghostZ} min={-25} max={25} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostZ} />
       <div className="mt-2 border-t border-white/20 pt-2 text-white/70">
         bake → tower yaw {yawDeg.toFixed(0)}°, dx {towerDx.toFixed(0)}, dz{" "}
