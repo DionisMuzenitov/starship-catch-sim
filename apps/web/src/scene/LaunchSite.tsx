@@ -9,7 +9,7 @@
  * Frame: origin = tower base, +X = east (rocket/chopstick side), -Z = north
  * (Hwy 4 side), metres.
  */
-import { useEffect, useRef } from "react";
+import { Component, type ReactNode, Suspense, useCallback, useRef } from "react";
 
 import { MeshStandardMaterial } from "three";
 
@@ -22,6 +22,22 @@ import { useTowerTuneStore } from "../state/towerTuneStore";
 function useGlbTower(): boolean {
   if (typeof window === "undefined") return true;
   return new URLSearchParams(window.location.search).get("tower") !== "proc";
+}
+
+/** Same graceful-fallback pattern as the GLB vehicle (SLS-44 VehicleModel):
+ *  if the tower GLB fails to load/decode, the procedural tower renders —
+ *  the sim never white-screens over scenery. */
+class TowerGlbBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }
 
 // OLM centre measured at (18, -21), deck ~21 m (2023 lidar)
@@ -156,18 +172,26 @@ function Apron() {
  * awaiting the booster) + OLM + tank farm + apron.
  */
 export function LaunchSite() {
-  const towerRef = useRef<MechazillaApi>(null);
+  const towerRef = useRef<MechazillaApi | null>(null);
   const glbTower = useGlbTower();
-  useEffect(() => {
-    // pre-catch stance: chopsticks open, carriage at the default catch height
-    towerRef.current?.setOpening(1);
-  }, [glbTower]);
+  // Callback ref so the pre-catch stance (chopsticks open) applies whichever
+  // tower actually mounts — the GLB can arrive late (Suspense) or be swapped
+  // for the procedural fallback by the boundary.
+  const attachTower = useCallback((api: MechazillaApi | null) => {
+    towerRef.current = api;
+    api?.setOpening(1);
+  }, []);
+  const procedural = <MechazillaTower ref={attachTower} />;
   return (
     <group>
       {glbTower ? (
-        <MechazillaTowerGLB ref={towerRef} />
+        <TowerGlbBoundary fallback={procedural}>
+          <Suspense fallback={procedural}>
+            <MechazillaTowerGLB ref={attachTower} />
+          </Suspense>
+        </TowerGlbBoundary>
       ) : (
-        <MechazillaTower ref={towerRef} />
+        procedural
       )}
       <Olm />
       <TankFarm />
