@@ -16,6 +16,7 @@
     "test:e2e": "pnpm --filter @starship-catch-sim/web exec playwright test",
     "playwright:install": "pnpm --filter @starship-catch-sim/web exec playwright install --with-deps chromium",
     "bake:terrain": "node tools/assets/bake-terrain.mjs",
+    "bake:tower": "tsx tools/assets/build-tower-glb.mjs",
     "gen:consts": "tsx tools/gen-physics-consts.ts",
     "gen:consts:check": "tsx tools/gen-physics-consts.ts --check",
     "gen:parity-fixtures": "tsx tools/eval/gen-parity-fixtures.ts",

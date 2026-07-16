@@ -24,8 +24,11 @@ import { PostFX } from "./PostFX";
 import { Sky } from "./Sky";
 import { Sun } from "./Sun";
 import { Terrain } from "./terrain/Terrain";
+import { TowerTunePanel } from "./TowerTunePanel";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
+import { LandingGhost } from "./LandingGhost";
+import { SITE_OFFSET, towerTuneEnabled } from "../state/towerTuneStore";
 
 export function Scene() {
   useSimRunner();
@@ -51,8 +54,14 @@ export function Scene() {
         <Fog />
         <Sun />
         <Sky />
-        <Terrain />
-        <LaunchSite />
+        {/* site visuals shifted as one so the visual catch cradle sits on the
+            physics catch point without disturbing the tower↔terrain alignment
+            (SLS-76; zero until the owner bakes the ghost position) */}
+        <group position={[...SITE_OFFSET]}>
+          <Terrain />
+          <LaunchSite />
+        </group>
+        {towerTuneEnabled() && <LandingGhost />}
         <BoosterFlight />
         <CameraRig />
         <ImpactReticle />
@@ -60,10 +69,16 @@ export function Scene() {
         <MpcPlanOverlay />
         <OrbitControls
           enabled={cameraMode === "free"}
-          target={[0, 800, 0]}
+          // When tuning (?tune=1) pivot the free camera on the tower catch
+          // point so O starts framed on the chopsticks; otherwise keep the
+          // high sky pivot for watching the descent. Panning is enabled so
+          // the camera can actually translate through space (right-drag /
+          // two-finger drag), not just orbit a fixed point.
+          target={towerTuneEnabled() ? [8.5, 91, 0] : [0, 800, 0]}
           maxDistance={20_000}
-          minDistance={5}
-          enablePan={false}
+          minDistance={2}
+          enablePan
+          screenSpacePanning
         />
         <PostFX />
         <DebugSampler onSample={setSample} />
@@ -74,6 +89,7 @@ export function Scene() {
       <MpcServiceBanner />
       <PidTuningPanel />
       <Hud />
+      {towerTuneEnabled() && <TowerTunePanel />}
       <ReplayDriver />
       <ReplayPlayer />
     </div>
