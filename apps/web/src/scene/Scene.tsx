@@ -24,8 +24,10 @@ import { PostFX } from "./PostFX";
 import { Sky } from "./Sky";
 import { Sun } from "./Sun";
 import { Terrain } from "./terrain/Terrain";
+import { TowerTunePanel } from "./TowerTunePanel";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
+import { towerTuneEnabled } from "../state/towerTuneStore";
 
 export function Scene() {
   useSimRunner();
@@ -74,6 +76,7 @@ export function Scene() {
       <MpcServiceBanner />
       <PidTuningPanel />
       <Hud />
+      {towerTuneEnabled() && <TowerTunePanel />}
       <ReplayDriver />
       <ReplayPlayer />
     </div>

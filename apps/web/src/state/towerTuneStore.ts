@@ -1,0 +1,115 @@
+/**
+ * Live tuning state for the community GLB tower (SLS-76). A dev-only panel
+ * (`TowerTunePanel`, shown with `?tower=glb&tune=1`) drives these values and
+ * `MechazillaTowerGLB` reads them, so the owner can dial the tower's facing and
+ * arm pose in the running sim instead of round-tripping through re-bakes. The
+ * values the owner settles on get baked back into the layout / component
+ * defaults.
+ */
+import { create } from "zustand";
+
+import { DEFAULT_ARM_HEIGHT_M } from "@starship-catch-sim/physics";
+
+export type TowerTuneState = {
+  /** Yaw of the whole tower about the vertical axis (degrees). */
+  yawDeg: number;
+  /** Planar offset of the whole tower (column + arms) from the world origin. */
+  towerDx: number;
+  towerDz: number;
+  /** Extra yaw of just the chopstick assembly about the tower (degrees) —
+   *  aligns the arms to the tower face independent of the tower yaw. */
+  armYawDeg: number;
+  /** Chopstick opening 0 = closed (gripping) … 1 = wide. */
+  armOpen: number;
+  /** Carriage / arm height along the tower (metres). */
+  armHeightM: number;
+  /** Carriage frame offset from the tower centre (metres) to seat it on the tower. */
+  carriageDx: number;
+  carriageDy: number;
+  carriageDz: number;
+  /** Carriage orientation (degrees): pitch = about X, yaw = about Y (tower
+   *  axis), roll = about Z. Full 3-angle control for owner tuning. */
+  carriagePitchDeg: number;
+  carriageYawDeg: number;
+  carriageRollDeg: number;
+  /** OLM (rocket platform) yaw + planar offset from its measured position. */
+  olmYawDeg: number;
+  olmDx: number;
+  olmDz: number;
+  setYaw: (v: number) => void;
+  setTowerDx: (v: number) => void;
+  setTowerDz: (v: number) => void;
+  setArmYaw: (v: number) => void;
+  setArmOpen: (v: number) => void;
+  setArmHeight: (v: number) => void;
+  setCarriageDx: (v: number) => void;
+  setCarriageDy: (v: number) => void;
+  setCarriageDz: (v: number) => void;
+  setCarriagePitch: (v: number) => void;
+  setCarriageYaw: (v: number) => void;
+  setCarriageRoll: (v: number) => void;
+  setOlmYaw: (v: number) => void;
+  setOlmDx: (v: number) => void;
+  setOlmDz: (v: number) => void;
+};
+
+/**
+ * Owner-aligned tower placement (SLS-76), dialled in against the satellite
+ * shadows in the tuning panel. Tower yaw 47° squares the lattice to the real
+ * footprint; arm yaw −44° puts the chopsticks' closed direction ~3° off east
+ * (≈ the physics +X catch axis); the OLM offsets seat the platform in front.
+ */
+export const DEFAULT_TOWER_YAW_DEG = 47;
+export const DEFAULT_TOWER_DX = 11;
+export const DEFAULT_TOWER_DZ = 0;
+export const DEFAULT_ARM_YAW_DEG = -44;
+export const DEFAULT_OLM_YAW_DEG = -13;
+export const DEFAULT_OLM_DX = 15;
+export const DEFAULT_OLM_DZ = 19;
+/** Carriage pose, owner-aligned in the tuning panel (2026-07-16). */
+export const DEFAULT_CARRIAGE_DX = 4.0;
+export const DEFAULT_CARRIAGE_DY = 0;
+export const DEFAULT_CARRIAGE_DZ = 0;
+export const DEFAULT_CARRIAGE_PITCH_DEG = 0;
+export const DEFAULT_CARRIAGE_YAW_DEG = 180;
+export const DEFAULT_CARRIAGE_ROLL_DEG = 90;
+
+export const useTowerTuneStore = create<TowerTuneState>((set) => ({
+  yawDeg: DEFAULT_TOWER_YAW_DEG,
+  towerDx: DEFAULT_TOWER_DX,
+  towerDz: DEFAULT_TOWER_DZ,
+  armYawDeg: DEFAULT_ARM_YAW_DEG,
+  armOpen: 1,
+  armHeightM: DEFAULT_ARM_HEIGHT_M,
+  carriageDx: DEFAULT_CARRIAGE_DX,
+  carriageDy: DEFAULT_CARRIAGE_DY,
+  carriageDz: DEFAULT_CARRIAGE_DZ,
+  carriagePitchDeg: DEFAULT_CARRIAGE_PITCH_DEG,
+  carriageYawDeg: DEFAULT_CARRIAGE_YAW_DEG,
+  carriageRollDeg: DEFAULT_CARRIAGE_ROLL_DEG,
+  olmYawDeg: DEFAULT_OLM_YAW_DEG,
+  olmDx: DEFAULT_OLM_DX,
+  olmDz: DEFAULT_OLM_DZ,
+  setYaw: (yawDeg) => set({ yawDeg }),
+  setTowerDx: (towerDx) => set({ towerDx }),
+  setTowerDz: (towerDz) => set({ towerDz }),
+  setArmYaw: (armYawDeg) => set({ armYawDeg }),
+  setArmOpen: (armOpen) => set({ armOpen }),
+  setArmHeight: (armHeightM) => set({ armHeightM }),
+  setCarriageDx: (carriageDx) => set({ carriageDx }),
+  setCarriageDy: (carriageDy) => set({ carriageDy }),
+  setCarriageDz: (carriageDz) => set({ carriageDz }),
+  setCarriagePitch: (carriagePitchDeg) => set({ carriagePitchDeg }),
+  setCarriageYaw: (carriageYawDeg) => set({ carriageYawDeg }),
+  setCarriageRoll: (carriageRollDeg) => set({ carriageRollDeg }),
+  setOlmYaw: (olmYawDeg) => set({ olmYawDeg }),
+  setOlmDx: (olmDx) => set({ olmDx }),
+  setOlmDz: (olmDz) => set({ olmDz }),
+}));
+
+/** `?tune=1` shows the tuning panel (GLB tower only — no effect with `?tower=proc`). */
+export function towerTuneEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = new URLSearchParams(window.location.search);
+  return p.get("tower") !== "proc" && p.get("tune") === "1";
+}

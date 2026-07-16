@@ -14,6 +14,15 @@ import { useEffect, useRef } from "react";
 import { MeshStandardMaterial } from "three";
 
 import { type MechazillaApi, MechazillaTower } from "./MechazillaTower";
+import { MechazillaTowerGLB } from "./MechazillaTowerGLB";
+import { useTowerTuneStore } from "../state/towerTuneStore";
+
+/** The community GLB tower (SLS-76) is the default; `?tower=proc` falls back
+ *  to the procedural one (kept for A/B and as a loading-failure escape hatch). */
+function useGlbTower(): boolean {
+  if (typeof window === "undefined") return true;
+  return new URLSearchParams(window.location.search).get("tower") !== "proc";
+}
 
 // OLM centre measured at (18, -21), deck ~21 m (2023 lidar)
 const OLM_POS_X = 18;
@@ -45,12 +54,20 @@ const waterTankMat = new MeshStandardMaterial({
 
 /** Orbital launch mount: ring on six legs (~20 m, Pad A era). */
 function Olm() {
+  // Owner-tunable placement (SLS-76 `?tower=glb&tune=1`) so the platform can be
+  // squared to the tower face the same way the tower yaw was aligned.
+  const olmYawDeg = useTowerTuneStore((s) => s.olmYawDeg);
+  const olmDx = useTowerTuneStore((s) => s.olmDx);
+  const olmDz = useTowerTuneStore((s) => s.olmDz);
   const legs = Array.from({ length: OLM_LEG_COUNT }, (_, i) => {
     const a = (i / OLM_LEG_COUNT) * Math.PI * 2;
     return [Math.cos(a) * OLM_RING_RADIUS_M, Math.sin(a) * OLM_RING_RADIUS_M] as const;
   });
   return (
-    <group position={[OLM_POS_X, 0, OLM_POS_Z]}>
+    <group
+      position={[OLM_POS_X + olmDx, 0, OLM_POS_Z + olmDz]}
+      rotation={[0, (olmYawDeg * Math.PI) / 180, 0]}
+    >
       {legs.map(([lx, lz], i) => (
         <mesh key={`olm-leg-${i}`} position={[lx, OLM_DECK_HEIGHT_M / 2, lz]} material={concreteMat}>
           <cylinderGeometry args={[1.2, 1.4, OLM_DECK_HEIGHT_M, 10]} />
@@ -140,13 +157,18 @@ function Apron() {
  */
 export function LaunchSite() {
   const towerRef = useRef<MechazillaApi>(null);
+  const glbTower = useGlbTower();
   useEffect(() => {
     // pre-catch stance: chopsticks open, carriage at the default catch height
     towerRef.current?.setOpening(1);
-  }, []);
+  }, [glbTower]);
   return (
     <group>
-      <MechazillaTower ref={towerRef} />
+      {glbTower ? (
+        <MechazillaTowerGLB ref={towerRef} />
+      ) : (
+        <MechazillaTower ref={towerRef} />
+      )}
       <Olm />
       <TankFarm />
       <WestSupportArea />
