@@ -19,12 +19,13 @@
  * Source STLs are NOT committed (CC-BY, downloaded per ASSETS.md). Point
  * --kit at the extracted kit root (the dir containing the STL subfolders).
  *
- * Usage:
- *   node tools/assets/build-tower-glb.mjs \
+ * Usage (via tsx — plain `node` cannot resolve the physics package's .ts):
+ *   pnpm bake:tower \
  *     --kit <path/to/extracted/kit> --layout mikenotbrick \
  *     [--out apps/web/public/assets/mechazilla-tower.glb] [--ratio 0.5] [--raw]
  *
  *   --raw   skip simplify+Draco (fast iteration; larger file)
+ *   --plan  print ASCII plan/side views of the assembly for headless checking
  */
 
 import { readFileSync } from "node:fs";
