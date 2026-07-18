@@ -505,6 +505,22 @@ def sim_step(
         p, world.engine_states, control, com_body, pr, dt
     )
 
+    # Gate thrust on available propellant (SLS-78) — mirrors world.ts exactly.
+    # No mass flow, no thrust: if the tank can't supply the demanded burn this
+    # tick, scale thrust force, thrust torque, and mdot by the available
+    # fraction (0 when empty). With fuel to spare fuel_scale is exactly 1.0 (a
+    # bit-identical no-op), so parity with the TS port is preserved.
+    fuel_demand = mdot_total * dt
+    if fuel_demand > world.propellant_mass:
+        fuel_scale = (
+            world.propellant_mass / fuel_demand if world.propellant_mass > 0 else 0.0
+        )
+    else:
+        fuel_scale = 1.0
+    force_body = force_body * fuel_scale
+    torque_body = torque_body * fuel_scale
+    mdot_total = mdot_total * fuel_scale
+
     # wind-relative velocity for aero + drag.
     rel_vel = world.velocity - wind
 

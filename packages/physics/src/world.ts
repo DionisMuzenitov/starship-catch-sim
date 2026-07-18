@@ -196,6 +196,23 @@ export function simStep(
     dt,
   );
 
+  // Gate thrust on available propellant (SLS-78). An engine cannot produce
+  // thrust without mass flow, so if the tank can't supply the burn demanded
+  // this tick, scale thrust force, thrust torque, and mdot by the fraction of
+  // fuel actually available (0 when empty). With fuel to spare fuelScale is
+  // exactly 1.0 — a bit-identical no-op — so normal flight and the numpy↔TS
+  // parity fixtures (SLS-28) are unchanged; only a near/at-empty tank differs.
+  const fuelDemand = plant.mdotTotal * dt;
+  const fuelScale =
+    fuelDemand > world.mass.propellantMass
+      ? world.mass.propellantMass > 0
+        ? world.mass.propellantMass / fuelDemand
+        : 0
+      : 1;
+  const thrustForceBody = Vec3.scale(plant.forceBody, fuelScale);
+  const thrustTorqueBody = Vec3.scale(plant.torqueBody, fuelScale);
+  const mdotTotal = plant.mdotTotal * fuelScale;
+
   // Wind at the body's location; aero forces use velocity-relative-to-wind.
   const windWorld = env.wind.at(world.rigidBody.position, world.t);
   const relVelWorld = Vec3.sub(world.rigidBody.velocity, windWorld);
@@ -230,7 +247,7 @@ export function simStep(
   // 4. Body→world for thrust + aero.
   const thrustForceWorld = Quat.rotateVec3(
     world.rigidBody.attitude,
-    plant.forceBody,
+    thrustForceBody,
   );
   const aeroForceWorld = Quat.rotateVec3(
     world.rigidBody.attitude,
@@ -252,13 +269,13 @@ export function simStep(
     Vec3.add(thrustForceWorld, aeroForceWorld),
     Vec3.add(gravityForceWorld, dragForceWorld),
   );
-  const torqueBody = Vec3.add(plant.torqueBody, aeroTorqueBody);
+  const torqueBody = Vec3.add(thrustTorqueBody, aeroTorqueBody);
 
   // 6. Integrate.
   const rb1 = step(world.rigidBody, forceWorld, torqueBody, dt);
 
   // 7. Burn fuel; refresh mass/inertia on the new rigid body.
-  const newMass = consumeFuel(world.mass, plant.mdotTotal * dt);
+  const newMass = consumeFuel(world.mass, mdotTotal * dt);
   const rb2: RigidBodyState = {
     position: rb1.position,
     velocity: rb1.velocity,
