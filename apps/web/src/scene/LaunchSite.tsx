@@ -41,10 +41,10 @@ class TowerGlbBoundary extends Component<
 }
 
 // OLM centre measured at (18, -21), deck ~21 m (2023 lidar)
-const OLM_POS_X = 18;
-const OLM_POS_Z = -21;
-const OLM_DECK_HEIGHT_M = 18;
-const OLM_RING_RADIUS_M = 7.5;
+export const OLM_POS_X = 18;
+export const OLM_POS_Z = -21;
+export const OLM_DECK_HEIGHT_M = 18;
+export const OLM_RING_RADIUS_M = 7.5;
 const OLM_LEG_COUNT = 6;
 
 const steelMat = new MeshStandardMaterial({

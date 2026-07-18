@@ -26,11 +26,14 @@ import {
   type Recorder,
   type Replay,
   type SimEnv,
+  type SiteCollision,
   type TowerState,
   type Vehicle,
   type World,
 } from "@starship-catch-sim/physics";
 import type { Controller } from "@starship-catch-sim/controllers";
+
+import { drawnSiteCollision } from "./siteCollision";
 
 const PHYSICS_DT = 1 / 250;
 const SNAPSHOT_INTERVAL_S = 1 / 25;
@@ -63,6 +66,10 @@ export type RunnerArgs = {
   /** Tower geometry the catch detector evaluates against. Defaults to the
    *  closed-pose, default-height chopstick state. */
   towerState?: TowerState;
+  /** Drawn-frame failure collision (ground/tower/OLM). Defaults to the baked
+   *  site layout (SLS-79); pass `null` to fall back to physics-frame geometry
+   *  (headless benches that don't render the site). */
+  siteCollision?: SiteCollision | null;
   /** Replay recorder. If omitted, no replay is captured. */
   recorder?: Recorder;
 };
@@ -101,6 +108,7 @@ export class SimRunner {
   private readonly env: SimEnv | undefined;
   private readonly catchEnvelope: CatchEnvelope | undefined;
   private readonly towerState: TowerState;
+  private readonly site: SiteCollision | undefined;
   private readonly recorder: Recorder | undefined;
   /** Most recent ControlInput from the controller this tick — captured so
    *  the recorder can pair it with the post-step world. */
@@ -132,6 +140,11 @@ export class SimRunner {
     this.env = args.env;
     this.catchEnvelope = args.catchEnvelope;
     this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
+    // Default to the baked drawn-site geometry; `null` opts out (physics-frame).
+    this.site =
+      args.siteCollision === null
+        ? undefined
+        : (args.siteCollision ?? drawnSiteCollision());
     this.recorder = args.recorder;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;
@@ -256,6 +269,7 @@ export class SimRunner {
       this.world,
       this.catchEnvelope,
       this.towerState,
+      this.site,
     );
     if (outcome.kind === "none") return;
     this.outcome = outcome;

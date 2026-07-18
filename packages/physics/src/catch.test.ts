@@ -82,6 +82,54 @@ describe("evaluateCatchOutcome", () => {
     expect(out.verdict).toBeUndefined();
   });
 
+  describe("drawn-frame site collision (SLS-79)", () => {
+    // A structure box away from the physics origin, and a raised ground plane
+    // — the shapes the runner supplies once SITE_OFFSET moves the visuals.
+    const site = {
+      groundY: 63,
+      solids: [
+        { center: Vec3.of(-13, 136, 1), halfExtents: Vec3.of(9, 73, 9) },
+        { center: Vec3.of(9, 74, 0), halfExtents: Vec3.of(10, 10, 10) },
+      ],
+    };
+
+    it("inside a supplied solid (drawn tower/OLM) → tower_collision", () => {
+      const w = worldAt(Vec3.of(-13, 130, 1), Vec3.of(0, -10, 0));
+      expect(evaluateCatchOutcome(w, ENV, DEFAULT_TOWER_STATE, site).kind).toBe(
+        "tower_collision",
+      );
+    });
+
+    it("at/under the raised ground plane → crash (not the y≤0 default)", () => {
+      const w = worldAt(Vec3.of(40, 62, 40), Vec3.of(0, -20, 0));
+      expect(evaluateCatchOutcome(w, ENV, DEFAULT_TOWER_STATE, site).kind).toBe(
+        "crash",
+      );
+      // Physics y is well above 0, so the legacy check would have said none —
+      // proving the drawn ground height is what's used.
+      expect(w.rigidBody.position.y).toBeGreaterThan(0);
+    });
+
+    it("above the raised ground and clear of solids → none", () => {
+      const w = worldAt(Vec3.of(40, 80, 40), Vec3.of(0, -20, 0));
+      expect(evaluateCatchOutcome(w, ENV, DEFAULT_TOWER_STATE, site).kind).toBe(
+        "none",
+      );
+    });
+
+    it("capture volume still wins over a supplied solid", () => {
+      // Put a solid right on the catch point; a caught booster must still catch.
+      const onCatch = {
+        groundY: 63,
+        solids: [{ center: CAPTURE.center, halfExtents: Vec3.of(20, 20, 20) }],
+      };
+      const w = worldAt(CAPTURE.center, Vec3.ZERO);
+      expect(evaluateCatchOutcome(w, ENV, DEFAULT_TOWER_STATE, onCatch).kind).toBe(
+        "caught",
+      );
+    });
+  });
+
   it("with arms wide open, the centre of the (now empty) capture volume is no longer inside it", () => {
     const widelyOpen = { ...DEFAULT_TOWER_STATE, armOpeningT: 1 };
     const openCapture = chopstickCaptureVolume(widelyOpen);

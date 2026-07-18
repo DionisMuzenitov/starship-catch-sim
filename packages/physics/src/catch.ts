@@ -6,14 +6,21 @@
  *
  *   - `caught`           — inside the capture volume AND envelope satisfied.
  *   - `near_miss`        — inside the capture volume BUT envelope violated.
- *   - `tower_collision`  — bounding box of the tower trusses penetrated.
- *   - `crash`            — ground impact (y ≤ 0) without any of the above.
+ *   - `tower_collision`  — a solid structure (tower / OLM) penetrated.
+ *   - `crash`            — ground impact without any of the above.
  *   - `none`             — no event this tick.
  *
  * Outcomes are exclusive and prioritised in that order (capture volume
- * wins over tower hit, both win over ground impact). Terminal metrics are
+ * wins over structure hit, both win over ground impact). Terminal metrics are
  * computed unconditionally so the HUD overlay always has something to
  * display.
+ *
+ * Collision geometry (SLS-79): the *capture volume* is always the physics
+ * tower's (pinned to the RL/MPC catch target, which SLS-76's SITE_OFFSET
+ * aligns the drawn cradle to). The *failure* bodies — solid structures and the
+ * ground plane — are supplied by the caller as a `SiteCollision` in the frame
+ * the booster is drawn in, so a hit fires where the player sees the structure.
+ * Without one, the legacy physics-frame tower AABB + `y ≤ 0` ground are used.
  */
 
 import { Quat } from "./math/quat.js";
@@ -24,12 +31,24 @@ import {
   evaluateCatch,
 } from "./scenarios.js";
 import {
+  type Aabb,
   chopstickCaptureVolume,
   pointInAabb,
   towerStructureAabb,
   type TowerState,
 } from "./tower.js";
 import type { World } from "./world.js";
+
+/**
+ * Failure collision geometry in the frame the booster is drawn in (SLS-79).
+ * `solids` are structures that end the run as `tower_collision` on contact
+ * (drawn tower, OLM, …); `groundY` is the crash plane (drawn terrain height).
+ * The capture volume is NOT part of this — it stays the physics tower's.
+ */
+export type SiteCollision = {
+  readonly groundY: number;
+  readonly solids: readonly Aabb[];
+};
 
 export type CatchOutcomeKind =
   | "none"
@@ -61,11 +80,13 @@ export function evaluateCatchOutcome(
   world: World,
   envelope: CatchEnvelope,
   tower: TowerState,
+  site?: SiteCollision,
 ): CatchOutcome {
   const metrics = computeMetrics(world, envelope);
   const captureVol = chopstickCaptureVolume(tower);
   const p = world.rigidBody.position;
 
+  // Capture volume wins over everything (physics-pinned catch target).
   if (pointInAabb(p, captureVol)) {
     const verdict = evaluateCatch(world, envelope);
     return {
@@ -75,6 +96,17 @@ export function evaluateCatchOutcome(
     };
   }
 
+  // Drawn-frame collision (SLS-79) when supplied: solid structures fail as a
+  // structure hit, then the ground plane fails as a crash.
+  if (site) {
+    for (const solid of site.solids) {
+      if (pointInAabb(p, solid)) return { kind: "tower_collision", metrics };
+    }
+    if (p.y <= site.groundY) return { kind: "crash", metrics };
+    return { kind: "none", metrics };
+  }
+
+  // Legacy physics-frame fallback (no drawn geometry supplied).
   const towerAabb = towerStructureAabb(tower);
   if (pointInAabb(p, towerAabb)) {
     return { kind: "tower_collision", metrics };

@@ -114,6 +114,7 @@ export { GROUND_Y_M, evaluateCatchOutcome } from "./catch.js";
 export type {
   CatchOutcome,
   CatchOutcomeKind,
+  SiteCollision,
   TerminalMetrics,
 } from "./catch.js";
 export {
