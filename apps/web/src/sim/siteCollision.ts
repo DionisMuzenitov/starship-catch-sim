@@ -16,7 +16,6 @@
 import {
   type Aabb,
   type SiteCollision,
-  TOWER_HEIGHT_M,
   towerStructureAabb,
   DEFAULT_TOWER_STATE,
   Vec3,
@@ -27,7 +26,7 @@ import {
   OLM_POS_X,
   OLM_POS_Z,
   OLM_RING_RADIUS_M,
-} from "../scene/LaunchSite";
+} from "../scene/siteLayout";
 import {
   DEFAULT_OLM_DX,
   DEFAULT_OLM_DZ,
@@ -61,7 +60,7 @@ function drawnTowerAabb(): Aabb {
     center: moved.center,
     halfExtents: Vec3.of(
       base.halfExtents.x * YAW_INFLATE,
-      TOWER_HEIGHT_M / 2,
+      base.halfExtents.y, // full tower height, unchanged
       base.halfExtents.z * YAW_INFLATE,
     ),
   };
@@ -82,7 +81,17 @@ function drawnOlmAabb(): Aabb {
   };
 }
 
-/** Collision geometry in the frame the booster is drawn in (SLS-79). */
+/**
+ * Collision geometry in the frame the booster is drawn in (SLS-79).
+ *
+ * KNOWN GAP (fast-follow): the chopstick *arms* are not modelled here. The
+ * owner-tuned column sits ~13 m west of the descent path, so the only
+ * structure near the catch region is the arms that bridge out to the cradle —
+ * but their span is state-dependent (they swing open on approach), so a static
+ * AABB would false-trigger legitimate catches. A booster that clips the arms
+ * while outside the capture volume therefore still reads `none`. Modelling that
+ * needs articulation-aware geometry + owner visual validation.
+ */
 export function drawnSiteCollision(): SiteCollision {
   return {
     groundY: SITE_OFFSET[1], // drawn terrain height under the tower

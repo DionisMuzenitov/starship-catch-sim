@@ -1,4 +1,9 @@
-import { pointInAabb } from "@starship-catch-sim/physics";
+import {
+  chopstickCaptureVolume,
+  DEFAULT_TOWER_STATE,
+  pointInAabb,
+  Vec3,
+} from "@starship-catch-sim/physics";
 import { describe, expect, it } from "vitest";
 
 import { PHYSICS_CATCH_POINT } from "../state/towerTuneStore";
@@ -15,6 +20,29 @@ describe("drawnSiteCollision (SLS-79)", () => {
       expect(pointInAabb(PHYSICS_CATCH_POINT, solid)).toBe(false);
     }
     expect(PHYSICS_CATCH_POINT.y).toBeGreaterThan(site.groundY);
+  });
+
+  it("the WHOLE closed capture volume clears every failure body", () => {
+    // Not just the centre — the OLM top sits only ~2.7 m below the capture
+    // floor, so a future OLM_DECK bump could swallow the lower corners. Check
+    // all 8 corners of the full (closed) capture AABB stay out of every solid
+    // and above the ground plane.
+    const cap = chopstickCaptureVolume(DEFAULT_TOWER_STATE);
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          const corner = Vec3.of(
+            cap.center.x + sx * cap.halfExtents.x,
+            cap.center.y + sy * cap.halfExtents.y,
+            cap.center.z + sz * cap.halfExtents.z,
+          );
+          for (const solid of site.solids) {
+            expect(pointInAabb(corner, solid)).toBe(false);
+          }
+          expect(corner.y).toBeGreaterThan(site.groundY);
+        }
+      }
+    }
   });
 
   it("ground plane is raised to the drawn terrain height (well above 0)", () => {

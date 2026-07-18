@@ -15,6 +15,12 @@ import { MeshStandardMaterial } from "three";
 
 import { type MechazillaApi, MechazillaTower } from "./MechazillaTower";
 import { MechazillaTowerGLB } from "./MechazillaTowerGLB";
+import {
+  OLM_DECK_HEIGHT_M,
+  OLM_POS_X,
+  OLM_POS_Z,
+  OLM_RING_RADIUS_M,
+} from "./siteLayout";
 import { useTowerTuneStore } from "../state/towerTuneStore";
 
 /** The community GLB tower (SLS-76) is the default; `?tower=proc` falls back
@@ -40,11 +46,6 @@ class TowerGlbBoundary extends Component<
   }
 }
 
-// OLM centre measured at (18, -21), deck ~21 m (2023 lidar)
-export const OLM_POS_X = 18;
-export const OLM_POS_Z = -21;
-export const OLM_DECK_HEIGHT_M = 18;
-export const OLM_RING_RADIUS_M = 7.5;
 const OLM_LEG_COUNT = 6;
 
 const steelMat = new MeshStandardMaterial({
