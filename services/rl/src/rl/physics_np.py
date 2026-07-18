@@ -508,8 +508,9 @@ def sim_step(
     # Gate thrust on available propellant (SLS-78) — mirrors world.ts exactly.
     # No mass flow, no thrust: if the tank can't supply the demanded burn this
     # tick, scale thrust force, thrust torque, and mdot by the available
-    # fraction (0 when empty). With fuel to spare fuel_scale is exactly 1.0 (a
-    # bit-identical no-op), so parity with the TS port is preserved.
+    # fraction (0 when empty). On the fuel-to-spare path fuel_scale is exactly
+    # 1.0 (a bit-identical no-op); the depletion path is covered cross-port by
+    # the booster-depletion parity fixture (test_equivalence.py).
     fuel_demand = mdot_total * dt
     if fuel_demand > world.propellant_mass:
         fuel_scale = (

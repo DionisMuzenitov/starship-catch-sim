@@ -199,9 +199,10 @@ export function simStep(
   // Gate thrust on available propellant (SLS-78). An engine cannot produce
   // thrust without mass flow, so if the tank can't supply the burn demanded
   // this tick, scale thrust force, thrust torque, and mdot by the fraction of
-  // fuel actually available (0 when empty). With fuel to spare fuelScale is
-  // exactly 1.0 — a bit-identical no-op — so normal flight and the numpy↔TS
-  // parity fixtures (SLS-28) are unchanged; only a near/at-empty tank differs.
+  // fuel actually available (0 when empty). On the fuel-to-spare path fuelScale
+  // is exactly 1.0 — a bit-identical no-op — so normal flight is unchanged; the
+  // depletion path (fuelScale < 1, == 0) is exercised for numpy↔TS parity by
+  // the booster-depletion fixture (SLS-28).
   const fuelDemand = plant.mdotTotal * dt;
   const fuelScale =
     fuelDemand > world.mass.propellantMass

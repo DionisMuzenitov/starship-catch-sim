@@ -10,6 +10,7 @@ not the stateful Dryden RNG).
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -17,7 +18,13 @@ import numpy as np
 import pytest
 
 from rl import consts as C
-from rl.physics_np import ControlInput, initial_world, sim_step
+from rl.physics_np import (
+    ControlInput,
+    current_inertia,
+    current_mass,
+    initial_world,
+    sim_step,
+)
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURES = sorted(FIXTURE_DIR.glob("*.json"))
@@ -61,6 +68,16 @@ def test_numpy_matches_ts(fixture_path: Path):
     vehicle = C.VEHICLES[fx["vehicle"]]
     dt = float(fx["dt"])
     world = initial_world(fx["scenarioId"])
+    # Replay from the fixture's recorded initial propellant so depletion
+    # fixtures (SLS-78) start with the same reduced tank the TS side used;
+    # for the full-tank fixtures this is the same value initial_world sets.
+    prop0 = float(fx["initialWorld"]["propellantMass"])
+    world = dataclasses.replace(
+        world,
+        propellant_mass=prop0,
+        mass=current_mass(vehicle.mass_props, prop0),
+        inertia=current_inertia(vehicle.mass_props, prop0),
+    )
 
     def exceed(a: np.ndarray, g: np.ndarray) -> float:
         """Excess of the L2 error over the combined tolerance measured at the

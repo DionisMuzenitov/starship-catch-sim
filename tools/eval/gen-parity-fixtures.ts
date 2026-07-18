@@ -23,6 +23,8 @@ import {
   BoosterVehicle,
   ShipVehicle,
   constantWind,
+  currentInertia,
+  currentMass,
   scenarioById,
   simStep,
   Vec3,
@@ -135,6 +137,10 @@ type FixtureSpec = {
   scenarioId: string;
   kind: ProfileKind;
   seed: number;
+  /** Override the starting propellant (kg) to exercise the fuel-depletion gate
+   *  (SLS-78): the tank drains mid-run so the fixture crosses fuelScale < 1 and
+   *  fuelScale == 0, verifying the gate matches bit-close across the ports. */
+  initialPropellantMass?: number;
 };
 
 const FIXTURES: FixtureSpec[] = [
@@ -167,6 +173,17 @@ const FIXTURES: FixtureSpec[] = [
     scenarioId: "ship-descent-standard",
     kind: "ship",
     seed: 5,
+  },
+  {
+    // Burn-to-empty: a tiny reserve so full-ramp thrust drains the tank part
+    // way through the 1 s run, exercising the SLS-78 fuel gate's partial
+    // (fuelScale < 1) and empty (fuelScale == 0) branches under the parity
+    // contract — the rest of the suite never leaves the tank near full.
+    name: "booster-depletion",
+    scenarioId: "booster-descent-calm",
+    kind: "booster",
+    seed: 6,
+    initialPropellantMass: 2000,
   },
 ];
 
@@ -219,7 +236,22 @@ for (const spec of FIXTURES) {
   const flapCount = vehicle.surfaces.filter((s) => s.kind === "flap").length;
   const rng = splitmix32(spec.seed);
 
+  // Optionally start with a reduced tank (fuel-depletion fixture, SLS-78),
+  // recomputing the derived rigid-body mass + inertia to stay consistent.
   let world = scenario.initialWorld;
+  if (spec.initialPropellantMass !== undefined) {
+    const mass = { ...world.mass, propellantMass: spec.initialPropellantMass };
+    world = {
+      ...world,
+      mass,
+      rigidBody: {
+        ...world.rigidBody,
+        mass: currentMass(mass),
+        inertia: currentInertia(mass),
+      },
+    };
+  }
+  const initialWorld0 = world; // snapshot before the loop mutates `world`
   const controls: ReturnType<typeof serializeControl>[] = [];
   const states: ReturnType<typeof serializeState>[] = [];
 
@@ -240,29 +272,29 @@ for (const spec of FIXTURES) {
     initialWorld: {
       rigidBody: {
         position: [
-          scenario.initialWorld.rigidBody.position.x,
-          scenario.initialWorld.rigidBody.position.y,
-          scenario.initialWorld.rigidBody.position.z,
+          initialWorld0.rigidBody.position.x,
+          initialWorld0.rigidBody.position.y,
+          initialWorld0.rigidBody.position.z,
         ],
         velocity: [
-          scenario.initialWorld.rigidBody.velocity.x,
-          scenario.initialWorld.rigidBody.velocity.y,
-          scenario.initialWorld.rigidBody.velocity.z,
+          initialWorld0.rigidBody.velocity.x,
+          initialWorld0.rigidBody.velocity.y,
+          initialWorld0.rigidBody.velocity.z,
         ],
         attitude: [
-          scenario.initialWorld.rigidBody.attitude.x,
-          scenario.initialWorld.rigidBody.attitude.y,
-          scenario.initialWorld.rigidBody.attitude.z,
-          scenario.initialWorld.rigidBody.attitude.w,
+          initialWorld0.rigidBody.attitude.x,
+          initialWorld0.rigidBody.attitude.y,
+          initialWorld0.rigidBody.attitude.z,
+          initialWorld0.rigidBody.attitude.w,
         ],
         angularVelocity: [
-          scenario.initialWorld.rigidBody.angularVelocity.x,
-          scenario.initialWorld.rigidBody.angularVelocity.y,
-          scenario.initialWorld.rigidBody.angularVelocity.z,
+          initialWorld0.rigidBody.angularVelocity.x,
+          initialWorld0.rigidBody.angularVelocity.y,
+          initialWorld0.rigidBody.angularVelocity.z,
         ],
-        mass: scenario.initialWorld.rigidBody.mass,
+        mass: initialWorld0.rigidBody.mass,
       },
-      propellantMass: scenario.initialWorld.mass.propellantMass,
+      propellantMass: initialWorld0.mass.propellantMass,
     },
     controls,
     states,

@@ -6,7 +6,6 @@ the plant enforce the fuel gate identically (numpy↔TS parity, SLS-28).
 
 import dataclasses
 
-import numpy as np
 import rl.consts as C
 from rl.physics_np import (
     ControlInput,
@@ -46,9 +45,10 @@ def test_empty_tank_matches_engines_off():
     for _ in range(250):
         dry = sim_step(dry, BOOSTER, _FULL, DT, gravity=9.80665)  # commanded ON
         off = sim_step(off, BOOSTER, _IDLE, DT, gravity=9.80665)  # OFF
-    # No propellant → full throttle is indistinguishable from never firing.
-    assert abs(dry.velocity[1] - off.velocity[1]) < 1e-9
-    assert abs(dry.position[1] - off.position[1]) < 1e-6
+    # No propellant → thrust is scaled by exactly 0, so full throttle feeds the
+    # integrator the same forces as never firing: the runs are bit-identical.
+    assert dry.velocity[1] == off.velocity[1]
+    assert dry.position[1] == off.position[1]
     assert dry.propellant_mass == 0.0
     assert abs(dry.mass - BOOSTER.mass_props.dry_mass) < 1e-6
 
