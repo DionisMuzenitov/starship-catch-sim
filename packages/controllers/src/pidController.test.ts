@@ -83,6 +83,33 @@ describe("PIDController", () => {
     expect(maxOmega).toBeLessThan(3.5);
   });
 
+  it("actively damps a seeded roll disturbance (SLS-77 sign guard)", () => {
+    // The calm descent never excites roll, so a wrong-sign (or zero) fin
+    // damper would still pass the "bounded roll" test above. Here we inject a
+    // real roll and require it to DECAY — a positive-feedback damper would
+    // amplify it instead. Place the booster low + descending so the fins bite.
+    const pid = makeController();
+    const ic = BoosterDescentCalm.initialWorld;
+    let world = {
+      ...ic,
+      rigidBody: {
+        ...ic.rigidBody,
+        position: Vec3.of(0, 5_000, 0),
+        velocity: Vec3.of(0, -300, 0),
+        angularVelocity: Vec3.of(0, 2, 0), // 2 rad/s roll, no pitch/yaw
+      },
+    };
+    const dt = 1 / 250;
+    const roll0 = Math.abs(world.rigidBody.angularVelocity.y);
+    for (let i = 0; i < 250 * 3; i++) {
+      const ctl = pid.step(world, dt);
+      world = simStep(world, BoosterDescentCalm.vehicle, ctl, dt, BoosterDescentCalm.env);
+    }
+    // Clearly decaying from the seeded 2 rad/s (a flipped-sign damper would
+    // instead amplify past roll0, and a zero gain would hold it near 2 rad/s).
+    expect(Math.abs(world.rigidBody.angularVelocity.y)).toBeLessThan(roll0 * 0.75);
+  });
+
   it("keeps engines off above the ignition altitude (initial 65 km)", () => {
     const pid = makeController({ ignitionAltitudeM: 6_000 });
     const ctl = pid.step(BoosterDescentCalm.initialWorld, 1 / 250);

@@ -151,6 +151,7 @@ export class PIDController implements Controller {
   private readonly finCount: number;
   private readonly flapCount: number;
   private readonly maxGimbalRad: number;
+  private readonly maxFinDeflRad: number;
   private readonly targetPosition: Vec3;
   private readonly altPid: PID;
   private readonly horizPidX: PID;
@@ -173,6 +174,12 @@ export class PIDController implements Controller {
     // (An earlier hardcoded ±0.35 was the gimbal RATE, not the angle.)
     this.maxGimbalRad = vehicle.engines.reduce(
       (m, e) => Math.max(m, e.maxGimbal),
+      0,
+    );
+    // Plant grid-fin deflection limit, so the roll-damper command saturates
+    // exactly where the fin does (not a hand-picked ±0.35 that overshoots it).
+    this.maxFinDeflRad = vehicle.surfaces.reduce(
+      (m, s) => (s.kind === "grid_fin" ? Math.max(m, s.maxDeflection) : m),
       0,
     );
     this.targetPosition = targetPosition;
@@ -302,7 +309,11 @@ export class PIDController implements Controller {
     const rollRate = world.rigidBody.angularVelocity.y; // body roll rate
     const finRollCmd =
       heightAboveTarget < 50_000
-        ? clamp(-g.finRollDampGain * rollRate, -0.35, 0.35)
+        ? clamp(
+            -g.finRollDampGain * rollRate,
+            -this.maxFinDeflRad,
+            this.maxFinDeflRad,
+          )
         : 0;
 
     const base = neutralControl(this.finCount, this.flapCount);
