@@ -159,6 +159,7 @@ export function useSimRunner(): UseSimRunner {
       controller,
       env: scenario.env,
       catchEnvelope: scenario.targetCatch,
+      bodyCapsule: scenario.collisionBody,
       recorder,
       callbacks: {
         onRender: (world) => setWorld(world),

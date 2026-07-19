@@ -32,6 +32,7 @@ import {
 } from "./scenarios.js";
 import {
   type Aabb,
+  type BodyCapsule,
   chopstickCaptureVolume,
   pointInAabb,
   towerStructureAabb,
@@ -76,17 +77,60 @@ export type CatchOutcome = {
 
 export const GROUND_Y_M = 0;
 
+const inflateAabb = (a: Aabb, r: number): Aabb => ({
+  center: a.center,
+  halfExtents: Vec3.of(
+    a.halfExtents.x + r,
+    a.halfExtents.y + r,
+    a.halfExtents.z + r,
+  ),
+});
+
+/**
+ * Does the booster capsule (core segment `centre ± axis·halfLength`, radius
+ * `cap.radius`) overlap `aabb`? A capsule is the union of spheres along its core
+ * segment, and sphere-vs-AABB is point-in-AABB-inflated-by-radius; we sample the
+ * segment finely enough (~2 m spacing) that a short arm segment box can't slip
+ * between samples.
+ */
+function capsuleOverlapsAabb(
+  centre: Vec3,
+  axis: Vec3,
+  cap: BodyCapsule,
+  aabb: Aabb,
+): boolean {
+  const inflated = inflateAabb(aabb, cap.radius);
+  const n = Math.max(2, Math.ceil(cap.halfLength)); // ≈2 m spacing on the booster
+  for (let i = 0; i <= n; i++) {
+    const t = (i / n) * 2 - 1; // −1 … +1
+    const s = Vec3.of(
+      centre.x + axis.x * t * cap.halfLength,
+      centre.y + axis.y * t * cap.halfLength,
+      centre.z + axis.z * t * cap.halfLength,
+    );
+    if (pointInAabb(s, inflated)) return true;
+  }
+  return false;
+}
+
 export function evaluateCatchOutcome(
   world: World,
   envelope: CatchEnvelope,
   tower: TowerState,
   site?: SiteCollision,
+  body?: BodyCapsule,
 ): CatchOutcome {
   const metrics = computeMetrics(world, envelope);
   const captureVol = chopstickCaptureVolume(tower);
   const p = world.rigidBody.position;
+  const bodyUp = Quat.rotateVec3(world.rigidBody.attitude, Vec3.of(0, 1, 0));
+  const hitsSolid = (solid: Aabb): boolean =>
+    body ? capsuleOverlapsAabb(p, bodyUp, body, solid) : pointInAabb(p, solid);
 
-  // Capture volume wins over everything (physics-pinned catch target).
+  // Capture volume wins over everything (physics-pinned catch target). This is
+  // the success gate — CoM-point based so the benches are unaffected — and it is
+  // checked BEFORE structure hits, so the capsule overlapping the closing arms
+  // during a valid catch (the grip) reads `caught`, never a graze.
   if (pointInAabb(p, captureVol)) {
     const verdict = evaluateCatch(world, envelope);
     return {
@@ -97,18 +141,18 @@ export function evaluateCatchOutcome(
   }
 
   // Drawn-frame collision (SLS-79) when supplied: solid structures fail as a
-  // structure hit, then the ground plane fails as a crash.
+  // structure hit (booster capsule vs box, ADR-020), then the ground plane
+  // (CoM point) fails as a crash.
   if (site) {
     for (const solid of site.solids) {
-      if (pointInAabb(p, solid)) return { kind: "tower_collision", metrics };
+      if (hitsSolid(solid)) return { kind: "tower_collision", metrics };
     }
     if (p.y <= site.groundY) return { kind: "crash", metrics };
     return { kind: "none", metrics };
   }
 
   // Legacy physics-frame fallback (no drawn geometry supplied).
-  const towerAabb = towerStructureAabb(tower);
-  if (pointInAabb(p, towerAabb)) {
+  if (hitsSolid(towerStructureAabb(tower))) {
     return { kind: "tower_collision", metrics };
   }
 

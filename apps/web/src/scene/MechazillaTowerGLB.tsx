@@ -32,11 +32,7 @@ import { Group } from "three";
 import { type MechazillaApi } from "./MechazillaTower";
 import { segmentChain } from "./armSegments";
 import { towerTuneEnabled, useTowerTuneStore } from "../state/towerTuneStore";
-import {
-  ARM_COLLIDER_INFLATE_M,
-  ARM_SEGMENTS,
-  reportArmSegmentBoxes,
-} from "../sim/siteCollision";
+import { ARM_SEGMENTS, reportArmSegmentBoxes } from "../sim/siteCollision";
 
 const BASE = import.meta.env.BASE_URL;
 export const TOWER_GLB_URL = `${BASE}assets/mechazilla-tower.glb`;
@@ -156,7 +152,8 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
       // sim's arm collision rides the drawn arms. Recompute only when the arm
       // pose actually changes (opening/height) — otherwise the boxes are static,
       // so per-frame vertex traversal would be wasted work against the 60 fps
-      // budget. Inflated by the booster radius so a hull graze registers.
+      // budget. Boxes are TIGHT (no inflate): the booster capsule (ADR-020)
+      // supplies the body radius at test time.
       if (left && right) {
         const p = lastArmPose.current;
         if (
@@ -166,8 +163,8 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
           p.opening = s.openingReal;
           p.height = s.heightReal;
           reportArmSegmentBoxes([
-            ...segmentChain(left, ARM_SEGMENTS, ARM_COLLIDER_INFLATE_M),
-            ...segmentChain(right, ARM_SEGMENTS, ARM_COLLIDER_INFLATE_M),
+            ...segmentChain(left, ARM_SEGMENTS),
+            ...segmentChain(right, ARM_SEGMENTS),
           ]);
         }
       }

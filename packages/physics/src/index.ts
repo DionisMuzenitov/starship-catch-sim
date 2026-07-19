@@ -75,6 +75,8 @@ export {
   BoosterDescentStandard,
   BoosterDescentStormy,
   BoosterVehicle,
+  BOOSTER_CAPSULE,
+  SHIP_CAPSULE,
   SCENARIOS,
   ShipDescentCalm,
   ShipDescentStandard,
@@ -109,7 +111,7 @@ export {
   pointInAabb,
   towerStructureAabb,
 } from "./tower.js";
-export type { Aabb, CaptureVolume, TowerState } from "./tower.js";
+export type { Aabb, BodyCapsule, CaptureVolume, TowerState } from "./tower.js";
 export { GROUND_Y_M, evaluateCatchOutcome } from "./catch.js";
 export type {
   CatchOutcome,

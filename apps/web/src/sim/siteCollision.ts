@@ -85,12 +85,6 @@ function drawnOlmAabb(): Aabb {
  *  validated at 15 in the `/sandbox/arm` lab. */
 export const ARM_SEGMENTS = 15;
 
-/** Collision tests the booster's CENTRE point against the thin beam boxes, so
- *  the boxes are inflated by the booster's body radius (4.5 m, 9 m dia) — a
- *  graze registers when the booster's HULL contacts an arm, not only when its
- *  centre is inside the beam (which almost never happens). SLS-84. */
-export const ARM_COLLIDER_INFLATE_M = 4.5;
-
 /**
  * World-space collider boxes for the two chopstick arms (SLS-84): a chain of
  * short AABBs per arm that trace the beam's real geometry (see

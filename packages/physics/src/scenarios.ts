@@ -50,7 +50,11 @@ import {
   type Vehicle,
   type World,
 } from "./world.js";
-import { chopstickCaptureVolume, DEFAULT_TOWER_STATE } from "./tower.js";
+import {
+  type BodyCapsule,
+  chopstickCaptureVolume,
+  DEFAULT_TOWER_STATE,
+} from "./tower.js";
 
 // ---------------------------------------------------------------------------
 // Static vehicle config — used by every scenario in v1.
@@ -93,6 +97,15 @@ export const ShipVehicle: Vehicle = defineVehicle({
   bodyRefArea: SHIP_REF_AREA,
   bodyCd: SHIP_CD,
 });
+
+/**
+ * Collision capsules (ADR-020). Core-segment half-length = body half-length −
+ * radius, so the swept capsule spans the full body. Booster 71 m × 9 m,
+ * Starship 50 m × 9 m; both radius 4.5 m (single-sourced with the drag ref area
+ * above and the mass presets).
+ */
+export const BOOSTER_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 71 / 2 - 4.5 };
+export const SHIP_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 50 / 2 - 4.5 };
 
 // ---------------------------------------------------------------------------
 // Catch envelope + verdict shape
@@ -210,6 +223,8 @@ export type Scenario = {
   readonly env: SimEnv;
   readonly targetCatch: CatchEnvelope;
   readonly successCriteria: (world: World) => SuccessVerdict;
+  /** Booster/ship collision capsule for structure-hit tests (ADR-020). */
+  readonly collisionBody: BodyCapsule;
 };
 
 /**
@@ -350,6 +365,7 @@ function buildScenario(
     env,
     targetCatch: STANDARD_CATCH_ENVELOPE,
     successCriteria: (world) => evaluateCatch(world, STANDARD_CATCH_ENVELOPE),
+    collisionBody: BOOSTER_CAPSULE,
   };
 }
 
@@ -483,6 +499,7 @@ function buildShipScenario(
     name,
     difficulty,
     vehicle: ShipVehicle,
+    collisionBody: SHIP_CAPSULE,
     initialWorld,
     env,
     targetCatch: SHIP_CATCH_ENVELOPE,

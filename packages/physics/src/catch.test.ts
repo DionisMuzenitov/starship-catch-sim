@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateCatchOutcome } from "./catch.js";
 import { Quat } from "./math/quat.js";
 import { Vec3 } from "./math/vec3.js";
-import { BoosterDescentStandard } from "./scenarios.js";
+import { BoosterDescentStandard, BOOSTER_CAPSULE } from "./scenarios.js";
 import { DEFAULT_TOWER_STATE, chopstickCaptureVolume } from "./tower.js";
 import type { World } from "./world.js";
 
@@ -156,5 +156,50 @@ describe("evaluateCatchOutcome", () => {
     expect(out.metrics.tiltRad).toBeCloseTo(Math.PI / 6, 4);
     expect(out.metrics.angularRateMagRadPerS).toBeCloseTo(0.3, 6);
     expect(out.metrics.fuelRemainingKg).toBe(1234);
+  });
+});
+
+describe("booster capsule collision (ADR-020 / SLS-86)", () => {
+  const SITE = (solid: { center: Vec3; halfExtents: Vec3 }) => ({
+    groundY: -1000,
+    solids: [solid],
+  });
+  // A structure box 31 m BELOW an upright booster's CoM — beyond its centre
+  // point, but within reach of its 31 m core half-length (radius 4.5).
+  const boxBelow = {
+    center: Vec3.of(-20, 60, 0),
+    halfExtents: Vec3.of(1, 1, 1),
+  };
+  const upright = worldAt(Vec3.of(-20, 91, 0), Vec3.ZERO); // clear of capture vol
+
+  it("the capsule hits a structure box the CoM point misses", () => {
+    const asPoint = evaluateCatchOutcome(upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow));
+    expect(asPoint.kind).toBe("none"); // CoM (y=91) is nowhere near the box (y=60)
+    const asCapsule = evaluateCatchOutcome(
+      upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow), BOOSTER_CAPSULE,
+    );
+    expect(asCapsule.kind).toBe("tower_collision"); // the body reaches down to it
+  });
+
+  it("a horizontal (belly-flop) capsule reaches sideways where upright would not", () => {
+    // Booster laid on its side (+Y body axis → +X world): the capsule now
+    // extends ±31 m in X, so a box 25 m to the +X side is hit.
+    const boxSide = { center: Vec3.of(5, 91, 0), halfExtents: Vec3.of(1, 1, 1) };
+    const belly = worldAt(Vec3.of(-20, 91, 0), Vec3.ZERO, {
+      attitude: Quat.fromAxisAngle(Vec3.of(0, 0, 1), -Math.PI / 2), // +Y → +X
+    });
+    const out = evaluateCatchOutcome(
+      belly, ENV, DEFAULT_TOWER_STATE, SITE(boxSide), BOOSTER_CAPSULE,
+    );
+    expect(out.kind).toBe("tower_collision");
+  });
+
+  it("capture-volume-first: a valid catch is never a graze, even if the capsule overlaps arms", () => {
+    const caught = worldAt(CAPTURE.center, Vec3.ZERO); // in capture volume, envelope ok
+    const armAtCatch = { center: CAPTURE.center, halfExtents: Vec3.of(2, 2, 2) };
+    const out = evaluateCatchOutcome(
+      caught, ENV, DEFAULT_TOWER_STATE, SITE(armAtCatch), BOOSTER_CAPSULE,
+    );
+    expect(out.kind).toBe("caught");
   });
 });
