@@ -70,6 +70,53 @@ describe("simStep — booster descent scenario", () => {
     );
   });
 
+  it("empty tank produces no thrust — full throttle matches engines-off (SLS-78)", () => {
+    const base = boosterDescentScenario().initialWorld;
+    // Same IC but a dry tank.
+    const empty = { ...base, mass: { ...base.mass, propellantMass: 0 } };
+    let dry = empty;
+    let off = empty;
+    const fullCtl = fullThrottle();
+    const idle = neutralControl(BoosterVehicle.surfaces.length, 0);
+    for (let i = 0; i < 250; i++) {
+      dry = simStep(dry, BoosterVehicle, fullCtl, DT); // engines commanded ON
+      off = simStep(off, BoosterVehicle, idle, DT); // engines OFF
+    }
+    // With no propellant, thrust is scaled by exactly 0, so commanding full
+    // throttle feeds the integrator identical forces to never firing — the two
+    // trajectories are bit-identical, not merely close.
+    expect(dry.rigidBody.velocity.y).toBe(off.rigidBody.velocity.y);
+    expect(dry.rigidBody.position.y).toBe(off.rigidBody.position.y);
+    // Tank cannot go negative; mass stays put (no phantom burn).
+    expect(dry.mass.propellantMass).toBe(0);
+    expect(dry.rigidBody.mass).toBeCloseTo(base.mass.dryMass, 6);
+  });
+
+  it("propellant depletes to exactly zero and thrust cuts off (SLS-78)", () => {
+    const base = boosterDescentScenario().initialWorld;
+    // A tiny reserve so full throttle drains it within the run.
+    const world0 = { ...base, mass: { ...base.mass, propellantMass: 500 } };
+    let world = world0;
+    const fullCtl = fullThrottle();
+    let sawEmpty = false;
+    for (let i = 0; i < 2000; i++) {
+      world = simStep(world, BoosterVehicle, fullCtl, DT);
+      // Never negative at any point.
+      expect(world.mass.propellantMass).toBeGreaterThanOrEqual(0);
+      if (world.mass.propellantMass === 0) {
+        sawEmpty = true;
+        break;
+      }
+    }
+    expect(sawEmpty).toBe(true);
+    // Once empty, an extra full-throttle step adds no thrust: the vertical
+    // velocity change over the step is pure gravity/drag (no upward kick).
+    const before = world.rigidBody.velocity.y;
+    world = simStep(world, BoosterVehicle, fullCtl, DT);
+    expect(world.mass.propellantMass).toBe(0);
+    expect(world.rigidBody.velocity.y).toBeLessThan(before); // still falling
+  });
+
   it("idle controls leave attitude unchanged after many steps", () => {
     let world = boosterDescentScenario().initialWorld;
     const q0 = world.rigidBody.attitude;
