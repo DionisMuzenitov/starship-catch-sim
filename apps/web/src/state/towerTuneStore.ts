@@ -46,6 +46,12 @@ export type TowerTuneState = {
   ghostX: number;
   ghostY: number;
   ghostZ: number;
+  /** Tower collision box (SLS-86): nudge + half-extent scale on the drawn tower
+   *  AABB so the owner can fit it to the visible lattice. */
+  towerColOffX: number;
+  towerColOffZ: number;
+  towerColHalfX: number;
+  towerColHalfZ: number;
   setYaw: (v: number) => void;
   setTowerDx: (v: number) => void;
   setTowerDz: (v: number) => void;
@@ -64,7 +70,18 @@ export type TowerTuneState = {
   setGhostX: (v: number) => void;
   setGhostY: (v: number) => void;
   setGhostZ: (v: number) => void;
+  setTowerColOffX: (v: number) => void;
+  setTowerColOffZ: (v: number) => void;
+  setTowerColHalfX: (v: number) => void;
+  setTowerColHalfZ: (v: number) => void;
 };
+
+/** Tower collision box defaults (SLS-86). Half-extents match SLS-79's
+ *  yaw-inflated footprint (TOWER_FOOTPRINT/2 × 1.5 = 9 m); offsets nudge it. */
+export const DEFAULT_TOWERCOL_OFF_X = 0;
+export const DEFAULT_TOWERCOL_OFF_Z = 0;
+export const DEFAULT_TOWERCOL_HALF_X = 9;
+export const DEFAULT_TOWERCOL_HALF_Z = 9;
 
 /** Physics catch point (capture-volume centre, ≈(8.5, 91, 0)) — the fixed
  *  frame the visual site must align to; also the ghost's starting position. */
@@ -148,9 +165,17 @@ export const useTowerTuneStore = create<TowerTuneState>((set) => ({
   setOlmYaw: (olmYawDeg) => set({ olmYawDeg }),
   setOlmDx: (olmDx) => set({ olmDx }),
   setOlmDz: (olmDz) => set({ olmDz }),
+  towerColOffX: DEFAULT_TOWERCOL_OFF_X,
+  towerColOffZ: DEFAULT_TOWERCOL_OFF_Z,
+  towerColHalfX: DEFAULT_TOWERCOL_HALF_X,
+  towerColHalfZ: DEFAULT_TOWERCOL_HALF_Z,
   setGhostX: (ghostX) => set({ ghostX }),
   setGhostY: (ghostY) => set({ ghostY }),
   setGhostZ: (ghostZ) => set({ ghostZ }),
+  setTowerColOffX: (towerColOffX) => set({ towerColOffX }),
+  setTowerColOffZ: (towerColOffZ) => set({ towerColOffZ }),
+  setTowerColHalfX: (towerColHalfX) => set({ towerColHalfX }),
+  setTowerColHalfZ: (towerColHalfZ) => set({ towerColHalfZ }),
 }));
 
 /** `?tune=1` shows the tuning panel (GLB tower only — no effect with `?tower=proc`). */

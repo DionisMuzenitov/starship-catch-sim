@@ -33,11 +33,8 @@ import {
   DEFAULT_TOWER_DX,
   DEFAULT_TOWER_DZ,
   SITE_OFFSET,
+  useTowerTuneStore,
 } from "../state/towerTuneStore";
-
-/** The tower footprint is drawn yawed (~47°); inflate the AABB so the rotated
- *  lattice still falls inside it (a square rotated 45° needs √2 ≈ 1.5×). */
-const YAW_INFLATE = 1.5;
 
 function translate(a: Aabb, dx: number, dy: number, dz: number): Aabb {
   return {
@@ -46,22 +43,25 @@ function translate(a: Aabb, dx: number, dy: number, dz: number): Aabb {
   };
 }
 
-/** Drawn tower lattice: the physics structure AABB moved to where the column
- *  is rendered (tower offset + SITE_OFFSET), footprint inflated for the yaw. */
+/** Drawn tower lattice: the physics structure AABB moved to where the column is
+ *  rendered (tower offset + SITE_OFFSET), then nudged + sized by the owner-tuned
+ *  tower-col params (SLS-86; defaults = the yaw-inflated SLS-79 footprint). Reads
+ *  the store live so the `?tune=1` sliders move both the box and the collision. */
 function drawnTowerAabb(): Aabb {
+  const s = useTowerTuneStore.getState();
   const base = towerStructureAabb(DEFAULT_TOWER_STATE);
   const moved = translate(
     base,
-    DEFAULT_TOWER_DX + SITE_OFFSET[0],
+    DEFAULT_TOWER_DX + SITE_OFFSET[0] + s.towerColOffX,
     SITE_OFFSET[1],
-    DEFAULT_TOWER_DZ + SITE_OFFSET[2],
+    DEFAULT_TOWER_DZ + SITE_OFFSET[2] + s.towerColOffZ,
   );
   return {
     center: moved.center,
     halfExtents: Vec3.of(
-      base.halfExtents.x * YAW_INFLATE,
+      s.towerColHalfX,
       base.halfExtents.y, // full tower height, unchanged
-      base.halfExtents.z * YAW_INFLATE,
+      s.towerColHalfZ,
     ),
   };
 }

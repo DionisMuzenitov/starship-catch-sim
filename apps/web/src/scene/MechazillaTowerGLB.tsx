@@ -94,8 +94,10 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
     });
     const debugGroup = useRef<Group>(null);
     // Last arm pose the segment collider was rebuilt at (SLS-84), so useFrame
-    // only recomputes when the arms actually move.
-    const lastArmPose = useRef({ opening: NaN, height: NaN });
+    // only recomputes when the arms actually move. Seeded to impossible values
+    // so the FIRST frame always reports (a NaN seed would make every
+    // `|NaN − x| > eps` compare false → the boxes would never be reported).
+    const lastArmPose = useRef({ opening: -999, height: -999 });
 
     // Clear the reported arm collider on unmount so a fallback to the procedural
     // tower (which doesn't report) can't collide against stale GLB boxes.

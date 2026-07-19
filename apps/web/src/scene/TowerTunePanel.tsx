@@ -66,6 +66,10 @@ export function TowerTunePanel() {
     ghostX,
     ghostY,
     ghostZ,
+    towerColOffX,
+    towerColOffZ,
+    towerColHalfX,
+    towerColHalfZ,
     setYaw,
     setTowerDx,
     setTowerDz,
@@ -84,6 +88,10 @@ export function TowerTunePanel() {
     setGhostX,
     setGhostY,
     setGhostZ,
+    setTowerColOffX,
+    setTowerColOffZ,
+    setTowerColHalfX,
+    setTowerColHalfZ,
   } = useTowerTuneStore();
   return (
     <div className="pointer-events-auto absolute top-2 right-2 max-h-[95vh] w-72 overflow-auto rounded bg-black/70 p-3 font-mono text-xs text-white">
@@ -119,6 +127,11 @@ export function TowerTunePanel() {
       <Slider label="ghost east (x)" value={ghostX} min={-10} max={50} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostX} />
       <Slider label="ghost up (y)" value={ghostY} min={0} max={150} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostY} />
       <Slider label="ghost south (z)" value={ghostZ} min={-25} max={25} step={0.1} format={(v) => `${v.toFixed(1)} m`} onChange={setGhostZ} />
+      <div className="mb-1 mt-2 text-white/50">tower collision box (SLS-86, cyan)</div>
+      <Slider label="tower-col east (x)" value={towerColOffX} min={-30} max={30} step={0.5} format={(v) => `${v.toFixed(1)} m`} onChange={setTowerColOffX} />
+      <Slider label="tower-col south (z)" value={towerColOffZ} min={-30} max={30} step={0.5} format={(v) => `${v.toFixed(1)} m`} onChange={setTowerColOffZ} />
+      <Slider label="tower-col half x" value={towerColHalfX} min={1} max={30} step={0.5} format={(v) => `${v.toFixed(1)} m`} onChange={setTowerColHalfX} />
+      <Slider label="tower-col half z" value={towerColHalfZ} min={1} max={30} step={0.5} format={(v) => `${v.toFixed(1)} m`} onChange={setTowerColHalfZ} />
       <div className="mt-2 border-t border-white/20 pt-2 text-white/70">
         bake → tower yaw {yawDeg.toFixed(0)}°, dx {towerDx.toFixed(0)}, dz{" "}
         {towerDz.toFixed(0)}; arm yaw {armYawDeg.toFixed(0)}°, open{" "}
@@ -126,7 +139,9 @@ export function TowerTunePanel() {
         {carriageDx.toFixed(1)}, dy {carriageDy.toFixed(1)}, dz{" "}
         {carriageDz.toFixed(1)}, rot {carriagePitchDeg.toFixed(0)}/{carriageYawDeg.toFixed(0)}/{carriageRollDeg.toFixed(0)}°; olm yaw {olmYawDeg.toFixed(0)}°, dx{" "}
         {olmDx.toFixed(0)}, dz {olmDz.toFixed(0)}; ghost {ghostX.toFixed(1)}/
-        {ghostY.toFixed(1)}/{ghostZ.toFixed(1)}
+        {ghostY.toFixed(1)}/{ghostZ.toFixed(1)}; tower-col off{" "}
+        {towerColOffX.toFixed(1)}/{towerColOffZ.toFixed(1)}, half{" "}
+        {towerColHalfX.toFixed(1)}/{towerColHalfZ.toFixed(1)}
       </div>
     </div>
   );
