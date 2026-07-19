@@ -114,6 +114,10 @@ export function installKeyboardBindings(b: Bindings): () => void {
       useHelpStore.getState().closeHelp();
       return;
     }
+    // While the help overlay is open it behaves as a modal: swallow every other
+    // key so sim / manual / camera controls (R, Space, [ ], B, gimbal, …) can't
+    // fire against the live scene hidden behind it (`?` and Esc handled above).
+    if (useHelpStore.getState().helpOpen) return;
     switch (ev.code) {
       case "KeyW":
         if (ev.shiftKey) b.input.fullThrottle = true;

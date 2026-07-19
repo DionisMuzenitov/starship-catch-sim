@@ -27,12 +27,15 @@ export function FirstRunTutorial() {
   const kind = useControllerStore((s) => s.kind);
 
   // Switching to any auto-controller counts as engagement — retire the card so
-  // the Scene remount that the switch causes doesn't re-show it.
+  // the Scene remount that the switch causes doesn't re-show it. Persisting is a
+  // side-effect, so it lives in an effect; but the render-time guard below keys
+  // off `kind` directly so the card never paints (not even one frame) after the
+  // switch — the effect only writes localStorage.
   useEffect(() => {
     if (kind !== "manual" && !tutorialDismissed) dismissTutorial();
   }, [kind, tutorialDismissed, dismissTutorial]);
 
-  if (tutorialDismissed) return null;
+  if (tutorialDismissed || kind !== "manual") return null;
 
   return (
     <div
