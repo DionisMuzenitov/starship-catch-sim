@@ -63,6 +63,21 @@ export type Aabb = {
   readonly halfExtents: Vec3;
 };
 
+/**
+ * Booster collision capsule (ADR-020): a body-axis core segment (± halfLength
+ * along body +Y from the CoM) swept by `radius`, rotating with the vehicle's
+ * attitude. Used for structure-hit tests in `evaluateCatchOutcome`.
+ */
+export type BodyCapsule = {
+  readonly radius: number;
+  /** Half-length of the core segment along body +Y (≈ body half-length − radius). */
+  readonly halfLength: number;
+  /** Offset of the capsule centre from the CoM along body +Y (m). The GLB model
+   *  origin sits at the base, not the CoM, so the collider is shifted up to sit
+   *  on the drawn body (owner-tuned in `/sandbox/booster`). */
+  readonly offset: number;
+};
+
 export type CaptureVolume = Aabb;
 
 /**

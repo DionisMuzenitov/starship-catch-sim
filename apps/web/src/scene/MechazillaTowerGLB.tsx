@@ -30,7 +30,9 @@ import {
 import { Group } from "three";
 
 import { type MechazillaApi } from "./MechazillaTower";
+import { segmentChain } from "./armSegments";
 import { towerTuneEnabled, useTowerTuneStore } from "../state/towerTuneStore";
+import { ARM_SEGMENTS, reportArmSegmentBoxes } from "../sim/siteCollision";
 
 const BASE = import.meta.env.BASE_URL;
 export const TOWER_GLB_URL = `${BASE}assets/mechazilla-tower.glb`;
@@ -91,6 +93,15 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
       target: null as Vec3 | null,
     });
     const debugGroup = useRef<Group>(null);
+    // Last arm pose the segment collider was rebuilt at (SLS-84), so useFrame
+    // only recomputes when the arms actually move. Seeded to impossible values
+    // so the FIRST frame always reports (a NaN seed would make every
+    // `|NaN − x| > eps` compare false → the boxes would never be reported).
+    const lastArmPose = useRef({ opening: -999, height: -999 });
+
+    // Clear the reported arm collider on unmount so a fallback to the procedural
+    // tower (which doesn't report) can't collide against stale GLB boxes.
+    useEffect(() => () => reportArmSegmentBoxes([]), []);
 
     // Dev tuning (`?tune=1`): the owner drives yaw + arm pose live. Tuned arm
     // opening/height feed the same command path (so they get the same lag).
@@ -138,6 +149,27 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
       if (right) right.rotation.y = -swing;
       // the whole chopstick assembly (arms + carriage) rides the tower
       arms.position.y = s.heightReal - DEFAULT_ARM_HEIGHT_M;
+
+      // Report each arm's world-space segment-chain collider (SLS-84) so the
+      // sim's arm collision rides the drawn arms. Recompute only when the arm
+      // pose actually changes (opening/height) — otherwise the boxes are static,
+      // so per-frame vertex traversal would be wasted work against the 60 fps
+      // budget. Boxes are TIGHT (no inflate): the booster capsule (ADR-020)
+      // supplies the body radius at test time.
+      if (left && right) {
+        const p = lastArmPose.current;
+        if (
+          Math.abs(p.opening - s.openingReal) > 1e-4 ||
+          Math.abs(p.height - s.heightReal) > 1e-3
+        ) {
+          p.opening = s.openingReal;
+          p.height = s.heightReal;
+          reportArmSegmentBoxes([
+            ...segmentChain(left, ARM_SEGMENTS),
+            ...segmentChain(right, ARM_SEGMENTS),
+          ]);
+        }
+      }
 
       // debug markers track the physics catch points (world/physics frame)
       const dbg = debugGroup.current;

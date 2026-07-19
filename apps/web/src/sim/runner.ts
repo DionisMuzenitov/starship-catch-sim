@@ -20,6 +20,7 @@ import {
   Vec3,
   evaluateCatchOutcome,
   simStep,
+  type BodyCapsule,
   type CatchEnvelope,
   type CatchOutcome,
   type ControlInput,
@@ -70,6 +71,9 @@ export type RunnerArgs = {
    *  site layout (SLS-79); pass `null` to fall back to physics-frame geometry
    *  (headless benches that don't render the site). */
   siteCollision?: SiteCollision | null;
+  /** Booster/ship collision capsule for structure-hit tests (ADR-020). When
+   *  omitted, structure hits fall back to the CoM-point test (SLS-79). */
+  bodyCapsule?: BodyCapsule;
   /** Replay recorder. If omitted, no replay is captured. */
   recorder?: Recorder;
 };
@@ -109,6 +113,11 @@ export class SimRunner {
   private readonly catchEnvelope: CatchEnvelope | undefined;
   private readonly towerState: TowerState;
   private readonly site: SiteCollision | undefined;
+  /** True when using the default baked drawn-site geometry: recompute it each
+   *  outcome check so the chopstick-arm segment boxes track the arm geometry the
+   *  rendered tower reports (SLS-84), which changes as the arms move. */
+  private readonly liveDrawnSite: boolean;
+  private readonly bodyCapsule: BodyCapsule | undefined;
   private readonly recorder: Recorder | undefined;
   /** Most recent ControlInput from the controller this tick — captured so
    *  the recorder can pair it with the post-step world. */
@@ -140,11 +149,12 @@ export class SimRunner {
     this.env = args.env;
     this.catchEnvelope = args.catchEnvelope;
     this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
-    // Default to the baked drawn-site geometry; `null` opts out (physics-frame).
-    this.site =
-      args.siteCollision === null
-        ? undefined
-        : (args.siteCollision ?? drawnSiteCollision());
+    // Explicit site is used as-is; `null` opts out (physics-frame); `undefined`
+    // uses the live drawn site, recomputed each outcome check (see checkOutcome)
+    // so `this.site` stays unset to avoid a dead per-construction allocation.
+    this.liveDrawnSite = args.siteCollision === undefined;
+    this.site = args.siteCollision ?? undefined;
+    this.bodyCapsule = args.bodyCapsule;
     this.recorder = args.recorder;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;
@@ -265,11 +275,13 @@ export class SimRunner {
 
   private checkOutcome(): void {
     if (this.ended || this.catchEnvelope === undefined) return;
+    const site = this.liveDrawnSite ? drawnSiteCollision() : this.site;
     const outcome = evaluateCatchOutcome(
       this.world,
       this.catchEnvelope,
       this.towerState,
-      this.site,
+      site,
+      this.bodyCapsule,
     );
     if (outcome.kind === "none") return;
     this.outcome = outcome;

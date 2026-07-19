@@ -28,6 +28,7 @@ import { TowerTunePanel } from "./TowerTunePanel";
 import { DragTrajectoryOverlay } from "./trajectory/DragTrajectoryOverlay";
 import { MpcPlanOverlay } from "./trajectory/MpcPlanOverlay";
 import { LandingGhost } from "./LandingGhost";
+import { CollisionDebug } from "./CollisionDebug";
 import { SITE_OFFSET, towerTuneEnabled } from "../state/towerTuneStore";
 
 export function Scene() {
@@ -62,6 +63,7 @@ export function Scene() {
           <LaunchSite />
         </group>
         {towerTuneEnabled() && <LandingGhost />}
+        {towerTuneEnabled() && <CollisionDebug />}
         <BoosterFlight />
         <CameraRig />
         <ImpactReticle />

@@ -50,7 +50,11 @@ import {
   type Vehicle,
   type World,
 } from "./world.js";
-import { chopstickCaptureVolume, DEFAULT_TOWER_STATE } from "./tower.js";
+import {
+  type BodyCapsule,
+  chopstickCaptureVolume,
+  DEFAULT_TOWER_STATE,
+} from "./tower.js";
 
 // ---------------------------------------------------------------------------
 // Static vehicle config — used by every scenario in v1.
@@ -62,7 +66,11 @@ const boosterEngineGroupOf: readonly EngineGroup[] = [
   ...Array<EngineGroup>(20).fill("outer"),
 ];
 
-const BOOSTER_REF_AREA = Math.PI * 4.5 * 4.5;
+/** Booster/ship body radius (m) — 9 m outer diameter. Single-sourced across the
+ *  drag reference areas and the collision capsules (SLS-28). */
+export const BODY_RADIUS_M = 4.5;
+
+const BOOSTER_REF_AREA = Math.PI * BODY_RADIUS_M * BODY_RADIUS_M;
 const BOOSTER_CD = 0.7;
 
 export const BoosterVehicle: Vehicle = defineVehicle({
@@ -83,7 +91,7 @@ const shipEngineGroupOf: readonly EngineGroup[] = Array<EngineGroup>(
   StarshipEngines.length,
 ).fill("ship");
 
-const SHIP_REF_AREA = Math.PI * 4.5 * 4.5;
+const SHIP_REF_AREA = Math.PI * BODY_RADIUS_M * BODY_RADIUS_M;
 const SHIP_CD = 0.9;
 
 export const ShipVehicle: Vehicle = defineVehicle({
@@ -93,6 +101,26 @@ export const ShipVehicle: Vehicle = defineVehicle({
   bodyRefArea: SHIP_REF_AREA,
   bodyCd: SHIP_CD,
 });
+
+/**
+ * Collision capsules (ADR-020). These match the DRAWN mesh (what the player sees
+ * hit the arms), not the physics hull — the booster GLB renders ~79 m and with
+ * its origin at the base, so `halfLength` (35) and `offset` (34, CoM → capsule
+ * centre along body +Y) are owner-tuned in `/sandbox/booster`, not the
+ * `bodyHalf − radius` formula. Radius is single-sourced (`BODY_RADIUS_M`).
+ */
+export const BOOSTER_CAPSULE: BodyCapsule = {
+  radius: BODY_RADIUS_M,
+  halfLength: 35,
+  offset: 34,
+};
+// Ship capsule is an untuned analog of the booster's (mesh origin at base ⇒
+// offset ≈ halfLength); re-tune in the lab if the ship scenario is revived.
+export const SHIP_CAPSULE: BodyCapsule = {
+  radius: BODY_RADIUS_M,
+  halfLength: 50 / 2 - BODY_RADIUS_M,
+  offset: 50 / 2 - BODY_RADIUS_M,
+};
 
 // ---------------------------------------------------------------------------
 // Catch envelope + verdict shape
@@ -210,6 +238,8 @@ export type Scenario = {
   readonly env: SimEnv;
   readonly targetCatch: CatchEnvelope;
   readonly successCriteria: (world: World) => SuccessVerdict;
+  /** Booster/ship collision capsule for structure-hit tests (ADR-020). */
+  readonly collisionBody: BodyCapsule;
 };
 
 /**
@@ -350,6 +380,7 @@ function buildScenario(
     env,
     targetCatch: STANDARD_CATCH_ENVELOPE,
     successCriteria: (world) => evaluateCatch(world, STANDARD_CATCH_ENVELOPE),
+    collisionBody: BOOSTER_CAPSULE,
   };
 }
 
@@ -483,6 +514,7 @@ function buildShipScenario(
     name,
     difficulty,
     vehicle: ShipVehicle,
+    collisionBody: SHIP_CAPSULE,
     initialWorld,
     env,
     targetCatch: SHIP_CATCH_ENVELOPE,

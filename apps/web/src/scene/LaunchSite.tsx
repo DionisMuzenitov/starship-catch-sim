@@ -9,9 +9,11 @@
  * Frame: origin = tower base, +X = east (rocket/chopstick side), -Z = north
  * (Hwy 4 side), metres.
  */
-import { Component, type ReactNode, Suspense, useCallback, useRef } from "react";
+import { Component, type ReactNode, Suspense, useCallback, useEffect, useRef } from "react";
 
 import { MeshStandardMaterial } from "three";
+
+import { useSimStore } from "../state/simStore";
 
 import { type MechazillaApi, MechazillaTower } from "./MechazillaTower";
 import { MechazillaTowerGLB } from "./MechazillaTowerGLB";
@@ -182,6 +184,16 @@ export function LaunchSite() {
     towerRef.current = api;
     api?.setOpening(1);
   }, []);
+  // Catch-as-collision (ADR-020): when the run registers a catch, the arms
+  // close and grip the booster where it was caught; any other outcome (or a new
+  // attempt with outcome cleared) returns them to the open, waiting stance.
+  const outcome = useSimStore((s) => s.outcome);
+  useEffect(() => {
+    const api = towerRef.current;
+    if (!api) return;
+    if (outcome?.kind === "caught") api.closeOnTarget(outcome.metrics.position);
+    else api.setOpening(1);
+  }, [outcome]);
   const procedural = <MechazillaTower ref={attachTower} />;
   return (
     <group>

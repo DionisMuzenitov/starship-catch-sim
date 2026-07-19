@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { ArmColliderLab } from "./sandbox/ArmColliderLab";
+import { BoosterColliderLab } from "./sandbox/BoosterColliderLab";
 import { SandboxModels } from "./sandbox/SandboxModels";
 import { SandboxTower } from "./sandbox/SandboxTower";
 import { Scene } from "./scene/Scene";
@@ -27,6 +29,10 @@ export function App() {
       return <SandboxModels />;
     case "/sandbox/tower":
       return <SandboxTower />;
+    case "/sandbox/arm":
+      return <ArmColliderLab />;
+    case "/sandbox/booster":
+      return <BoosterColliderLab />;
     default:
       // Keying Scene on (scenarioId, epoch, controllerKind) forces a full
       // remount when the user picks a new scenario, swaps Manual ↔ PID,
