@@ -144,12 +144,11 @@ export class SimRunner {
     this.env = args.env;
     this.catchEnvelope = args.catchEnvelope;
     this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
-    // Default to the baked drawn-site geometry; `null` opts out (physics-frame).
+    // Explicit site is used as-is; `null` opts out (physics-frame); `undefined`
+    // uses the live drawn site, recomputed each outcome check (see checkOutcome)
+    // so `this.site` stays unset to avoid a dead per-construction allocation.
     this.liveDrawnSite = args.siteCollision === undefined;
-    this.site =
-      args.siteCollision === null
-        ? undefined
-        : (args.siteCollision ?? drawnSiteCollision());
+    this.site = args.siteCollision ?? undefined;
     this.recorder = args.recorder;
     this.prevWorld = args.initialWorld;
     this.world = args.initialWorld;

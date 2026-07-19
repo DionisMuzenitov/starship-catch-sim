@@ -38,6 +38,7 @@ function worldPoints(node: Object3D): number[] {
  * the result has ≤ n boxes.
  */
 export function segmentChain(node: Object3D, n: number, inflate = 0): Aabb[] {
+  n = Math.max(1, Math.floor(n)); // guard: n<=0 would index an empty bins array
   const pts = worldPoints(node);
   if (pts.length === 0) return [];
 
