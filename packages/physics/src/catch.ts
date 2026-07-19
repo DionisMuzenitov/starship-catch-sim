@@ -48,7 +48,14 @@ import type { World } from "./world.js";
  */
 export type SiteCollision = {
   readonly groundY: number;
+  /** Bulk structures (tower column, OLM) — CoM-point tested (SLS-79). The
+   *  booster is caught *alongside* these, so testing its long capsule against
+   *  them would false-fire as its lower body passes their loose boxes. */
   readonly solids: readonly Aabb[];
+  /** Thin chopstick-arm segment boxes (SLS-84) — tested against the booster
+   *  CAPSULE (ADR-020) when one is supplied, so a hull graze of a beam the
+   *  centre point would slip past still fails. */
+  readonly armSolids?: readonly Aabb[];
 };
 
 export type CatchOutcomeKind =
@@ -124,8 +131,8 @@ export function evaluateCatchOutcome(
   const captureVol = chopstickCaptureVolume(tower);
   const p = world.rigidBody.position;
   const bodyUp = Quat.rotateVec3(world.rigidBody.attitude, Vec3.of(0, 1, 0));
-  const hitsSolid = (solid: Aabb): boolean =>
-    body ? capsuleOverlapsAabb(p, bodyUp, body, solid) : pointInAabb(p, solid);
+  const armHit = (arm: Aabb): boolean =>
+    body ? capsuleOverlapsAabb(p, bodyUp, body, arm) : pointInAabb(p, arm);
 
   // Capture volume wins over everything (physics-pinned catch target). This is
   // the success gate — CoM-point based so the benches are unaffected — and it is
@@ -140,19 +147,25 @@ export function evaluateCatchOutcome(
     };
   }
 
-  // Drawn-frame collision (SLS-79) when supplied: solid structures fail as a
-  // structure hit (booster capsule vs box, ADR-020), then the ground plane
-  // (CoM point) fails as a crash.
+  // Drawn-frame collision (SLS-79 + SLS-84). Bulk structures (tower/OLM) use the
+  // CoM point — the booster is caught alongside them, so capsule-testing them
+  // would false-fire. Thin chopstick arms use the booster capsule so a hull
+  // graze registers. Then the ground plane (CoM point) fails as a crash.
   if (site) {
     for (const solid of site.solids) {
-      if (hitsSolid(solid)) return { kind: "tower_collision", metrics };
+      if (pointInAabb(p, solid)) return { kind: "tower_collision", metrics };
+    }
+    for (const arm of site.armSolids ?? []) {
+      if (armHit(arm)) return { kind: "tower_collision", metrics };
     }
     if (p.y <= site.groundY) return { kind: "crash", metrics };
     return { kind: "none", metrics };
   }
 
-  // Legacy physics-frame fallback (no drawn geometry supplied).
-  if (hitsSolid(towerStructureAabb(tower))) {
+  // Legacy physics-frame fallback (no drawn geometry supplied): CoM-point tower
+  // + ground, unchanged from SLS-79 (no capsule — the physics tower box is
+  // coarse and the booster is caught next to it).
+  if (pointInAabb(p, towerStructureAabb(tower))) {
     return { kind: "tower_collision", metrics };
   }
 

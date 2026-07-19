@@ -113,6 +113,9 @@ export function getArmSegmentBoxes(): readonly Aabb[] {
 export function drawnSiteCollision(): SiteCollision {
   return {
     groundY: SITE_OFFSET[1], // drawn terrain height under the tower
-    solids: [drawnTowerAabb(), drawnOlmAabb(), ...reportedArmBoxes],
+    // Tower + OLM are CoM-point tested (SLS-79); the chopstick arms are capsule-
+    // tested (ADR-020), so they go in `armSolids`, not `solids`.
+    solids: [drawnTowerAabb(), drawnOlmAabb()],
+    armSolids: reportedArmBoxes,
   };
 }

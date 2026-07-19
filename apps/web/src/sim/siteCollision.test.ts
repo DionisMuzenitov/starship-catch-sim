@@ -68,10 +68,12 @@ describe("chopstick-arm segment collision (SLS-84)", () => {
     halfExtents: Vec3.of(2, 2, 2),
   };
 
-  it("reported arm boxes are added to the site solids", () => {
-    expect(drawnSiteCollision().solids).toHaveLength(2); // tower + OLM only
+  it("reported arm boxes go to armSolids; tower + OLM stay in solids", () => {
+    expect(drawnSiteCollision().solids).toHaveLength(2); // tower + OLM (point)
+    expect(drawnSiteCollision().armSolids ?? []).toHaveLength(0);
     reportArmSegmentBoxes([armBox, armBox]);
-    expect(drawnSiteCollision().solids).toHaveLength(4); // + 2 arm boxes
+    expect(drawnSiteCollision().solids).toHaveLength(2); // tower/OLM unchanged
+    expect(drawnSiteCollision().armSolids).toHaveLength(2); // arms (capsule)
   });
 
   it("a booster inside a reported arm box fails as a structure hit", () => {

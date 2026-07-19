@@ -160,9 +160,12 @@ describe("evaluateCatchOutcome", () => {
 });
 
 describe("booster capsule collision (ADR-020 / SLS-86)", () => {
-  const SITE = (solid: { center: Vec3; halfExtents: Vec3 }) => ({
+  // Arms use the capsule test; put the probe box there (tower/OLM `solids` stay
+  // CoM-point tested).
+  const SITE = (arm: { center: Vec3; halfExtents: Vec3 }) => ({
     groundY: -1000,
-    solids: [solid],
+    solids: [],
+    armSolids: [arm],
   });
   // A structure box 31 m BELOW an upright booster's CoM — beyond its centre
   // point, but within reach of its 31 m core half-length (radius 4.5).
