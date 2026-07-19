@@ -45,6 +45,9 @@ docs build runs with `DOCS_BASE_PATH=/starship-catch-sim/docs/`.
   compile-checked 30-line `Controller` example against the real types.
 - **Negative:** the docs build is coupled to the web deploy job (a docs build
   failure blocks the deploy) — acceptable, since we want both to ship together.
+  Also, GitHub Pages supports only one top-level `404.html`, so an unresolved
+  `/docs/*` deep link falls back to the app SPA shell rather than a docs-styled
+  404 — a minor edge inherent to single-artifact Pages hosting (ADR-011).
 - **Deviations from the ticket (deliberate):**
   - **KaTeX → MathJax3.** No doc uses LaTeX today, so live math is future-proofing;
     VitePress's first-class math plugin is MathJax3. Same client-side typeset role,

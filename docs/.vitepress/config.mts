@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitepress";
 
+import { APP_URL, REPO_URL as REPO } from "./site.mjs";
+
 const here = dirname(fileURLToPath(import.meta.url));
 const DOCS_ROOT = resolve(here, "..");
-const REPO = "https://github.com/DionisMuzenitov/starship-catch-sim";
-const APP_URL = "https://dionismuzenitov.github.io/starship-catch-sim/";
 
 /**
  * Auto-list the ADRs (SLS-32 AC: "All ADRs auto-listed via filesystem walk").
