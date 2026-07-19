@@ -78,10 +78,10 @@ export type TowerTuneState = {
 
 /** Tower collision box defaults (SLS-86). Half-extents match SLS-79's
  *  yaw-inflated footprint (TOWER_FOOTPRINT/2 × 1.5 = 9 m); offsets nudge it. */
-export const DEFAULT_TOWERCOL_OFF_X = 0;
+export const DEFAULT_TOWERCOL_OFF_X = -7.5;
 export const DEFAULT_TOWERCOL_OFF_Z = 0;
 export const DEFAULT_TOWERCOL_HALF_X = 9;
-export const DEFAULT_TOWERCOL_HALF_Z = 9;
+export const DEFAULT_TOWERCOL_HALF_Z = 8.5;
 
 /** Physics catch point (capture-volume centre, ≈(8.5, 91, 0)) — the fixed
  *  frame the visual site must align to; also the ghost's starting position. */

@@ -72,6 +72,10 @@ export type BodyCapsule = {
   readonly radius: number;
   /** Half-length of the core segment along body +Y (≈ body half-length − radius). */
   readonly halfLength: number;
+  /** Offset of the capsule centre from the CoM along body +Y (m). The GLB model
+   *  origin sits at the base, not the CoM, so the collider is shifted up to sit
+   *  on the drawn body (owner-tuned in `/sandbox/booster`). */
+  readonly offset: number;
 };
 
 export type CaptureVolume = Aabb;

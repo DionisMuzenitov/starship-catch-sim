@@ -11,7 +11,7 @@ import { useRef } from "react";
 
 import { useFrame } from "@react-three/fiber";
 import { BOOSTER_CAPSULE, scenarioById } from "@starship-catch-sim/physics";
-import type { Group, Mesh } from "three";
+import type { Group } from "three";
 
 import { drawnSiteCollision } from "../sim/siteCollision";
 import { useScenarioStore } from "../state/scenarioStore";
@@ -26,7 +26,7 @@ export function CollisionDebug(): React.JSX.Element {
 
   const structRef = useRef<Group>(null);
   const armsRef = useRef<Group>(null);
-  const capsuleRef = useRef<Mesh>(null);
+  const capsuleRef = useRef<Group>(null);
 
   useFrame(() => {
     const site = drawnSiteCollision();
@@ -46,11 +46,11 @@ export function CollisionDebug(): React.JSX.Element {
     paint(structRef.current, site.solids);
     paint(armsRef.current, site.armSolids ?? []);
 
-    const m = capsuleRef.current;
-    if (m) {
+    const g = capsuleRef.current;
+    if (g) {
       const rb = useSimStore.getState().world.rigidBody;
-      m.position.set(rb.position.x, rb.position.y, rb.position.z);
-      m.quaternion.set(rb.attitude.x, rb.attitude.y, rb.attitude.z, rb.attitude.w);
+      g.position.set(rb.position.x, rb.position.y, rb.position.z);
+      g.quaternion.set(rb.attitude.x, rb.attitude.y, rb.attitude.z, rb.attitude.w);
     }
   });
 
@@ -72,11 +72,14 @@ export function CollisionDebug(): React.JSX.Element {
           </mesh>
         ))}
       </group>
-      {/* booster capsule: CapsuleGeometry axis is +Y, matching the body long axis */}
-      <mesh ref={capsuleRef}>
-        <capsuleGeometry args={[cap.radius, cap.halfLength * 2, 6, 16]} />
-        <meshBasicMaterial color="#22ff88" wireframe transparent opacity={0.6} />
-      </mesh>
+      {/* booster capsule: group carries the CoM pose (position + attitude); the
+          inner mesh is offset along body +Y by cap.offset (model origin ≠ CoM) */}
+      <group ref={capsuleRef}>
+        <mesh position={[0, cap.offset, 0]}>
+          <capsuleGeometry args={[cap.radius, cap.halfLength * 2, 6, 16]} />
+          <meshBasicMaterial color="#22ff88" wireframe transparent opacity={0.6} />
+        </mesh>
+      </group>
     </>
   );
 }

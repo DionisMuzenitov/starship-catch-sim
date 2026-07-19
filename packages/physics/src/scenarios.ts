@@ -104,8 +104,12 @@ export const ShipVehicle: Vehicle = defineVehicle({
  * Starship 50 m × 9 m; both radius 4.5 m (single-sourced with the drag ref area
  * above and the mass presets).
  */
-export const BOOSTER_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 71 / 2 - 4.5 };
-export const SHIP_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 50 / 2 - 4.5 };
+// `offset` (CoM → capsule centre, along body +Y) is owner-tuned in
+// `/sandbox/booster` to sit the collider on the drawn mesh (origin at the base).
+export const BOOSTER_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 35, offset: 34 };
+// Ship capsule offset is an untuned analog of the booster's (mesh origin at
+// base ⇒ offset ≈ halfLength); re-tune in the lab if the ship scenario is revived.
+export const SHIP_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 50 / 2 - 4.5, offset: 50 / 2 - 4.5 };
 
 // ---------------------------------------------------------------------------
 // Catch envelope + verdict shape

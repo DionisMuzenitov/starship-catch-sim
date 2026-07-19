@@ -109,11 +109,12 @@ function capsuleOverlapsAabb(
   const inflated = inflateAabb(aabb, cap.radius);
   const n = Math.max(2, Math.ceil(cap.halfLength)); // ≈2 m spacing on the booster
   for (let i = 0; i <= n; i++) {
-    const t = (i / n) * 2 - 1; // −1 … +1
+    // segment runs from (offset − halfLength) to (offset + halfLength) along +Y.
+    const d = cap.offset + ((i / n) * 2 - 1) * cap.halfLength;
     const s = Vec3.of(
-      centre.x + axis.x * t * cap.halfLength,
-      centre.y + axis.y * t * cap.halfLength,
-      centre.z + axis.z * t * cap.halfLength,
+      centre.x + axis.x * d,
+      centre.y + axis.y * d,
+      centre.z + axis.z * d,
     );
     if (pointInAabb(s, inflated)) return true;
   }

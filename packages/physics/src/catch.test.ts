@@ -176,12 +176,22 @@ describe("booster capsule collision (ADR-020 / SLS-86)", () => {
   const upright = worldAt(Vec3.of(-20, 91, 0), Vec3.ZERO); // clear of capture vol
 
   it("the capsule hits a structure box the CoM point misses", () => {
+    // A CoM-centred capsule (offset 0) reaching 31 m down — tests the sweep,
+    // independent of BOOSTER_CAPSULE's baked (shifted-up) offset.
+    const centred = { radius: 4.5, halfLength: 31, offset: 0 };
     const asPoint = evaluateCatchOutcome(upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow));
     expect(asPoint.kind).toBe("none"); // CoM (y=91) is nowhere near the box (y=60)
     const asCapsule = evaluateCatchOutcome(
-      upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow), BOOSTER_CAPSULE,
+      upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow), centred,
     );
     expect(asCapsule.kind).toBe("tower_collision"); // the body reaches down to it
+  });
+
+  it("the capsule offset shifts the collider along the body axis", () => {
+    // Same box, but a capsule shifted UP by 40 m no longer reaches down to it.
+    const shiftedUp = { radius: 4.5, halfLength: 31, offset: 40 };
+    const out = evaluateCatchOutcome(upright, ENV, DEFAULT_TOWER_STATE, SITE(boxBelow), shiftedUp);
+    expect(out.kind).toBe("none");
   });
 
   it("a horizontal (belly-flop) capsule reaches sideways where upright would not", () => {

@@ -59,7 +59,7 @@ function Slider(props: {
 export function BoosterColliderLab() {
   const [radius, setRadius] = useState(BOOSTER_CAPSULE.radius);
   const [halfLength, setHalfLength] = useState(BOOSTER_CAPSULE.halfLength);
-  const [offsetY, setOffsetY] = useState(0);
+  const [offsetY, setOffsetY] = useState(BOOSTER_CAPSULE.offset);
 
   const engineStates = useMemo<EngineState[]>(
     () =>
