@@ -13,7 +13,8 @@
  *   W / Shift+W / S / X           → throttle ±, full, cutoff (per group)
  *   Arrow keys or right-mouse-drag → gimbal pitch / yaw (centre engines)
  *   Q / E                          → gimbal yaw (single axis in v1; see note)
- *   1 / 2 / 3                      → engine group selector for W/S
+ *   1 / 2 / 3 / 4                  → engine group selector for W/S
+ *                                    (centre / inner / outer / ship)
  *   F                              → toggle fin/flap deflection
  *
  * Gamepad axes (Gamepad API):
@@ -27,8 +28,9 @@
  *    arrow keys; true differential gimbaling across centre engines is
  *    a later refinement.
  *  - All fins share one deployment target; per-fin trim is later.
- *  - Starship `ship` engine group exists in the type but is not bound
- *    to a key (no Starship vehicle in v1).
+ *  - Starship's single `ship` engine group is selected with `4` (SLS-81);
+ *    ignite (`I`) + throttle (`W/S`) then fly it. PID/RL still can't land
+ *    the belly-flop — that autonomous guidance is a follow-up.
  */
 
 import {

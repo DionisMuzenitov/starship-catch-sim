@@ -29,6 +29,7 @@ import {
   Vec3,
   neutralControl,
   type ControlInput,
+  type EngineGroup,
   type EngineGroupBag,
   type Vehicle,
   type World,
@@ -152,6 +153,14 @@ export class PIDController implements Controller {
   private readonly flapCount: number;
   private readonly maxGimbalRad: number;
   private readonly maxFinDeflRad: number;
+  /**
+   * Distinct engine groups this vehicle actually exposes (SLS-81). The
+   * booster splits its 33 Raptors into centre/inner/outer; the Starship
+   * upper stage runs all its Raptors as one `ship` group. Throttle
+   * allocation routes to whichever groups exist — commanding a group the
+   * vehicle lacks was a silent no-op (the ship never ignited).
+   */
+  private readonly engineGroups: ReadonlySet<EngineGroup>;
   private readonly targetPosition: Vec3;
   private readonly altPid: PID;
   private readonly horizPidX: PID;
@@ -169,6 +178,7 @@ export class PIDController implements Controller {
   ) {
     this.finCount = vehicle.surfaces.filter((s) => s.kind === "grid_fin").length;
     this.flapCount = vehicle.surfaces.filter((s) => s.kind === "flap").length;
+    this.engineGroups = new Set(vehicle.engineGroupOf);
     // Plant gimbal limit (±0.262 rad for Raptor) — pre-clamping at the
     // real saturation point keeps the attitude PIDs' anti-windup honest.
     // (An earlier hardcoded ±0.35 was the gimbal RATE, not the angle.)
@@ -229,7 +239,7 @@ export class PIDController implements Controller {
       centre: enginesShouldFire && throttle.centre > 0,
       inner: enginesShouldFire && throttle.inner > 0,
       outer: enginesShouldFire && throttle.outer > 0,
-      ship: false,
+      ship: enginesShouldFire && throttle.ship > 0,
     };
 
     // --- Outer horizontal: world position → desired body-up tilt vector ---
@@ -345,9 +355,13 @@ export class PIDController implements Controller {
   }
 
   /**
-   * Map a [0..1] total-thrust command onto the three engine groups so the
-   * activation ramps in a vehicle-plausible order: centre first (always
-   * available), inner ring joining at cmd 0.2, outer ring at cmd 0.5.
+   * Map a [0..1] total-thrust command onto the vehicle's engine groups
+   * (SLS-81). A booster ramps its three groups in a vehicle-plausible
+   * order: centre first (always available), inner ring joining at cmd 0.2,
+   * outer ring at cmd 0.5. The Starship upper stage runs all its Raptors as
+   * a single `ship` group, so the command drives that group directly —
+   * commanding centre/inner/outer on a ship was a silent no-op that left it
+   * unpowered.
    */
   private allocateThrottle(
     cmd: number,
@@ -357,6 +371,15 @@ export class PIDController implements Controller {
       return { centre: 0, inner: 0, outer: 0, ship: 0 };
     }
     const x = clamp(cmd, 0, 1);
+    // Single-group stage (e.g. Starship's `ship`): every engine ramps
+    // together, driving whichever group the vehicle actually exposes. Keying
+    // on cardinality — not a hardcoded `ship` — means any future single-group
+    // stage ignites instead of silently commanding groups it lacks (the
+    // SLS-81 bug).
+    if (this.engineGroups.size === 1) {
+      const [only] = this.engineGroups;
+      return { centre: 0, inner: 0, outer: 0, ship: 0, [only!]: x };
+    }
     // Centre ramps 5× (saturating at cmd 0.2) before the inner ring
     // joins — mirrors the real Raptor activation ladder.
     const centre = clamp(x * 5, 0, 1);
