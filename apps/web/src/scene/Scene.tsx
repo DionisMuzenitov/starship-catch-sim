@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
 import { ControllerSwitcher } from "../menu/ControllerSwitcher";
+import { DocsLink } from "../menu/DocsLink";
 import { FirstRunTutorial } from "../menu/FirstRunTutorial";
 import { HelpOverlay } from "../menu/HelpOverlay";
 import { MpcServiceBanner } from "../menu/MpcServiceBanner";
@@ -94,6 +95,7 @@ export function Scene() {
       <PidTuningPanel />
       <Hud />
       {towerTuneEnabled() && <TowerTunePanel />}
+      <DocsLink />
       <ReplayDriver />
       <ReplayPlayer />
       <HelpOverlay />

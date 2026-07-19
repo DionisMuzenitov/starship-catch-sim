@@ -7,6 +7,12 @@ build/
 out/
 *.tsbuildinfo
 
+# VitePress docs site (SLS-32): build output, cache, and the report page
+# synced in from eval/reports at build time (single-sourced there).
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/benchmarks.md
+
 # Environment
 .env
 .env.*
