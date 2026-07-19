@@ -56,3 +56,5 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 016 | [Pure-TS policy runtime (JSON weights, no ONNX)](016-ts-policy-runtime.md)                         | Accepted                                    |
 | 017 | [Defer the global leaderboard to post-launch demand](017-leaderboard-defer.md)                     | Accepted                                    |
 | 018 | [Launch-site sourcing — Pad A era, PD terrain bake, CC-BY detail](018-launch-site-environment-sourcing.md) | Accepted                            |
+| 019 | [Print-kit tower pipeline (STL kit → assembled GLB)](019-print-kit-tower-pipeline.md)              | Accepted                                    |
+| 020 | [Booster collision capsule + catch-as-collision](020-booster-capsule-collision-and-catch.md)      | Proposed                                    |
