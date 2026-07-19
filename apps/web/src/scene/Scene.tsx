@@ -6,6 +6,8 @@ import { Canvas } from "@react-three/fiber";
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
 import { ControllerSwitcher } from "../menu/ControllerSwitcher";
+import { FirstRunTutorial } from "../menu/FirstRunTutorial";
+import { HelpOverlay } from "../menu/HelpOverlay";
 import { MpcServiceBanner } from "../menu/MpcServiceBanner";
 import { PidTuningPanel } from "../menu/PidTuningPanel";
 import { ScenarioPicker } from "../menu/ScenarioPicker";
@@ -94,6 +96,8 @@ export function Scene() {
       {towerTuneEnabled() && <TowerTunePanel />}
       <ReplayDriver />
       <ReplayPlayer />
+      <HelpOverlay />
+      <FirstRunTutorial />
     </div>
   );
 }

@@ -26,6 +26,8 @@
  *   C / T / G / O / N / M / V (SLS-17 camera modes — set on the camera store)
  *   H              cycle HUD mode (full / minimal / off) — SLS-18
  *   U              toggle units (metric / imperial) — SLS-18
+ *   ?              toggle the help / hotkey overlay — SLS-55
+ *   Esc            close the help overlay — SLS-55
  */
 
 import type { ManualInputState } from "@starship-catch-sim/controllers";
@@ -33,6 +35,7 @@ import type { EngineGroup } from "@starship-catch-sim/physics";
 
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
 import { useDebugStore } from "../state/debugStore.js";
+import { useHelpStore } from "../state/helpStore.js";
 import { useHudStore } from "../state/hudStore.js";
 import { useReplayStore } from "../state/replayStore.js";
 
@@ -101,6 +104,20 @@ export function installKeyboardBindings(b: Bindings): () => void {
       // each tick via the booleans, so repeat events add nothing.
       return;
     }
+    // Help overlay (SLS-55). Matched on `ev.key` because "?" is Shift+Slash and
+    // has no stable `ev.code`. Not in SIM_KEYS, so it stays live during replay.
+    if (ev.key === "?") {
+      useHelpStore.getState().toggleHelp();
+      return;
+    }
+    if (ev.code === "Escape") {
+      useHelpStore.getState().closeHelp();
+      return;
+    }
+    // While the help overlay is open it behaves as a modal: swallow every other
+    // key so sim / manual / camera controls (R, Space, [ ], B, gimbal, …) can't
+    // fire against the live scene hidden behind it (`?` and Esc handled above).
+    if (useHelpStore.getState().helpOpen) return;
     switch (ev.code) {
       case "KeyW":
         if (ev.shiftKey) b.input.fullThrottle = true;
