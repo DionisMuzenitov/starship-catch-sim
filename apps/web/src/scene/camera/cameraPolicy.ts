@@ -19,6 +19,9 @@ import type { CameraMode } from "../../state/cameraStore";
 
 export type CameraControlPolicy = "rig" | "orbit-track" | "orbit-free";
 
+/** Modes the imperative `CameraRig` drives (everything else is OrbitControls). */
+export type RigMode = Extract<CameraMode, "onboard" | "cinematic">;
+
 export const MODE_POLICY: Record<CameraMode, CameraControlPolicy> = {
   // Focused cams: orbit + zoom around the tracked booster, auto-following it.
   chase: "orbit-track",
@@ -34,4 +37,9 @@ export const MODE_POLICY: Record<CameraMode, CameraControlPolicy> = {
 /** True when `OrbitControls` (not the rig) owns the camera in this mode. */
 export function isOrbitMode(mode: CameraMode): boolean {
   return MODE_POLICY[mode] !== "rig";
+}
+
+/** Narrowing guard: true when the imperative `CameraRig` drives this mode. */
+export function isRigMode(mode: CameraMode): mode is RigMode {
+  return MODE_POLICY[mode] === "rig";
 }

@@ -19,17 +19,12 @@ import { MathUtils, Vector3 } from "three";
 import { useCameraStore, type CameraMode } from "../../state/cameraStore";
 import { useSimStore } from "../../state/simStore";
 
-import { MODE_POLICY } from "./cameraPolicy";
+import { isRigMode, type RigMode } from "./cameraPolicy";
 import { DEFAULT_ENV, modeTargetFor } from "./modes";
 
-/** Per-mode damping time constants (seconds). Only the `rig` modes (onboard,
- *  cinematic) are read here; the orbit modes bail before the damping (their
- *  entries are kept for a total map). */
-const TAU_BY_MODE: Record<CameraMode, number> = {
-  chase: 0.4,
-  tower: 0.6,
-  ground: 0.6,
-  free: 1.0,
+/** Per-mode damping time constants (seconds). Only the rig modes reach the
+ *  damping; the orbit modes are owned by OrbitControls and bail first. */
+const TAU_BY_MODE: Record<RigMode, number> = {
   onboard: 0.2,
   cinematic: 1.0,
 };
@@ -47,7 +42,7 @@ export function CameraRig() {
     // <OrbitCameraRig> + OrbitControls; the rig only drives the scripted
     // first-person / movie modes. Remember the mode so re-entering a rig mode
     // still snaps its lookAt.
-    if (MODE_POLICY[mode] !== "rig") {
+    if (!isRigMode(mode)) {
       prevModeRef.current = mode;
       return;
     }

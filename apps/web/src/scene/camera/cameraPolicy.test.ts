@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CameraMode } from "../../state/cameraStore";
 
-import { isOrbitMode, MODE_POLICY } from "./cameraPolicy";
+import { isOrbitMode, isRigMode, MODE_POLICY } from "./cameraPolicy";
 
 const ALL_MODES: readonly CameraMode[] = [
   "chase",
@@ -38,5 +38,14 @@ describe("cameraPolicy (SLS-58)", () => {
     expect(isOrbitMode("free")).toBe(true);
     expect(isOrbitMode("onboard")).toBe(false);
     expect(isOrbitMode("cinematic")).toBe(false);
+  });
+
+  it("isRigMode is the complement of isOrbitMode", () => {
+    for (const mode of ALL_MODES) {
+      expect(isRigMode(mode)).toBe(!isOrbitMode(mode));
+    }
+    expect(isRigMode("onboard")).toBe(true);
+    expect(isRigMode("cinematic")).toBe(true);
+    expect(isRigMode("chase")).toBe(false);
   });
 });
