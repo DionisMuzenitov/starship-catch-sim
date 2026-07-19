@@ -1,7 +1,9 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
   BoosterDescentCalm,
+  ShipDescentCalm,
   Vec3,
   simStep,
   type ControlInput,
@@ -132,6 +134,81 @@ describe("PIDController", () => {
     const ctl = pid.step(w, 1 / 250);
     expect(ctl.enginesOn.centre).toBe(true);
     expect(ctl.engineGroups.centre).toBeGreaterThan(0);
+  });
+
+  it("commands the ship engine group on a Starship vehicle (SLS-81)", () => {
+    // Regression: PID hardcoded centre/inner/outer, which the ship (all
+    // Raptors in one `ship` group) lacks — so it commanded dead groups and
+    // never ignited (0 kg burned). Allocation must now route to `ship`.
+    const target = ShipDescentCalm.targetCatch.targetPosition;
+    const pid = new PIDController(
+      ShipDescentCalm.vehicle,
+      target,
+      () => DEFAULT_PID_GAINS,
+    );
+    // Below ignition altitude, descending faster than the profile wants →
+    // the altitude loop calls for braking thrust.
+    const ic = ShipDescentCalm.initialWorld;
+    const w = {
+      ...ic,
+      rigidBody: {
+        ...ic.rigidBody,
+        position: Vec3.of(target.x, target.y + 3_000, target.z),
+        velocity: Vec3.of(0, -700, 0),
+      },
+    };
+    const ctl = pid.step(w, 1 / 250);
+    expect(ctl.enginesOn.ship).toBe(true);
+    expect(ctl.engineGroups.ship).toBeGreaterThan(0);
+    // Booster groups stay dead — the ship has none of them.
+    expect(ctl.engineGroups.centre).toBe(0);
+    expect(ctl.engineGroups.inner).toBe(0);
+    expect(ctl.engineGroups.outer).toBe(0);
+
+    // Closed-loop: the ship actually consumes propellant now.
+    let world = w;
+    const fuel0 = world.mass.propellantMass;
+    for (let i = 0; i < 250; i++) {
+      const u = pid.step(world, 1 / 250);
+      world = simStep(world, ShipDescentCalm.vehicle, u, 1 / 250, ShipDescentCalm.env);
+    }
+    expect(world.mass.propellantMass).toBeLessThan(fuel0);
+  });
+
+  it("property: ship allocation stays in [0,1] with booster groups dead (SLS-81)", () => {
+    // Invariants of the single-group allocation branch, across the descent
+    // envelope: ship throttle ∈ [0,1], the booster groups the ship lacks are
+    // always zero, and ignition tracks throttle exactly.
+    const target = ShipDescentCalm.targetCatch.targetPosition;
+    const ic = ShipDescentCalm.initialWorld;
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 80_000, noNaN: true }),
+        fc.double({ min: -800, max: 50, noNaN: true }),
+        (dh, vy) => {
+          const pid = new PIDController(
+            ShipDescentCalm.vehicle,
+            target,
+            () => DEFAULT_PID_GAINS,
+          );
+          const w = {
+            ...ic,
+            rigidBody: {
+              ...ic.rigidBody,
+              position: Vec3.of(target.x, target.y + dh, target.z),
+              velocity: Vec3.of(0, vy, 0),
+            },
+          };
+          const u = pid.step(w, 1 / 250);
+          expect(u.engineGroups.ship).toBeGreaterThanOrEqual(0);
+          expect(u.engineGroups.ship).toBeLessThanOrEqual(1);
+          expect(u.engineGroups.centre).toBe(0);
+          expect(u.engineGroups.inner).toBe(0);
+          expect(u.engineGroups.outer).toBe(0);
+          expect(u.enginesOn.ship).toBe(u.engineGroups.ship > 0);
+        },
+      ),
+    );
   });
 
   it("reset() clears the altitude integrator between runs", () => {

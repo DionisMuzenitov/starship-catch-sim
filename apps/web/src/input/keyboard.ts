@@ -17,7 +17,7 @@
  *   I              ignite (all groups on)
  *   Arrow keys     gimbal pitch / yaw
  *   Q / E          gimbal yaw (synonyms for ←/→)
- *   1 / 2 / 3      select engine group (centre / inner / outer)
+ *   1 / 2 / 3 / 4  select engine group (centre / inner / outer / ship)
  *   F              toggle fin/flap deployment
  *   Space          pause / resume
  *   [ / ]          time scale ÷2 / ×2

@@ -1,6 +1,8 @@
 import {
   BoosterVehicle,
+  ShipDescentCalm,
   boosterDescentScenario,
+  simStep,
 } from "@starship-catch-sim/physics";
 import { describe, expect, it } from "vitest";
 
@@ -80,6 +82,32 @@ describe("ManualController", () => {
 
     expect(out.engineGroups.outer).toBeGreaterThan(0);
     expect(out.engineGroups.centre).toBe(0);
+  });
+
+  it("flies the Starship ship engine group: select 4, ignite, throttle → burns fuel (SLS-81)", () => {
+    // Regression: the ship's 6 Raptors are all one `ship` group. Before
+    // SLS-81 no key selected it and PID/RL ignored it, so the ship scenario
+    // looked dead. Manual selects the group (`4`), ignites, and throttles.
+    const input = createManualInputState();
+    const ctl = new ManualController(ShipDescentCalm.vehicle, input);
+    input.selectedGroup = "ship";
+    input.ignite = true;
+    input.fullThrottle = true;
+
+    const out = ctl.step(ShipDescentCalm.initialWorld, DT);
+    expect(out.engineGroups.ship).toBe(1);
+    expect(out.enginesOn.ship).toBe(true);
+    // Booster groups stay dead — the ship has none of them.
+    expect(out.engineGroups.centre).toBe(0);
+
+    // Closed-loop: stepping the plant actually consumes propellant.
+    let world = ShipDescentCalm.initialWorld;
+    const fuel0 = world.mass.propellantMass;
+    for (let i = 0; i < 250; i++) {
+      const u = ctl.step(world, DT);
+      world = simStep(world, ShipDescentCalm.vehicle, u, DT, ShipDescentCalm.env);
+    }
+    expect(world.mass.propellantMass).toBeLessThan(fuel0);
   });
 
   it("right-mouse-drag pointerDx/Dy feed gimbal targets", () => {
