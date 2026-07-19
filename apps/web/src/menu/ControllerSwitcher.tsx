@@ -46,7 +46,7 @@ export function ControllerSwitcher() {
 
   return (
     <div
-      className="absolute left-3 top-24 z-10 select-none rounded-md bg-black/60 px-2 py-1 font-mono text-[11px] text-white/90"
+      className="absolute left-3 top-20 z-10 select-none rounded-md bg-black/60 px-2 py-1 font-mono text-[11px] text-white/90"
       data-testid="controller-switcher"
     >
       <span className="mr-2 opacity-70">controller:</span>
