@@ -66,7 +66,11 @@ const boosterEngineGroupOf: readonly EngineGroup[] = [
   ...Array<EngineGroup>(20).fill("outer"),
 ];
 
-const BOOSTER_REF_AREA = Math.PI * 4.5 * 4.5;
+/** Booster/ship body radius (m) — 9 m outer diameter. Single-sourced across the
+ *  drag reference areas and the collision capsules (SLS-28). */
+export const BODY_RADIUS_M = 4.5;
+
+const BOOSTER_REF_AREA = Math.PI * BODY_RADIUS_M * BODY_RADIUS_M;
 const BOOSTER_CD = 0.7;
 
 export const BoosterVehicle: Vehicle = defineVehicle({
@@ -87,7 +91,7 @@ const shipEngineGroupOf: readonly EngineGroup[] = Array<EngineGroup>(
   StarshipEngines.length,
 ).fill("ship");
 
-const SHIP_REF_AREA = Math.PI * 4.5 * 4.5;
+const SHIP_REF_AREA = Math.PI * BODY_RADIUS_M * BODY_RADIUS_M;
 const SHIP_CD = 0.9;
 
 export const ShipVehicle: Vehicle = defineVehicle({
@@ -99,17 +103,24 @@ export const ShipVehicle: Vehicle = defineVehicle({
 });
 
 /**
- * Collision capsules (ADR-020). Core-segment half-length = body half-length −
- * radius, so the swept capsule spans the full body. Booster 71 m × 9 m,
- * Starship 50 m × 9 m; both radius 4.5 m (single-sourced with the drag ref area
- * above and the mass presets).
+ * Collision capsules (ADR-020). These match the DRAWN mesh (what the player sees
+ * hit the arms), not the physics hull — the booster GLB renders ~79 m and with
+ * its origin at the base, so `halfLength` (35) and `offset` (34, CoM → capsule
+ * centre along body +Y) are owner-tuned in `/sandbox/booster`, not the
+ * `bodyHalf − radius` formula. Radius is single-sourced (`BODY_RADIUS_M`).
  */
-// `offset` (CoM → capsule centre, along body +Y) is owner-tuned in
-// `/sandbox/booster` to sit the collider on the drawn mesh (origin at the base).
-export const BOOSTER_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 35, offset: 34 };
-// Ship capsule offset is an untuned analog of the booster's (mesh origin at
-// base ⇒ offset ≈ halfLength); re-tune in the lab if the ship scenario is revived.
-export const SHIP_CAPSULE: BodyCapsule = { radius: 4.5, halfLength: 50 / 2 - 4.5, offset: 50 / 2 - 4.5 };
+export const BOOSTER_CAPSULE: BodyCapsule = {
+  radius: BODY_RADIUS_M,
+  halfLength: 35,
+  offset: 34,
+};
+// Ship capsule is an untuned analog of the booster's (mesh origin at base ⇒
+// offset ≈ halfLength); re-tune in the lab if the ship scenario is revived.
+export const SHIP_CAPSULE: BodyCapsule = {
+  radius: BODY_RADIUS_M,
+  halfLength: 50 / 2 - BODY_RADIUS_M,
+  offset: 50 / 2 - BODY_RADIUS_M,
+};
 
 // ---------------------------------------------------------------------------
 // Catch envelope + verdict shape

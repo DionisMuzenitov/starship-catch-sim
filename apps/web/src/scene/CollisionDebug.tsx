@@ -13,12 +13,12 @@ import { useFrame } from "@react-three/fiber";
 import { BOOSTER_CAPSULE, scenarioById } from "@starship-catch-sim/physics";
 import type { Group } from "three";
 
-import { drawnSiteCollision } from "../sim/siteCollision";
+import { ARM_SEGMENTS, drawnSiteCollision } from "../sim/siteCollision";
 import { useScenarioStore } from "../state/scenarioStore";
 import { useSimStore } from "../state/simStore";
 
 const MAX_STRUCT = 4;
-const MAX_ARMS = 2 * 15;
+const MAX_ARMS = 2 * ARM_SEGMENTS;
 
 export function CollisionDebug(): React.JSX.Element {
   const scenarioId = useScenarioStore((s) => s.currentScenarioId);
