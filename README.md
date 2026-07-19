@@ -7,6 +7,8 @@
 
 **▶ Live demo: <https://dionismuzenitov.github.io/starship-catch-sim/>** — manual flight, PID guidance, all scenarios, replay, and the Monte-Carlo evaluator run entirely in your browser. (MPC guidance needs a local service — see [Running MPC locally](#running-mpc-locally).)
 
+**📖 Docs: <https://dionismuzenitov.github.io/starship-catch-sim/docs/>** — physics derivations, how each controller works, the ADR index, benchmarks, and a "[write your own controller](https://dionismuzenitov.github.io/starship-catch-sim/docs/api/controllers)" guide.
+
 > Work is tracked in Jira: [SLS board](https://yanismuzenitov.atlassian.net/jira/software/projects/SLS/boards/67).
 
 ## Pitch
@@ -105,8 +107,10 @@ gate (coast-phase ignition planning) met on 2026-07-05 (≥50 % catch, SLS-47).
 MPC's 53 / 50 / 50 % — see [Results](#results).
 
 ³ The static [live demo](https://dionismuzenitov.github.io/starship-catch-sim/)
-is deployed (SLS-49, pulled forward from M7); leaderboard, replay-verification
-server, and docs site remain planned (SLS-31/32/33).
+is deployed (SLS-49, pulled forward from M7) and the
+[docs site](https://dionismuzenitov.github.io/starship-catch-sim/docs/) is live
+(SLS-32); leaderboard and replay-verification server remain planned
+(SLS-31/33).
 
 ## Deep dives
 

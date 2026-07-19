@@ -4,6 +4,10 @@ name: Deploy demo (GitHub Pages)
 # main (post-merge), plus manual re-runs. The bundle is client-side only;
 # the MPC guidance service is declared absent (VITE_MPC_URL="") so the app
 # flies its PID fallback and shows a banner instead of failing — SLS-49.
+#
+# The VitePress docs site (SLS-32) is built under /starship-catch-sim/docs/ and
+# nested into the same single Pages artifact at apps/web/dist/docs, so the app
+# lives at the repo root and the docs at /docs.
 
 on:
   push:
@@ -58,6 +62,17 @@ jobs:
           VITE_BASE_PATH: /starship-catch-sim/
           VITE_MPC_URL: ""
         run: pnpm --filter @starship-catch-sim/web build
+
+      - name: Build docs site (SLS-32)
+        # Nests under the app's Pages base at /starship-catch-sim/docs/.
+        env:
+          DOCS_BASE_PATH: /starship-catch-sim/docs/
+        run: pnpm --filter @starship-catch-sim/docs build
+
+      - name: Nest docs into the Pages artifact at /docs
+        run: |
+          mkdir -p apps/web/dist/docs
+          cp -r docs/.vitepress/dist/. apps/web/dist/docs/
 
       - name: SPA fallback (serve index.html for unknown paths)
         run: cp apps/web/dist/index.html apps/web/dist/404.html
