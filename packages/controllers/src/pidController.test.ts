@@ -60,6 +60,56 @@ describe("PIDController", () => {
     }
   });
 
+  it("keeps the body roll rate bounded over a full descent (SLS-77)", () => {
+    // Regression: uniform grid-fin deflection commanded a constant roll the
+    // gimbal can't counter, spinning the booster to ~900°/s (15+ rad/s). The
+    // roll-rate damper must keep it bounded. Threshold ≫ the ~0.1 rad/s the
+    // fixed controller reaches, but ≪ the old blow-up.
+    const pid = makeController();
+    let world = BoosterDescentCalm.initialWorld;
+    const dt = 1 / 250;
+    let maxRoll = 0;
+    let maxOmega = 0;
+    for (let i = 0; i < 250 * 130 && world.rigidBody.position.y > 0; i++) {
+      const ctl = pid.step(world, dt);
+      world = simStep(world, BoosterDescentCalm.vehicle, ctl, dt, BoosterDescentCalm.env);
+      const w = world.rigidBody.angularVelocity;
+      maxRoll = Math.max(maxRoll, Math.abs(w.y));
+      maxOmega = Math.max(maxOmega, Math.hypot(w.x, w.y, w.z));
+    }
+    // ~15.6 rad/s (895°/s) before the fix; ~0.1 rad/s after. 3 rad/s ≈ 170°/s
+    // is a wide margin that still fails hard on the old spin-up.
+    expect(maxRoll).toBeLessThan(3);
+    expect(maxOmega).toBeLessThan(3.5);
+  });
+
+  it("actively damps a seeded roll disturbance (SLS-77 sign guard)", () => {
+    // The calm descent never excites roll, so a wrong-sign (or zero) fin
+    // damper would still pass the "bounded roll" test above. Here we inject a
+    // real roll and require it to DECAY — a positive-feedback damper would
+    // amplify it instead. Place the booster low + descending so the fins bite.
+    const pid = makeController();
+    const ic = BoosterDescentCalm.initialWorld;
+    let world = {
+      ...ic,
+      rigidBody: {
+        ...ic.rigidBody,
+        position: Vec3.of(0, 5_000, 0),
+        velocity: Vec3.of(0, -300, 0),
+        angularVelocity: Vec3.of(0, 2, 0), // 2 rad/s roll, no pitch/yaw
+      },
+    };
+    const dt = 1 / 250;
+    const roll0 = Math.abs(world.rigidBody.angularVelocity.y);
+    for (let i = 0; i < 250 * 3; i++) {
+      const ctl = pid.step(world, dt);
+      world = simStep(world, BoosterDescentCalm.vehicle, ctl, dt, BoosterDescentCalm.env);
+    }
+    // Clearly decaying from the seeded 2 rad/s (a flipped-sign damper would
+    // instead amplify past roll0, and a zero gain would hold it near 2 rad/s).
+    expect(Math.abs(world.rigidBody.angularVelocity.y)).toBeLessThan(roll0 * 0.75);
+  });
+
   it("keeps engines off above the ignition altitude (initial 65 km)", () => {
     const pid = makeController({ ignitionAltitudeM: 6_000 });
     const ctl = pid.step(BoosterDescentCalm.initialWorld, 1 / 250);

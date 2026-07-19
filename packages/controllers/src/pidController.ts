@@ -60,6 +60,13 @@ export type PIDControllerGains = {
   maxTiltRad: number;
   /** Altitude above tower (m) at which engines ignite for the descent burn. */
   ignitionAltitudeM: number;
+  /** Roll rate-SAS gain: grid fins deflected to oppose the body ROLL rate
+   *  (about the long axis) — the ONLY actuator with roll authority (a single
+   *  gimbaled engine makes no torque about the thrust axis). The old constant
+   *  uniform-fin deploy commanded a steady roll the gimbal can't counter,
+   *  spinning the booster to ~900°/s until it tumbled; this nulls it and keeps
+   *  the max body rate ~60°/s so the baseline misses gracefully (SLS-77). */
+  finRollDampGain: number;
 };
 
 /**
@@ -118,6 +125,7 @@ export const DEFAULT_PID_GAINS: PIDControllerGains = {
   finalApproachVyMps: -8,
   ignitionAltitudeM: 60_000,
   maxTiltRad: 0.3,
+  finRollDampGain: 2.5,
 };
 
 /**
@@ -143,6 +151,7 @@ export class PIDController implements Controller {
   private readonly finCount: number;
   private readonly flapCount: number;
   private readonly maxGimbalRad: number;
+  private readonly maxFinDeflRad: number;
   private readonly targetPosition: Vec3;
   private readonly altPid: PID;
   private readonly horizPidX: PID;
@@ -165,6 +174,12 @@ export class PIDController implements Controller {
     // (An earlier hardcoded ±0.35 was the gimbal RATE, not the angle.)
     this.maxGimbalRad = vehicle.engines.reduce(
       (m, e) => Math.max(m, e.maxGimbal),
+      0,
+    );
+    // Plant grid-fin deflection limit, so the roll-damper command saturates
+    // exactly where the fin does (not a hand-picked ±0.35 that overshoots it).
+    this.maxFinDeflRad = vehicle.surfaces.reduce(
+      (m, s) => (s.kind === "grid_fin" ? Math.max(m, s.maxDeflection) : m),
       0,
     );
     this.targetPosition = targetPosition;
@@ -246,11 +261,7 @@ export class PIDController implements Controller {
       bodyUpWorld.z,
       dt,
     );
-    const gimbalYawCmd = this.attPidYaw.update(
-      tiltSetpointX,
-      bodyUpWorld.x,
-      dt,
-    );
+    const gimbalYawCmd = this.attPidYaw.update(tiltSetpointX, bodyUpWorld.x, dt);
 
     // Pre-clamp at the plant's actual gimbal limit so anti-windup
     // unwinds exactly where the engine saturates.
@@ -289,6 +300,22 @@ export class PIDController implements Controller {
       });
     }
 
+    // Grid fins as a ROLL-RATE damper (SLS-77). Uniform fin deflection makes a
+    // roll torque about the long axis (the fins share a tangential swirl
+    // normal), so the old constant 0.25 deploy commanded a steady roll the
+    // gimbal can't counter — spinning the booster to ~900°/s. Instead deflect
+    // to oppose the measured roll rate, only where the air is dense enough for
+    // the fins to bite (below 50 km).
+    const rollRate = world.rigidBody.angularVelocity.y; // body roll rate
+    const finRollCmd =
+      heightAboveTarget < 50_000
+        ? clamp(
+            -g.finRollDampGain * rollRate,
+            -this.maxFinDeflRad,
+            this.maxFinDeflRad,
+          )
+        : 0;
+
     const base = neutralControl(this.finCount, this.flapCount);
     return {
       ...base,
@@ -296,8 +323,7 @@ export class PIDController implements Controller {
       enginesOn,
       gimbalPitch,
       gimbalYaw,
-      // Fins fully deployed during descent for aero damping.
-      fins: new Array(this.finCount).fill(heightAboveTarget < 50_000 ? 0.25 : 0),
+      fins: new Array(this.finCount).fill(finRollCmd),
       flaps: new Array(this.flapCount).fill(0),
     };
   }
