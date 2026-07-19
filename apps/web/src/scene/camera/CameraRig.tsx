@@ -1,12 +1,12 @@
 /**
- * R3F camera driver. Each rAF:
- *  1. Read current mode + world from the zustand stores.
- *  2. Resolve a per-mode target via `modeTargetFor`. `null` ⇒ free; we
- *     leave the camera to `<OrbitControls>`.
- *  3. Damp the three.js camera position and an internal lookAt vector
- *     toward the target with a per-mode τ.
- *  4. Clamp camera Y above ground so it can't tunnel below.
- *  5. Apply `camera.lookAt(internalLookAt)`.
+ * R3F camera driver for the SCRIPTED modes only (onboard, cinematic). The other
+ * modes are user-controlled and owned by `OrbitCameraRig` (chase, tower) or
+ * `FreeLookRig` (ground, free); this rig bails for them (see `isRigMode`). Each
+ * rAF, for a rig mode:
+ *  1. Resolve a per-mode target via `modeTargetFor`.
+ *  2. Damp the three.js camera position + an internal lookAt vector toward it
+ *     with a per-mode τ.
+ *  3. Clamp camera Y above ground; apply `camera.lookAt(internalLookAt)`.
  *
  * State (`prevMode`, the damped `lookAt` Vector3) is kept in refs so the
  * component never re-renders.

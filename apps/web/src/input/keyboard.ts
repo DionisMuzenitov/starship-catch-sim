@@ -33,6 +33,7 @@
 import type { ManualInputState } from "@starship-catch-sim/controllers";
 import type { EngineGroup } from "@starship-catch-sim/physics";
 
+import { flyDirForCode, flyInput } from "../scene/camera/flyInput.js";
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
 import { useDebugStore } from "../state/debugStore.js";
 import { useHelpStore } from "../state/helpStore.js";
@@ -118,6 +119,17 @@ export function installKeyboardBindings(b: Bindings): () => void {
     // key so sim / manual / camera controls (R, Space, [ ], B, gimbal, …) can't
     // fire against the live scene hidden behind it (`?` and Esc handled above).
     if (useHelpStore.getState().helpOpen) return;
+    // Free-cam fly (SLS-58): in the `free` camera mode WASD/RF drive the camera
+    // (via FreeLookRig), not the vehicle — consume them so throttle/fins/reset
+    // don't also fire. Camera-switch + HUD keys are not fly keys, so they pass
+    // through and still work.
+    if (useCameraStore.getState().mode === "free") {
+      const dir = flyDirForCode(ev.code);
+      if (dir) {
+        flyInput[dir] = true;
+        return;
+      }
+    }
     switch (ev.code) {
       case "KeyW":
         if (ev.shiftKey) b.input.fullThrottle = true;
@@ -212,6 +224,10 @@ export function installKeyboardBindings(b: Bindings): () => void {
 
   const onKeyUp = (ev: KeyboardEvent) => {
     if (shouldIgnoreEvent(ev.target)) return;
+    // Always release any fly-move flag (SLS-58), regardless of camera mode, so a
+    // key held while switching out of `free` can't leave the camera drifting.
+    const flyDir = flyDirForCode(ev.code);
+    if (flyDir) flyInput[flyDir] = false;
     switch (ev.code) {
       case "KeyW":
         b.input.throttleUp = false;

@@ -9,10 +9,17 @@
 
 import { Quat, Vec3, type World } from "@starship-catch-sim/physics";
 
-import { MECHAZILLA_TOWER_HEIGHT_M } from "../MechazillaTower";
+import { SITE_OFFSET } from "../../state/towerTuneStore";
 
 import type { CameraMode } from "../../state/cameraStore";
 import { cinematicTarget } from "./cinematicRigs";
+
+// Visual ground level near the launch site. The terrain + site are drawn in a
+// group shifted up by SITE_OFFSET.y (~63 m) so the drawn catch cradle meets the
+// physics catch point (SLS-76), so "the ground" the player sees near the tower
+// sits at ≈ SITE_OFFSET.y, NOT y=0. Ground/free cams + the camera floor key off
+// this so they don't spawn underground.
+export const SITE_GROUND_Y_M = SITE_OFFSET[1];
 
 export type CameraTarget = {
   position: Vec3;
@@ -36,15 +43,24 @@ const CHASE_BASE_HEIGHT = 30;
 const CHASE_HEIGHT_PER_M = 0.1;
 const CHASE_MAX_HEIGHT = 200;
 
-// Ground tripod — a defensible position south-east of the pad.
-const GROUND_CAM_POS = Vec3.of(300, 5, 300);
+// Tower catch cam (SLS-58): orbits a FIXED pivot at the chopstick catch point,
+// seeded from the side at ~arm height so you can frame the catch and rotate /
+// zoom around it. Pivot matches the free-cam tune target (the chopsticks).
+const TOWER_CATCH_PIVOT = Vec3.of(8.5, 91, 0);
+const TOWER_CAM_POS = Vec3.of(90, 95, 50);
 
-// Onboard — body-frame offsets so the camera tracks the rocket's
-// orientation. (0, 40, 0) sits near the booster nose (CoM ~28-35 m of
-// 71 m total height); looking ~100 m down the body axis keeps the lookAt
-// well behind the camera so the orientation is unambiguous.
-const ONBOARD_OFFSET_BODY = Vec3.of(0, 40, 0);
-const ONBOARD_LOOK_BODY = Vec3.of(0, -100, 0);
+// Ground cam (SLS-58): a human standing off to the side of the tower, on the
+// ground (a few m above the site ground level), looking up toward the catch.
+// `FreeLookRig` seeds position + look from these, then the user looks around.
+const GROUND_STAND_POS = Vec3.of(100, SITE_GROUND_Y_M + 5, 60);
+const GROUND_LOOK_AT = Vec3.of(8.5, 91, 0);
+
+// Onboard — body-frame offsets so the camera tracks the rocket's orientation.
+// Pulled up + behind the nose so it sits OUTSIDE the hull (SLS-58 owner
+// feedback: the old (0,40,0) mount was inside the booster) and looks down the
+// body toward the engines / ground.
+const ONBOARD_OFFSET_BODY = Vec3.of(0, 45, -20);
+const ONBOARD_LOOK_BODY = Vec3.of(0, -90, 20);
 
 const clamp = (v: number, lo: number, hi: number) =>
   v < lo ? lo : v > hi ? hi : v;
@@ -68,21 +84,24 @@ function chaseTarget(world: World, env: CameraEnv): CameraTarget {
   };
 }
 
-function towerTarget(world: World): CameraTarget {
-  // Perched just above and outboard of the truss on the chopstick (+X) side:
-  // the tower structure is mounted in the main scene now (SLS-57), so a
-  // camera at the exact top-centre would sit inside the lattice and clip
-  // through beams when looking down at the catch.
+function towerTarget(): CameraTarget {
+  // Off to the side at ~arm height, centred on the fixed catch point — the
+  // caller orbits + zooms around that pivot (SLS-58) to frame the catch. Fixed
+  // (not booster-tracking) so the tower/catch stays centred as the booster
+  // arrives.
   return {
-    position: Vec3.of(10, MECHAZILLA_TOWER_HEIGHT_M + 3, 0),
-    lookAt: world.rigidBody.position,
+    position: TOWER_CAM_POS,
+    lookAt: TOWER_CATCH_PIVOT,
   };
 }
 
-function groundTarget(world: World): CameraTarget {
+function groundTarget(): CameraTarget {
+  // Seed for the ground first-person cam (SLS-58): a fixed human vantage on the
+  // ground beside the tower, looking up toward the catch. FreeLookRig derives
+  // its initial yaw/pitch from this.
   return {
-    position: GROUND_CAM_POS,
-    lookAt: world.rigidBody.position,
+    position: GROUND_STAND_POS,
+    lookAt: GROUND_LOOK_AT,
   };
 }
 
@@ -115,9 +134,9 @@ export function modeTargetFor(
     case "chase":
       return chaseTarget(world, env);
     case "tower":
-      return towerTarget(world);
+      return towerTarget();
     case "ground":
-      return groundTarget(world);
+      return groundTarget();
     case "onboard":
       return onboardTarget(world);
     case "cinematic":

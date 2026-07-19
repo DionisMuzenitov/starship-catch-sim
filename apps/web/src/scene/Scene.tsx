@@ -17,6 +17,7 @@ import { BoosterFlight } from "../sim/BoosterFlight";
 import { useSimRunner } from "../sim/useSimRunner";
 
 import { CameraRig } from "./camera/CameraRig";
+import { FreeLookRig } from "./camera/FreeLookRig";
 import { OrbitCameraRig } from "./camera/OrbitCameraRig";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "./constants";
 import { DebugHud, DebugSampler, type DebugSample } from "./DebugOverlay";
@@ -70,9 +71,11 @@ export function Scene() {
         <ImpactReticle />
         <DragTrajectoryOverlay />
         <MpcPlanOverlay />
-        {/* Per-mode camera controls (SLS-58): orbit/zoom on focused cams,
-            free-look/zoom/pan on ground + free. Owns the scene's OrbitControls. */}
+        {/* Per-mode camera controls (SLS-58). CameraRig: onboard/cinematic.
+            OrbitCameraRig: chase (follow) + tower (fixed pivot), orbit + zoom.
+            FreeLookRig: ground (look-in-place) + free (fly). */}
         <OrbitCameraRig />
+        <FreeLookRig />
         <PostFX />
         <DebugSampler onSample={setSample} />
       </Canvas>

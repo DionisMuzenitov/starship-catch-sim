@@ -6,10 +6,8 @@ import {
 } from "@starship-catch-sim/physics";
 import { describe, expect, it } from "vitest";
 
-import { MECHAZILLA_TOWER_HEIGHT_M } from "../MechazillaTower";
-
 import { __forTests } from "./cinematicRigs";
-import { DEFAULT_ENV, modeTargetFor } from "./modes";
+import { DEFAULT_ENV, modeTargetFor, SITE_GROUND_Y_M } from "./modes";
 
 const baseWorld: World = boosterDescentScenario().initialWorld;
 
@@ -48,27 +46,32 @@ describe("modeTargetFor", () => {
     expect(high.position.y - 5000).toBeLessThanOrEqual(200 + 1e-6);
   });
 
-  it("tower camera perches above and outboard of the MechazillaTower top", () => {
+  it("tower camera frames the fixed catch point from the side (SLS-58)", () => {
     const t = modeTargetFor("tower", worldAtAltitude(800), DEFAULT_ENV, 0)!;
-    expect(t.position).toEqual(Vec3.of(10, MECHAZILLA_TOWER_HEIGHT_M + 3, 0));
-    expect(t.lookAt).toEqual(worldAtAltitude(800).rigidBody.position);
+    // Off to the side at arm height, centred on the fixed catch point — not the
+    // (moving) booster, so the catch stays framed.
+    expect(t.position).toEqual(Vec3.of(90, 95, 50));
+    expect(t.lookAt).toEqual(Vec3.of(8.5, 91, 0));
   });
 
-  it("ground camera is at the fixed tripod position", () => {
+  it("ground camera seeds a fixed human vantage beside the tower (SLS-58)", () => {
     const g = modeTargetFor("ground", worldAtAltitude(800), DEFAULT_ENV, 0)!;
-    expect(g.position).toEqual(Vec3.of(300, 5, 300));
-    expect(g.lookAt).toEqual(worldAtAltitude(800).rigidBody.position);
+    // Stands a few m above the site ground level (the terrain is shifted up by
+    // SITE_OFFSET.y), not at y=0, looking up toward the catch.
+    expect(g.position).toEqual(Vec3.of(100, SITE_GROUND_Y_M + 5, 60));
+    expect(g.position.y).toBeGreaterThan(SITE_GROUND_Y_M);
+    expect(g.lookAt).toEqual(Vec3.of(8.5, 91, 0));
   });
 
   it("onboard places camera above CoM along the body axis and looks down it", () => {
     const o = modeTargetFor("onboard", worldAtAltitude(800), DEFAULT_ENV, 0)!;
-    // Upright booster: body +Y == world +Y, so camera sits 40 m above CoM
-    // and looks ~100 m below the camera (well below CoM).
-    expect(o.position.y).toBeCloseTo(840, 6);
+    // Upright booster: body +Y == world +Y, so camera sits 45 m above CoM
+    // (pulled outside the hull, SLS-58) and looks well below itself.
+    expect(o.position.y).toBeCloseTo(845, 6);
     expect(o.lookAt.y).toBeLessThan(o.position.y);
   });
 
-  it("onboard tracks attitude: 90° pitch swings the offset onto +X", () => {
+  it("onboard tracks attitude: 90° pitch swings the offset onto -X", () => {
     const q = Quat.fromAxisAngle(Vec3.of(0, 0, 1), Math.PI / 2);
     const world: World = {
       ...baseWorld,
@@ -79,9 +82,9 @@ describe("modeTargetFor", () => {
       },
     };
     const o = modeTargetFor("onboard", world, DEFAULT_ENV, 0)!;
-    // After +π/2 around Z: body +Y → world -X (right-handed), so the
-    // 40 m body-up offset lands at x ~ -40 from the rocket.
-    expect(o.position.x).toBeCloseTo(-40, 5);
+    // After +π/2 around Z: body +Y → world -X, so the 45 m body-up offset lands
+    // at x ~ -45 from the rocket (and the body-Z offset stays on world Z).
+    expect(o.position.x).toBeCloseTo(-45, 5);
     expect(o.position.y).toBeCloseTo(800, 5);
   });
 
