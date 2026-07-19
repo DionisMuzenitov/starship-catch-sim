@@ -30,7 +30,9 @@ import {
 import { Group } from "three";
 
 import { type MechazillaApi } from "./MechazillaTower";
+import { segmentChain } from "./armSegments";
 import { towerTuneEnabled, useTowerTuneStore } from "../state/towerTuneStore";
+import { ARM_SEGMENTS, reportArmSegmentBoxes } from "../sim/siteCollision";
 
 const BASE = import.meta.env.BASE_URL;
 export const TOWER_GLB_URL = `${BASE}assets/mechazilla-tower.glb`;
@@ -138,6 +140,15 @@ export const MechazillaTowerGLB = forwardRef<MechazillaApi, Props>(
       if (right) right.rotation.y = -swing;
       // the whole chopstick assembly (arms + carriage) rides the tower
       arms.position.y = s.heightReal - DEFAULT_ARM_HEIGHT_M;
+
+      // Report each arm's world-space segment-chain collider (SLS-84) so the
+      // sim's arm collision rides the drawn arms as they open / ride / yaw.
+      if (left && right) {
+        reportArmSegmentBoxes([
+          ...segmentChain(left, ARM_SEGMENTS),
+          ...segmentChain(right, ARM_SEGMENTS),
+        ]);
+      }
 
       // debug markers track the physics catch points (world/physics frame)
       const dbg = debugGroup.current;

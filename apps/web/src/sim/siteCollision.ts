@@ -81,20 +81,38 @@ function drawnOlmAabb(): Aabb {
   };
 }
 
+/** Segments each chopstick's collider chain is sliced into (SLS-84). Owner-
+ *  validated at 15 in the `/sandbox/arm` lab. */
+export const ARM_SEGMENTS = 15;
+
 /**
- * Collision geometry in the frame the booster is drawn in (SLS-79).
- *
- * KNOWN GAP (fast-follow): the chopstick *arms* are not modelled here. The
- * owner-tuned column sits ~13 m west of the descent path, so the only
- * structure near the catch region is the arms that bridge out to the cradle —
- * but their span is state-dependent (they swing open on approach), so a static
- * AABB would false-trigger legitimate catches. A booster that clips the arms
- * while outside the capture volume therefore still reads `none`. Modelling that
- * needs articulation-aware geometry + owner visual validation.
+ * World-space collider boxes for the two chopstick arms (SLS-84): a chain of
+ * short AABBs per arm that trace the beam's real geometry (see
+ * `scene/armSegments.segmentChain`), not one loose box. The rendered GLB tower
+ * reports these every frame, so they ride the drawn arms as they open / ride /
+ * yaw. Empty until a tower mounts (headless benches/tests use no arm collision).
+ */
+let reportedArmBoxes: readonly Aabb[] = [];
+
+export function reportArmSegmentBoxes(boxes: readonly Aabb[]): void {
+  reportedArmBoxes = boxes;
+}
+
+export function getArmSegmentBoxes(): readonly Aabb[] {
+  return reportedArmBoxes;
+}
+
+/**
+ * Collision geometry in the frame the booster is drawn in (SLS-79 + SLS-84).
+ * Solids: the drawn tower lattice, the OLM, and the two chopstick arms' segment
+ * chains. The capture volume is checked first (in `evaluateCatchOutcome`), so an
+ * on-target booster is caught before any arm box can fire — catches can't
+ * regress. Recompute per outcome check (the runner does) so the arm boxes track
+ * the reported, moving arm geometry.
  */
 export function drawnSiteCollision(): SiteCollision {
   return {
     groundY: SITE_OFFSET[1], // drawn terrain height under the tower
-    solids: [drawnTowerAabb(), drawnOlmAabb()],
+    solids: [drawnTowerAabb(), drawnOlmAabb(), ...reportedArmBoxes],
   };
 }

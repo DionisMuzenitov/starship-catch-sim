@@ -1,14 +1,20 @@
 import {
+  BoosterDescentCalm,
   chopstickCaptureVolume,
   DEFAULT_TOWER_STATE,
+  evaluateCatchOutcome,
   pointInAabb,
   Vec3,
+  type Aabb,
 } from "@starship-catch-sim/physics";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { PHYSICS_CATCH_POINT } from "../state/towerTuneStore";
 
-import { drawnSiteCollision } from "./siteCollision";
+import {
+  drawnSiteCollision,
+  reportArmSegmentBoxes,
+} from "./siteCollision";
 
 describe("drawnSiteCollision (SLS-79)", () => {
   const site = drawnSiteCollision();
@@ -50,10 +56,64 @@ describe("drawnSiteCollision (SLS-79)", () => {
     // booster stops at the drawn terrain instead of sinking through it.
     expect(site.groundY).toBeGreaterThan(40);
   });
+});
 
-  it("supplies both a tower and an OLM solid", () => {
-    expect(site.solids.length).toBe(2);
-    for (const s of site.solids) {
+describe("chopstick-arm segment collision (SLS-84)", () => {
+  // The rendered tower reports per-frame world boxes; tests set them directly.
+  afterEach(() => reportArmSegmentBoxes([]));
+
+  // A small box off to the +Z side, clear of the capture volume + tower/OLM.
+  const armBox: Aabb = {
+    center: Vec3.of(PHYSICS_CATCH_POINT.x, PHYSICS_CATCH_POINT.y, PHYSICS_CATCH_POINT.z + 12),
+    halfExtents: Vec3.of(2, 2, 2),
+  };
+
+  it("reported arm boxes are added to the site solids", () => {
+    expect(drawnSiteCollision().solids).toHaveLength(2); // tower + OLM only
+    reportArmSegmentBoxes([armBox, armBox]);
+    expect(drawnSiteCollision().solids).toHaveLength(4); // + 2 arm boxes
+  });
+
+  it("a booster inside a reported arm box fails as a structure hit", () => {
+    reportArmSegmentBoxes([armBox]);
+    const base = BoosterDescentCalm.initialWorld;
+    const world = {
+      ...base,
+      rigidBody: { ...base.rigidBody, position: armBox.center },
+    };
+    const outcome = evaluateCatchOutcome(
+      world,
+      BoosterDescentCalm.targetCatch,
+      DEFAULT_TOWER_STATE,
+      drawnSiteCollision(),
+    );
+    expect(outcome.kind).toBe("tower_collision");
+  });
+
+  it("capture-volume-first: an on-target booster is not swallowed by arm boxes", () => {
+    // Even with an arm box overlapping the catch point, the capture volume wins.
+    reportArmSegmentBoxes([
+      { center: PHYSICS_CATCH_POINT, halfExtents: Vec3.of(5, 5, 5) },
+    ]);
+    const base = BoosterDescentCalm.initialWorld;
+    const world = {
+      ...base,
+      rigidBody: { ...base.rigidBody, position: PHYSICS_CATCH_POINT },
+    };
+    const outcome = evaluateCatchOutcome(
+      world,
+      BoosterDescentCalm.targetCatch,
+      DEFAULT_TOWER_STATE,
+      drawnSiteCollision(),
+    );
+    expect(["caught", "near_miss"]).toContain(outcome.kind);
+  });
+
+  it("with no arm boxes reported, only tower + OLM solids are present", () => {
+    reportArmSegmentBoxes([]);
+    const solids = drawnSiteCollision().solids;
+    expect(solids).toHaveLength(2);
+    for (const s of solids) {
       expect(s.halfExtents.x).toBeGreaterThan(0);
       expect(s.halfExtents.y).toBeGreaterThan(0);
       expect(s.halfExtents.z).toBeGreaterThan(0);

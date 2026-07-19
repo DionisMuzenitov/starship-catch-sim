@@ -109,6 +109,10 @@ export class SimRunner {
   private readonly catchEnvelope: CatchEnvelope | undefined;
   private readonly towerState: TowerState;
   private readonly site: SiteCollision | undefined;
+  /** True when using the default baked drawn-site geometry: recompute it each
+   *  outcome check so the chopstick-arm segment boxes track the arm geometry the
+   *  rendered tower reports (SLS-84), which changes as the arms move. */
+  private readonly liveDrawnSite: boolean;
   private readonly recorder: Recorder | undefined;
   /** Most recent ControlInput from the controller this tick — captured so
    *  the recorder can pair it with the post-step world. */
@@ -141,6 +145,7 @@ export class SimRunner {
     this.catchEnvelope = args.catchEnvelope;
     this.towerState = args.towerState ?? DEFAULT_TOWER_STATE;
     // Default to the baked drawn-site geometry; `null` opts out (physics-frame).
+    this.liveDrawnSite = args.siteCollision === undefined;
     this.site =
       args.siteCollision === null
         ? undefined
@@ -265,11 +270,12 @@ export class SimRunner {
 
   private checkOutcome(): void {
     if (this.ended || this.catchEnvelope === undefined) return;
+    const site = this.liveDrawnSite ? drawnSiteCollision() : this.site;
     const outcome = evaluateCatchOutcome(
       this.world,
       this.catchEnvelope,
       this.towerState,
-      this.site,
+      site,
     );
     if (outcome.kind === "none") return;
     this.outcome = outcome;
