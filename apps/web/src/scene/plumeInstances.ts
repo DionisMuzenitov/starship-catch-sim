@@ -12,9 +12,9 @@
 
 import type { Engine, EngineState } from "@starship-catch-sim/physics";
 import {
-  AdditiveBlending,
   Color,
   ConeGeometry,
+  DoubleSide,
   Euler,
   Float32BufferAttribute,
   type InstancedMesh,
@@ -23,6 +23,8 @@ import {
   Quaternion,
   Vector3,
 } from "three";
+
+import { MODEL_SCALE } from "../models/glb/assetTransform";
 
 import {
   plumeDims,
@@ -56,31 +58,37 @@ function gradientColor(t: number, out: Color): Color {
 }
 
 /** Unit cone pointing down −Y (apex at the nozzle y=0, base at y=−1), with the
- *  flame gradient baked into vertex colours. Scaled per-instance to
- *  (radius, length, radius). Open-ended: no base cap to draw. */
+ *  flame gradient + an opacity ramp baked into RGBA vertex colours. Scaled
+ *  per-instance to (radius, length, radius). Open-ended: no base cap to draw. */
 export function makePlumeGeometry(): ConeGeometry {
   const geo = new ConeGeometry(1, 1, 12, 1, true);
   geo.translate(0, -0.5, 0); // apex → y=0, base → y=−1
   const pos = geo.getAttribute("position");
-  const colors = new Float32Array(pos.count * 3);
+  // RGBA: colour gradient + alpha that's opaque at the nozzle and fades to
+  // transparent at the tip. Alpha (not additive blending) is what makes the
+  // flame visible against a BRIGHT sky as well as dark space — additive can
+  // only add light, so it washes out to nothing over a bright background.
+  const colors = new Float32Array(pos.count * 4);
   const c = new Color();
   for (let v = 0; v < pos.count; v++) {
-    gradientColor(-pos.getY(v), c); // y ∈ [−1,0] → t ∈ [0,1]
-    colors[v * 3] = c.r;
-    colors[v * 3 + 1] = c.g;
-    colors[v * 3 + 2] = c.b;
+    const t = -pos.getY(v); // y ∈ [−1,0] → t ∈ [0,1]
+    gradientColor(t, c);
+    colors[v * 4] = c.r;
+    colors[v * 4 + 1] = c.g;
+    colors[v * 4 + 2] = c.b;
+    colors[v * 4 + 3] = Math.max(0, 1 - t); // opaque nozzle → transparent tip
   }
-  geo.setAttribute("color", new Float32BufferAttribute(colors, 3));
+  geo.setAttribute("color", new Float32BufferAttribute(colors, 4));
   return geo;
 }
 
 export function makePlumeMaterial(): MeshBasicMaterial {
   return new MeshBasicMaterial({
-    vertexColors: true,
+    vertexColors: true, // RGBA (alpha comes from the geometry colour attribute)
     transparent: true,
     depthWrite: false,
-    blending: AdditiveBlending,
-    toneMapped: false, // keep HDR core >1 so it blooms
+    side: DoubleSide, // visible from any angle, incl. looking up the cone
+    toneMapped: false, // keep the HDR core >1 so it still blooms through PostFX
   });
 }
 
@@ -122,8 +130,12 @@ export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
       mesh.setColorAt(i, _col.setRGB(0, 0, 0)); // scratch — never mutate _white
       continue;
     }
+    // Anchor at the DRAWN nozzle: the GLB body is rendered scaled by
+    // MODEL_SCALE, so the visible engine ring sits at mount × MODEL_SCALE.
+    // (Physics mounts are metric, but the plume is a visual overlay on the
+    // scaled model — it must match the model, not the physics frame.)
     const m = f.engines[i].mount;
-    _posV.set(m.x, m.y, m.z);
+    _posV.set(m.x * MODEL_SCALE, m.y * MODEL_SCALE, m.z * MODEL_SCALE);
     _eul.set(st.gimbalPitch, 0, st.gimbalYaw, "XYZ");
     _quat.setFromEuler(_eul);
     _scaleV.set(dims.radius, dims.length, dims.radius);

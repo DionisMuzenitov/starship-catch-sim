@@ -45,8 +45,11 @@ export const PLUME_VACUUM_ALT_M = 40_000;
 // during the landing burn reads as tens of metres against the 71 m booster.
 const LENGTH_SEA_M = 22;
 const LENGTH_VAC_M = 55;
-const RADIUS_SEA_M = 1.1;
-const RADIUS_VAC_M = 3.2;
+// Flame is noticeably wider than the ~1.3 m nozzle so a burn reads as a chunky
+// column, and the clustered centre engines merge into one plume (owner feedback
+// — the earlier 1.1 m looked too thin for the engine size).
+const RADIUS_SEA_M = 2.2;
+const RADIUS_VAC_M = 4.5;
 const BRIGHT_SEA = 1.8; // >1 so the additive core blooms
 const BRIGHT_VAC = 0.7;
 
