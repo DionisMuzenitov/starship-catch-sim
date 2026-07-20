@@ -67,6 +67,12 @@ export function Scene() {
         </group>
         {towerTuneEnabled() && <LandingGhost />}
         {towerTuneEnabled() && <CollisionDebug />}
+        {/* The plumes anchor to the same world transform the model draws at,
+            so these two MUST stay siblings at the SAME scene-graph level (both
+            outside the SITE_OFFSET group above). Wrapping only one in an offset
+            group would re-detach the flames from the nozzles — the SLS-88 bug.
+            The deeper single-source fix (parent plumes under the model node) is
+            SLS-90. */}
         <BoosterFlight />
         <EnginePlumes />
         <CameraRig />
