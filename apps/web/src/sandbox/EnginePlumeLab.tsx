@@ -25,9 +25,8 @@ import { type InstancedMesh } from "three";
 import { VehicleModel } from "../models/glb";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
 import {
+  BOOSTER_PLUME_ALIGN,
   MAX_PLUMES,
-  PLUME_CENTER_OFFSET,
-  PLUME_MOUNT_SCALE,
   makePlumeGeometry,
   makePlumeMaterial,
   updatePlumeInstances,
@@ -80,40 +79,33 @@ function Slider(props: {
   );
 }
 
-/** The plume instanced mesh, driven by the lab controls (not the sim store). */
-function LabPlumes({
-  throttle,
-  altitudeKm,
-  engineCount,
-  gimbalDeg,
-  mountScale,
-  centerX,
-  centerY,
-  centerZ,
-}: Controls) {
+/** The plume instanced mesh, driven by the lab controls (not the sim store).
+ *  `engineStates` is the parent's memoized array (throttle-0 engines auto-hide),
+ *  so nothing is allocated per frame. */
+function LabPlumes(props: {
+  engineStates: readonly EngineState[];
+  altitudeKm: number;
+  mountScale: number;
+  centerX: number;
+  centerY: number;
+  centerZ: number;
+}) {
   const meshRef = useRef<InstancedMesh>(null);
   const geometry = useMemo(makePlumeGeometry, []);
   const material = useMemo(makePlumeMaterial, []);
-  const gimbal = (gimbalDeg * Math.PI) / 180;
 
   useFrame((state) => {
     const mesh = meshRef.current;
     if (!mesh) return;
-    const engineStates: EngineState[] = SuperHeavyEngines.map((_, i) => ({
-      gimbalPitch: gimbal,
-      gimbalYaw: 0,
-      throttle: i < engineCount ? throttle : 0,
-      on: i < engineCount && throttle > 0,
-    }));
     // Booster is upright at the origin: mesh stays at identity.
     updatePlumeInstances(mesh, {
       engines: SuperHeavyEngines,
-      engineStates,
-      plumeCount: engineCount,
-      altitudeM: altitudeKm * 1000,
+      engineStates: props.engineStates,
+      plumeCount: MAX_PLUMES,
+      altitudeM: props.altitudeKm * 1000,
       t: state.clock.elapsedTime,
-      mountScale,
-      centerOffset: { x: centerX, y: centerY, z: centerZ },
+      mountScale: props.mountScale,
+      centerOffset: { x: props.centerX, y: props.centerY, z: props.centerZ },
     });
   });
 
@@ -133,10 +125,10 @@ export function EnginePlumeLab() {
     altitudeKm: 0,
     engineCount: 13,
     gimbalDeg: 0,
-    mountScale: PLUME_MOUNT_SCALE,
-    centerX: PLUME_CENTER_OFFSET.x,
-    centerY: PLUME_CENTER_OFFSET.y,
-    centerZ: PLUME_CENTER_OFFSET.z,
+    mountScale: BOOSTER_PLUME_ALIGN.mountScale,
+    centerX: BOOSTER_PLUME_ALIGN.centerOffset.x,
+    centerY: BOOSTER_PLUME_ALIGN.centerOffset.y,
+    centerZ: BOOSTER_PLUME_ALIGN.centerOffset.z,
   });
   const set = (patch: Partial<Controls>) => setC((s) => ({ ...s, ...patch }));
 
@@ -183,7 +175,14 @@ export function EnginePlumeLab() {
             altitudeFactor={0}
           />
         </Suspense>
-        <LabPlumes {...c} />
+        <LabPlumes
+          engineStates={engineStates}
+          altitudeKm={c.altitudeKm}
+          mountScale={c.mountScale}
+          centerX={c.centerX}
+          centerY={c.centerY}
+          centerZ={c.centerZ}
+        />
         <EffectComposer>
           <Bloom intensity={0.25} luminanceThreshold={0.85} mipmapBlur />
         </EffectComposer>

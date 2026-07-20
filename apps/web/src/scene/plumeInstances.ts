@@ -41,12 +41,27 @@ import {
 export const MODELLED_BOOSTER_PLUMES = 13;
 export const MAX_PLUMES = MODELLED_BOOSTER_PLUMES;
 
-// Owner-tuned alignment of the plumes onto the DRAWN GLB nozzle bells
-// (`/sandbox/plumes`, SLS-60). The physics mount ring doesn't match the model's
-// nozzle ring, so these are measured empirically, not derived: a radius
-// multiplier + a body-frame translation of the whole cluster.
-export const PLUME_MOUNT_SCALE = 1.42;
-export const PLUME_CENTER_OFFSET = { x: 0.3, y: 0.45, z: 0.2 } as const;
+/** Alignment of the plume cluster onto a vehicle's DRAWN nozzle bells: a mount-
+ *  radius multiplier + a body-frame translation of the whole cluster. Measured
+ *  empirically in `/sandbox/plumes` (the physics mount ring doesn't match the
+ *  GLB nozzle ring), so it is PER-VEHICLE — the ship's nozzles are not the
+ *  booster's. */
+export type PlumeAlign = {
+  readonly mountScale: number;
+  readonly centerOffset: { readonly x: number; readonly y: number; readonly z: number };
+};
+
+// Booster: owner-tuned onto the BoosterModelGLB nozzle bells (SLS-60).
+export const BOOSTER_PLUME_ALIGN: PlumeAlign = {
+  mountScale: 1.42,
+  centerOffset: { x: 0.3, y: 0.45, z: 0.2 },
+};
+// Ship: not yet tuned against the ship GLB — identity so it isn't skewed by the
+// booster's numbers (ship-nozzle tuning is an SLS-60 follow-up).
+export const SHIP_PLUME_ALIGN: PlumeAlign = {
+  mountScale: 1,
+  centerOffset: { x: 0, y: 0, z: 0 },
+};
 
 // Flame colour gradient from nozzle (t=0) to tip (t=1): yellow-white core →
 // golden yellow → orange → dark red. Brightness is kept modest (see
@@ -111,8 +126,8 @@ export type PlumeFrame = {
   /** Time (s) for the flicker phase. */
   readonly t: number;
   /** Multiplier on the engine mount radius so the plumes land on the DRAWN
-   *  nozzle ring. Defaults to `MODEL_SCALE`; the `/sandbox/plumes` lab exposes
-   *  it as a slider so the ring can be dialled to the GLB. */
+   *  nozzle ring. Defaults to 1 (no scaling); callers pass their vehicle's
+   *  `PlumeAlign.mountScale` (the lab exposes it as a slider). */
   readonly mountScale?: number;
   /** Body-frame translation applied to the whole plume cluster (m), on top of
    *  the scaled mounts — lets the cluster centre be nudged onto the model.
@@ -135,10 +150,10 @@ const _white = new Color(1, 1, 1);
  */
 export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
   const sea = seaLevelFactor(f.altitudeM);
-  const mountScale = f.mountScale ?? PLUME_MOUNT_SCALE;
-  const ox = f.centerOffset?.x ?? PLUME_CENTER_OFFSET.x;
-  const oy = f.centerOffset?.y ?? PLUME_CENTER_OFFSET.y;
-  const oz = f.centerOffset?.z ?? PLUME_CENTER_OFFSET.z;
+  const mountScale = f.mountScale ?? 1;
+  const ox = f.centerOffset?.x ?? 0;
+  const oy = f.centerOffset?.y ?? 0;
+  const oz = f.centerOffset?.z ?? 0;
   for (let i = 0; i < MAX_PLUMES; i++) {
     const st = i < f.plumeCount ? f.engineStates[i] : undefined;
     const dims = st ? plumeDims(plumeIntensity(st), sea) : null;

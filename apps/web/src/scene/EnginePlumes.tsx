@@ -19,8 +19,10 @@ import { type InstancedMesh } from "three";
 import { useSimStore } from "../state/simStore.js";
 
 import {
+  BOOSTER_PLUME_ALIGN,
   MAX_PLUMES,
   MODELLED_BOOSTER_PLUMES,
+  SHIP_PLUME_ALIGN,
   makePlumeGeometry,
   makePlumeMaterial,
   updatePlumeInstances,
@@ -42,6 +44,8 @@ export function EnginePlumes() {
     const plumeCount = isShip
       ? StarshipEngines.length
       : MODELLED_BOOSTER_PLUMES;
+    // Alignment is per-vehicle — the ship's nozzles aren't the booster's.
+    const align = isShip ? SHIP_PLUME_ALIGN : BOOSTER_PLUME_ALIGN;
 
     // Body frame: place the instanced mesh at the engine plane
     // (rigidBody.position) with the body attitude; instance matrices are then
@@ -55,6 +59,8 @@ export function EnginePlumes() {
       plumeCount,
       altitudeM: rb.position.y,
       t,
+      mountScale: align.mountScale,
+      centerOffset: align.centerOffset,
     });
   });
 
