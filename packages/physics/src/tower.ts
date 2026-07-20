@@ -45,7 +45,7 @@ export const ARM_ANGLE_OPEN_RAD = (110 * Math.PI) / 180;
 export const CAPTURE_VOLUME_Y_HALF_M = 4;
 
 /**
- * Active catch-assist reach (SLS-82 / ADR-021). `armLateral` is a horizontal
+ * Active catch-assist reach (SLS-82 / ADR-022). `armLateral` is a horizontal
  * (x, z) offset of the arm catch region from the tower centreline — the
  * carriage + arms reaching toward a slightly-off booster. `MAX_ARM_REACH_M`
  * bounds it so the arms can't sweep the whole pad; `ARM_HEIGHT_{MIN,MAX}_M` is

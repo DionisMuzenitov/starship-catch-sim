@@ -1,5 +1,5 @@
 /**
- * Tower-side catch-assist controller (SLS-82 / ADR-021).
+ * Tower-side catch-assist controller (SLS-82 / ADR-022).
  *
  * The SECOND cooperating controller in the catch: the booster-side `Controller`
  * flies the vehicle to the target, and this one moves the chopstick arms to
@@ -36,6 +36,11 @@ export interface TowerController {
 /** Nominal catch centre with the arms home (≈ (8.5, 91, 0)). Lateral reach is
  *  measured as the offset of the live catch centre from this point. */
 const NOMINAL_CENTER: Vec3 = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
+/** Half-extents of the home (fixed) capture slot. A booster already inside it is
+ *  a catch for the stationary tower, so the assist must NOT reach for it — doing
+ *  so could displace the slot off a booster that then re-centres and drop a
+ *  catch the fixed tower would have made. */
+const FIXED_HALF: Vec3 = chopstickCaptureVolume(DEFAULT_TOWER_STATE).halfExtents;
 
 export type TrackingTowerOpts = {
   /** Start tracking once the booster descends within this height above the
@@ -67,9 +72,16 @@ export class TrackingTowerController implements TowerController {
       vy < 0 &&
       b.y >= catchY - this.opts.engageBelowM &&
       b.y <= catchY + this.opts.engageAboveM;
-    const armLateral = engaged
-      ? clampArmReach(Vec3.of(b.x - NOMINAL_CENTER.x, 0, b.z - NOMINAL_CENTER.z))
-      : Vec3.ZERO;
+    const offX = b.x - NOMINAL_CENTER.x;
+    const offZ = b.z - NOMINAL_CENTER.z;
+    // Only reach when the booster is genuinely outside the fixed slot — a booster
+    // the stationary tower already catches is left to it (no regression risk).
+    const withinFixedSlot =
+      Math.abs(offX) <= FIXED_HALF.x && Math.abs(offZ) <= FIXED_HALF.z;
+    const armLateral =
+      engaged && !withinFixedSlot
+        ? clampArmReach(Vec3.of(offX, 0, offZ))
+        : Vec3.ZERO;
     // Arms stay in the closed gripping pose at the fixed catch height; the
     // assist is purely the lateral reach (the first increment — SLS-82).
     return { armLateral, armHeightM: catchY, armOpeningT: 0 };

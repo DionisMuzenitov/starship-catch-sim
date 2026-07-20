@@ -33,13 +33,20 @@ describe("TrackingTowerController", () => {
     expect(cmd.armLateral).toEqual(Vec3.ZERO);
   });
 
-  it("reaches toward a descending, slightly-off booster near the catch", () => {
+  it("reaches toward a descending booster just OUTSIDE the fixed slot", () => {
+    // Offset (4.5, 0): x is beyond the fixed ±3.5 m slot, within the 6 m reach.
     const cmd = ctl.step(
-      worldAt(Vec3.of(NOMINAL_X + 3, 95, 4), Vec3.of(0, -3, 0)),
+      worldAt(Vec3.of(NOMINAL_X + 4.5, 95, 0), Vec3.of(0, -3, 0)),
     );
-    // Offset from nominal is (3, 0, 4); within reach, so passed through.
-    expect(cmd.armLateral.x).toBeCloseTo(3, 9);
-    expect(cmd.armLateral.z).toBeCloseTo(4, 9);
+    expect(cmd.armLateral.x).toBeCloseTo(4.5, 9);
+    expect(cmd.armLateral.z).toBeCloseTo(0, 9);
+  });
+
+  it("holds the arms home for a booster the fixed slot already covers", () => {
+    // Offset (2, 2) sits inside the fixed slot (±3.5 x / ±5 z) — the stationary
+    // tower catches it, so the assist must not displace the arms (no regression).
+    const cmd = ctl.step(worldAt(Vec3.of(NOMINAL_X + 2, 95, 2), Vec3.of(0, -3, 0)));
+    expect(cmd.armLateral).toEqual(Vec3.ZERO);
   });
 
   it("clamps the reach for a badly-off booster (can't teleport across the pad)", () => {

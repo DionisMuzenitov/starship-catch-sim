@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { Vec3 } from "./math/vec3.js";
@@ -207,6 +208,59 @@ describe("active catch-assist (SLS-82)", () => {
         DEFAULT_TOWER_STATE,
       );
     });
+  });
+});
+
+describe("active catch-assist invariants (property)", () => {
+  const coord = () =>
+    fc.double({ min: -100, max: 100, noNaN: true, noDefaultInfinity: true });
+  const dt = () =>
+    fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true });
+  // A reachable tower pose (in-range height/opening, in-reach lateral).
+  const reachable = () =>
+    fc
+      .record({
+        lx: coord(),
+        lz: coord(),
+        h: fc.double({ min: ARM_HEIGHT_MIN_M, max: ARM_HEIGHT_MAX_M, noNaN: true }),
+        o: fc.double({ min: 0, max: 1, noNaN: true }),
+      })
+      .map(({ lx, lz, h, o }) => ({
+        ...DEFAULT_TOWER_STATE,
+        armLateral: clampArmReach(Vec3.of(lx, 0, lz)),
+        armHeightM: h,
+        armOpeningT: o,
+      }));
+
+  it("clampArmReach: output never exceeds MAX_ARM_REACH_M and zeroes y", () => {
+    fc.assert(
+      fc.property(coord(), coord(), (x, z) => {
+        const out = clampArmReach(Vec3.of(x, 0, z));
+        expect(Math.hypot(out.x, out.z)).toBeLessThanOrEqual(
+          MAX_ARM_REACH_M + 1e-9,
+        );
+        expect(out.y).toBe(0);
+      }),
+    );
+  });
+
+  it("stepTowerState: keeps every DOF inside its clamp from any reachable pose", () => {
+    fc.assert(
+      fc.property(reachable(), coord(), coord(), coord(), fc.double({ min: -2, max: 3, noNaN: true }), dt(), (state, cx, cz, ch, co, d) => {
+        const next = stepTowerState(
+          state,
+          { armLateral: Vec3.of(cx, 0, cz), armHeightM: ch, armOpeningT: co },
+          d,
+        );
+        expect(Math.hypot(next.armLateral.x, next.armLateral.z)).toBeLessThanOrEqual(
+          MAX_ARM_REACH_M + 1e-6,
+        );
+        expect(next.armHeightM).toBeGreaterThanOrEqual(ARM_HEIGHT_MIN_M - 1e-6);
+        expect(next.armHeightM).toBeLessThanOrEqual(ARM_HEIGHT_MAX_M + 1e-6);
+        expect(next.armOpeningT).toBeGreaterThanOrEqual(0);
+        expect(next.armOpeningT).toBeLessThanOrEqual(1);
+      }),
+    );
   });
 });
 

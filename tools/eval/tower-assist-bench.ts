@@ -1,5 +1,5 @@
 /**
- * Active catch-assist benchmark (SLS-82 / ADR-021).
+ * Active catch-assist benchmark (SLS-82 / ADR-022).
  *
  * Runs the SAME booster-side controller (the deployed RL policy) through the
  * SAME Monte-Carlo protocol as the headline gate, twice per scenario cell:
@@ -16,7 +16,8 @@
  *
  *   pnpm bench:catch-assist [--seeds 30] [--quick]
  *
- * Output: eval/results/catch-assist-<ts>.json + a comparison table on stdout.
+ * Output: eval/results/catch-assist-<N>seeds.json + a comparison table on
+ * stdout (re-running at the same seed count overwrites its report).
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -28,11 +29,9 @@ import {
   TrackingTowerController,
   runMonteCarlo,
   type MonteCarloResult,
+  type RLPolicyArtifact,
 } from "../../packages/controllers/src/index.js";
-import type {
-  RLPolicyArtifact,
-  Scenario,
-} from "../../packages/controllers/src/index.js";
+import type { Scenario } from "../../packages/physics/src/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "../..");
@@ -45,8 +44,12 @@ const SCENARIOS = [
 
 function parseArgs(argv: string[]) {
   const quick = argv.includes("--quick");
+  const fallback = quick ? 5 : 30;
   const seedsIdx = argv.indexOf("--seeds");
-  const seeds = seedsIdx >= 0 ? Number(argv[seedsIdx + 1]) : quick ? 5 : 30;
+  const raw = seedsIdx >= 0 ? Number(argv[seedsIdx + 1]) : NaN;
+  // Guard a missing/garbage --seeds value (e.g. the flag as the last arg) so we
+  // never silently run zero cases and print a NaN% benchmark.
+  const seeds = Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : fallback;
   return { seeds };
 }
 

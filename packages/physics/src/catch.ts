@@ -33,6 +33,7 @@ import {
 import {
   type Aabb,
   type BodyCapsule,
+  DEFAULT_TOWER_STATE,
   chopstickCaptureVolume,
   pointInAabb,
   towerStructureAabb,
@@ -129,15 +130,22 @@ export function evaluateCatchOutcome(
   body?: BodyCapsule,
 ): CatchOutcome {
   const captureVol = chopstickCaptureVolume(tower);
-  // The success target tracks the LIVE arm catch point (SLS-82 / ADR-021): the
-  // envelope's position tolerance is measured from where the arms actually are.
-  // For a stationary tower (DEFAULT_TOWER_STATE, zero reach) this equals the
-  // fixed `CATCH_POINT_WORLD` the envelope already carried, so the benches and
-  // the headline catch rates are byte-identical; only an actively-reaching
-  // tower widens the effective envelope.
+  // The success target follows the arms (SLS-82 / ADR-022): we shift the
+  // envelope's own `targetPosition` by how far the live arms have moved from
+  // their home pose, rather than replacing it. So a stationary tower
+  // (DEFAULT_TOWER_STATE, zero shift) leaves the scenario-authored target
+  // untouched — benches + headline byte-identical — while an actively-reaching
+  // tower carries the aim point along, and any intentionally-offset scenario
+  // target is preserved instead of being silently overridden.
+  const homeCenter = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
+  const t = envelope.targetPosition;
   const liveEnvelope: CatchEnvelope = {
     ...envelope,
-    targetPosition: captureVol.center,
+    targetPosition: Vec3.of(
+      t.x + (captureVol.center.x - homeCenter.x),
+      t.y + (captureVol.center.y - homeCenter.y),
+      t.z + (captureVol.center.z - homeCenter.z),
+    ),
   };
   const metrics = computeMetrics(world, liveEnvelope);
   const p = world.rigidBody.position;
