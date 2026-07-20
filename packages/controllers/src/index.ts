@@ -1,5 +1,11 @@
 export type { Controller } from "./types.js";
 export {
+  TrackingTowerController,
+  DEFAULT_TRACKING_TOWER_OPTS,
+  type TowerController,
+  type TrackingTowerOpts,
+} from "./towerController.js";
+export {
   ManualController,
   createManualInputState,
   type ManualInputState,

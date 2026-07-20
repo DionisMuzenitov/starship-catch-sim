@@ -33,6 +33,7 @@ import {
 import {
   type Aabb,
   type BodyCapsule,
+  DEFAULT_TOWER_STATE,
   chopstickCaptureVolume,
   pointInAabb,
   towerStructureAabb,
@@ -128,19 +129,36 @@ export function evaluateCatchOutcome(
   site?: SiteCollision,
   body?: BodyCapsule,
 ): CatchOutcome {
-  const metrics = computeMetrics(world, envelope);
   const captureVol = chopstickCaptureVolume(tower);
+  // The success target follows the arms (SLS-82 / ADR-022): we shift the
+  // envelope's own `targetPosition` by how far the live arms have moved from
+  // their home pose, rather than replacing it. So a stationary tower
+  // (DEFAULT_TOWER_STATE, zero shift) leaves the scenario-authored target
+  // untouched — benches + headline byte-identical — while an actively-reaching
+  // tower carries the aim point along, and any intentionally-offset scenario
+  // target is preserved instead of being silently overridden.
+  const homeCenter = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
+  const t = envelope.targetPosition;
+  const liveEnvelope: CatchEnvelope = {
+    ...envelope,
+    targetPosition: Vec3.of(
+      t.x + (captureVol.center.x - homeCenter.x),
+      t.y + (captureVol.center.y - homeCenter.y),
+      t.z + (captureVol.center.z - homeCenter.z),
+    ),
+  };
+  const metrics = computeMetrics(world, liveEnvelope);
   const p = world.rigidBody.position;
   const bodyUp = Quat.rotateVec3(world.rigidBody.attitude, Vec3.of(0, 1, 0));
   const armHit = (arm: Aabb): boolean =>
     body ? capsuleOverlapsAabb(p, bodyUp, body, arm) : pointInAabb(p, arm);
 
-  // Capture volume wins over everything (physics-pinned catch target). This is
-  // the success gate — CoM-point based so the benches are unaffected — and it is
-  // checked BEFORE structure hits, so the capsule overlapping the closing arms
-  // during a valid catch (the grip) reads `caught`, never a graze.
+  // Capture volume wins over everything (live arm catch target). This is the
+  // success gate — CoM-point based so the fixed-tower benches are unaffected —
+  // and it is checked BEFORE structure hits, so the capsule overlapping the
+  // closing arms during a valid catch (the grip) reads `caught`, never a graze.
   if (pointInAabb(p, captureVol)) {
-    const verdict = evaluateCatch(world, envelope);
+    const verdict = evaluateCatch(world, liveEnvelope);
     return {
       kind: verdict.caught ? "caught" : "near_miss",
       verdict,

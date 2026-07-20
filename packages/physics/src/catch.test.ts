@@ -36,6 +36,37 @@ function worldAt(
   };
 }
 
+describe("active catch-assist widens the envelope (SLS-82)", () => {
+  // 9 m off-axis in Z — outside the fixed capture volume (±5 m in Z), but
+  // within the arms' reach (MAX_ARM_REACH_M = 6 m).
+  const offAxis = Vec3.of(CAPTURE.center.x, CAPTURE.center.y, 9);
+
+  it("a laterally-off booster is NOT caught by the fixed tower", () => {
+    const out = evaluateCatchOutcome(
+      worldAt(offAxis, Vec3.ZERO),
+      ENV,
+      DEFAULT_TOWER_STATE,
+    );
+    expect(out.kind).not.toBe("caught");
+  });
+
+  it("the same booster IS caught once the arms reach toward it", () => {
+    const reached = { ...DEFAULT_TOWER_STATE, armLateral: Vec3.of(0, 0, 6) };
+    const out = evaluateCatchOutcome(worldAt(offAxis, Vec3.ZERO), ENV, reached);
+    expect(out.kind).toBe("caught");
+    expect(out.verdict?.caught).toBe(true);
+  });
+
+  it("does NOT let an out-of-reach booster through (impossible catch)", () => {
+    // 20 m off — beyond reach (6) + half-slot (5); even fully reached, the
+    // capture volume can't cover it.
+    const farOff = Vec3.of(CAPTURE.center.x, CAPTURE.center.y, 20);
+    const reached = { ...DEFAULT_TOWER_STATE, armLateral: Vec3.of(0, 0, 6) };
+    const out = evaluateCatchOutcome(worldAt(farOff, Vec3.ZERO), ENV, reached);
+    expect(out.kind).not.toBe("caught");
+  });
+});
+
 describe("evaluateCatchOutcome", () => {
   it("zero-velocity rocket at the capture-volume centre → caught", () => {
     const w = worldAt(CAPTURE.center, Vec3.ZERO);

@@ -26,14 +26,17 @@ import {
   evaluateCatchOutcome,
   scenarioById,
   simStep,
+  stepTowerState,
   type CatchOutcomeKind,
   type Scenario,
   type SimEnv,
   type TerminalMetrics,
+  type TowerState,
   type WindField,
   type World,
 } from "@starship-catch-sim/physics";
 
+import type { TowerController } from "../towerController.js";
 import type { Controller } from "../types.js";
 
 export const PHYSICS_DT = 1 / 250;
@@ -54,6 +57,12 @@ export type MonteCarloConfig = {
   /** If omitted, deterministic seeds `[0, 1, … nRuns-1]` are used. */
   seeds?: readonly number[];
   environment?: MonteCarloEnvironment;
+  /** Optional tower-side catch-assist (SLS-82). When present, the arms are
+   *  driven live each tick and the catch is evaluated against the moving
+   *  capture volume. When ABSENT the tower stays frozen at
+   *  `DEFAULT_TOWER_STATE` — the canonical bench, byte-identical to pre-SLS-82,
+   *  so the headline catch rates + the SLS-66 floor never move. */
+  towerControllerFactory?: (scenario: Scenario) => TowerController;
 };
 
 export type RunResult = {
@@ -203,10 +212,14 @@ function runOne(
   controller: Controller,
   env: SimEnv,
   seed: number,
+  towerController?: TowerController,
 ): RunResult {
   const startWorld = jitterInitialWorld(scenario, seed);
   const startPropellantKg = startWorld.mass.propellantMass;
   let world = startWorld;
+  // Live tower pose. With no assist it stays DEFAULT_TOWER_STATE for every
+  // tick, so `evaluateCatchOutcome` sees exactly what it always has.
+  let towerState: TowerState = DEFAULT_TOWER_STATE;
   const maxTicks = Math.round(MAX_SIM_TIME_S / PHYSICS_DT);
   let kind: CatchOutcomeKind | "none" = "none";
   let metrics: TerminalMetrics = synthMetrics(world, scenario);
@@ -214,10 +227,17 @@ function runOne(
   for (let t = 0; t < maxTicks; t++) {
     const ctl = controller.step(world, PHYSICS_DT);
     world = simStep(world, scenario.vehicle, ctl, PHYSICS_DT, env);
+    if (towerController) {
+      towerState = stepTowerState(
+        towerState,
+        towerController.step(world, PHYSICS_DT),
+        PHYSICS_DT,
+      );
+    }
     const outcome = evaluateCatchOutcome(
       world,
       scenario.targetCatch,
-      DEFAULT_TOWER_STATE,
+      towerState,
     );
     if (outcome.kind !== "none") {
       kind = outcome.kind;
@@ -305,7 +325,8 @@ export function runMonteCarlo(config: MonteCarloConfig): MonteCarloResult {
   const runs: RunResult[] = [];
   for (let i = 0; i < seeds.length; i++) {
     const controller = config.controllerFactory(scenario);
-    runs.push(runOne(scenario, controller, env, seeds[i]!));
+    const towerController = config.towerControllerFactory?.(scenario);
+    runs.push(runOne(scenario, controller, env, seeds[i]!, towerController));
   }
   return {
     scenarioId: config.scenarioId,

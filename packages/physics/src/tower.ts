@@ -44,19 +44,91 @@ export const ARM_ANGLE_OPEN_RAD = (110 * Math.PI) / 180;
 /** Vertical aperture of the capture slot (full extent = 2× this). */
 export const CAPTURE_VOLUME_Y_HALF_M = 4;
 
+/**
+ * Active catch-assist reach (SLS-82 / ADR-022). `armLateral` is a horizontal
+ * (x, z) offset of the arm catch region from the tower centreline — the
+ * carriage + arms reaching toward a slightly-off booster. `MAX_ARM_REACH_M`
+ * bounds it so the arms can't sweep the whole pad; `ARM_HEIGHT_{MIN,MAX}_M` is
+ * the carriage's vertical travel. Zero reach + the default height reproduce the
+ * pre-assist tower exactly.
+ */
+export const MAX_ARM_REACH_M = 6;
+export const ARM_HEIGHT_MIN_M = 40;
+export const ARM_HEIGHT_MAX_M = 120;
+
+/**
+ * First-order lag time constants (s) for the active assist. They rate-limit the
+ * arms so an *impossible* catch — a booster far outside reach, or arriving too
+ * fast — can't be met: the arms lag behind and the booster leaves the capture
+ * volume before they arrive. Gameplay constants.
+ */
+export const TAU_ARM_LATERAL_S = 0.6;
+export const TAU_ARM_HEIGHT_S = 0.5;
+export const TAU_ARM_OPENING_S = 0.4;
+
 export type TowerState = {
   readonly basePosition: Vec3;
   /** 0 = arms closed (gripping pose), 1 = arms wide open. */
   readonly armOpeningT: number;
   /** Arm carriage Y position in world coords. */
   readonly armHeightM: number;
+  /** Horizontal (x, z) reach of the arm catch region from the tower centreline
+   *  (SLS-82). `y` is ignored. Zero ⇒ the fixed pre-assist catch target. */
+  readonly armLateral: Vec3;
 };
 
 export const DEFAULT_TOWER_STATE: TowerState = {
   basePosition: Vec3.ZERO,
   armOpeningT: 0,
   armHeightM: DEFAULT_ARM_HEIGHT_M,
+  armLateral: Vec3.ZERO,
 };
+
+/** Command a tower-side controller emits each tick (SLS-82). `stepTowerState`
+ *  lags the live `TowerState` toward it, enforcing the reach/rate limits. */
+export type TowerCommand = {
+  readonly armLateral: Vec3;
+  readonly armHeightM: number;
+  readonly armOpeningT: number;
+};
+
+/** Clamp a lateral reach vector to the tower's physical reach (x, z only). */
+export function clampArmReach(lateral: Vec3): Vec3 {
+  const mag = Math.hypot(lateral.x, lateral.z);
+  if (mag <= MAX_ARM_REACH_M) return Vec3.of(lateral.x, 0, lateral.z);
+  const s = MAX_ARM_REACH_M / mag;
+  return Vec3.of(lateral.x * s, 0, lateral.z * s);
+}
+
+const lagToward = (cur: number, tgt: number, tau: number, dt: number): number =>
+  cur + (tgt - cur) * (1 - Math.exp(-dt / Math.max(tau, 1e-6)));
+
+/**
+ * Advance the live tower pose one tick toward a controller command, with
+ * first-order lag on each DOF and hard clamps (reach, carriage travel, opening).
+ * Pure. The lag is what keeps physically-impossible catches out of reach.
+ */
+export function stepTowerState(
+  state: TowerState,
+  cmd: TowerCommand,
+  dt: number,
+): TowerState {
+  const tgt = clampArmReach(cmd.armLateral);
+  const tgtHeight = clampRange(cmd.armHeightM, ARM_HEIGHT_MIN_M, ARM_HEIGHT_MAX_M);
+  const tgtOpen = clamp01(cmd.armOpeningT);
+  return {
+    ...state,
+    armLateral: Vec3.of(
+      lagToward(state.armLateral.x, tgt.x, TAU_ARM_LATERAL_S, dt),
+      0,
+      lagToward(state.armLateral.z, tgt.z, TAU_ARM_LATERAL_S, dt),
+    ),
+    armHeightM: lagToward(state.armHeightM, tgtHeight, TAU_ARM_HEIGHT_S, dt),
+    armOpeningT: clamp01(
+      lagToward(state.armOpeningT, tgtOpen, TAU_ARM_OPENING_S, dt),
+    ),
+  };
+}
 
 export type Aabb = {
   readonly center: Vec3;
@@ -100,8 +172,13 @@ export function chopstickCatchPoints(state: TowerState): readonly Vec3[] {
     const armRot = -sideSign * swing;
     const c = Math.cos(armRot);
     const s = Math.sin(armRot);
-    const hingeX = state.basePosition.x + ARM_HINGE_OFFSET_X_M;
-    const hingeZ = state.basePosition.z + sideSign * ARM_HINGE_OFFSET_Z_M;
+    // Active-assist lateral reach (SLS-82): the carriage + arms shift the whole
+    // catch region horizontally toward a slightly-off booster. Zero for a
+    // stationary tower, so the default catch geometry is unchanged.
+    const hingeX =
+      state.basePosition.x + ARM_HINGE_OFFSET_X_M + state.armLateral.x;
+    const hingeZ =
+      state.basePosition.z + sideSign * ARM_HINGE_OFFSET_Z_M + state.armLateral.z;
     for (const offset of [HARDPOINT_FORE_OFFSET_M, HARDPOINT_AFT_OFFSET_M]) {
       points.push(
         Vec3.of(hingeX + c * offset, state.armHeightM, hingeZ - s * offset),
@@ -178,4 +255,10 @@ function clamp01(t: number): number {
   if (t < 0) return 0;
   if (t > 1) return 1;
   return t;
+}
+
+function clampRange(v: number, lo: number, hi: number): number {
+  if (v < lo) return lo;
+  if (v > hi) return hi;
+  return v;
 }
