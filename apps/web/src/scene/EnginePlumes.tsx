@@ -1,21 +1,33 @@
 /**
  * Engine plume VFX (SLS-60) — the live-sim wrapper. Owns one `InstancedMesh`
- * of additive cones (a single draw call, no per-particle CPU) and, each frame,
- * reads the sim world imperatively (like `CollisionDebug` / the camera rigs, so
- * the plumes never trigger a React re-render) and hands it to the shared
- * `updatePlumeInstances` core. The rendering/tuning lives in `plumeInstances.ts`
- * so the `/sandbox/plumes` lab drives the exact same flame.
+ * of additive cones (a single draw call, no per-particle CPU) and hands the
+ * live sim world to the shared `updatePlumeInstances` core. The rendering/
+ * tuning lives in `plumeInstances.ts` so the `/sandbox/plumes` lab drives the
+ * exact same flame.
+ *
+ * **Subscription-driven, NOT imperative (SLS-88).** SLS-60 originally read the
+ * world via `getState()` inside `useFrame` to avoid re-renders. But the drawn
+ * booster (`BoosterFlight`/`BoosterModelGLB`) applies its whole-body transform
+ * through the React commit path (`position` prop + `attitude` in a layout
+ * effect) off the *subscribed* store, while `useFrame` reads whatever the
+ * runner last wrote — up to one runner-step newer. Per-step displacement scales
+ * with the sim speed, so at 8× the plume anchor visibly led the model. Reading
+ * the SAME committed `world` on the SAME commit (via a subscription, mirroring
+ * `BoosterFlight`) keeps the anchor and the model matrix byte-identical every
+ * painted frame — glued at 1×, 8×, and paused. Cost: one cheap extra reconcile
+ * per frame (a single `<instancedMesh>` element); the heavy instance write runs
+ * once per frame either way.
  */
 
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 
-import { useFrame } from "@react-three/fiber";
 import {
   SuperHeavyEngines,
   StarshipEngines,
 } from "@starship-catch-sim/physics";
 import { type InstancedMesh } from "three";
 
+import { isShipWorld } from "../models/glb";
 import { useSimStore } from "../state/simStore.js";
 
 import {
@@ -34,25 +46,25 @@ export function EnginePlumes() {
   const geometry = useMemo(makePlumeGeometry, []);
   const material = useMemo(makePlumeMaterial, []);
 
-  useFrame(() => {
+  // Subscribe to the SAME `world` slice the model draws from, so the plume
+  // anchor is committed on the exact React pass that positions the booster.
+  const world = useSimStore((s) => s.world);
+  const { rigidBody: rb, engineStates, t } = world;
+  const isShip = isShipWorld(world);
+  const engines = isShip ? StarshipEngines : SuperHeavyEngines;
+  const plumeCount = isShip ? StarshipEngines.length : MODELLED_BOOSTER_PLUMES;
+  // Alignment is per-vehicle — the ship's nozzles aren't the booster's.
+  const align = isShip ? SHIP_PLUME_ALIGN : BOOSTER_PLUME_ALIGN;
+
+  // Anchor (attitude) + instance shapes applied in the layout phase, in
+  // lockstep with the model's own whole-body `useLayoutEffect`. Body position
+  // rides the `position` prop below (same as `BoosterModelGLB`'s outer group);
+  // mounts are already physics metres, so the plume sits at the model's OUTER
+  // transform with no `MODEL_SCALE`.
+  useLayoutEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
-    const world = useSimStore.getState().world;
-    const { rigidBody: rb, engineStates, t } = world;
-    const isShip = engineStates.length === StarshipEngines.length;
-    const engines = isShip ? StarshipEngines : SuperHeavyEngines;
-    const plumeCount = isShip
-      ? StarshipEngines.length
-      : MODELLED_BOOSTER_PLUMES;
-    // Alignment is per-vehicle — the ship's nozzles aren't the booster's.
-    const align = isShip ? SHIP_PLUME_ALIGN : BOOSTER_PLUME_ALIGN;
-
-    // Body frame: place the instanced mesh at the engine plane
-    // (rigidBody.position) with the body attitude; instance matrices are then
-    // pure body-frame. Mounts are already physics metres — no model rescale.
-    mesh.position.set(rb.position.x, rb.position.y, rb.position.z);
     mesh.quaternion.set(rb.attitude.x, rb.attitude.y, rb.attitude.z, rb.attitude.w);
-
     updatePlumeInstances(mesh, {
       engines,
       engineStates,
@@ -68,6 +80,7 @@ export function EnginePlumes() {
     <instancedMesh
       ref={meshRef}
       args={[geometry, material, MAX_PLUMES]}
+      position={[rb.position.x, rb.position.y, rb.position.z]}
       frustumCulled={false}
       // Draw after the camera-centred Sky (which sorts as the nearest
       // transparent and would otherwise paint over the plumes against open
