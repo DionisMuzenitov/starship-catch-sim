@@ -8,6 +8,7 @@ strictly above a crash terminal.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from rl import consts as C
 from rl.env import StarshipCatchEnv, make_env
@@ -116,3 +117,29 @@ def test_caught_scores_above_crash():
     assert info_x["outcome"] == "crash" and term_x
 
     assert r_catch > r_crash
+
+
+def test_fuel_penalty_scales_with_kg_burned(monkeypatch):
+    """SLS-80 guardrail: reward drops by exactly W_FUEL·(kg burned), and burning
+    is penalised. Two seed-identical envs differ ONLY in W_FUEL, so the dynamics
+    (hence fuel burned + shaping + W_CTRL term) are identical and the propellant
+    term is isolated. Guards against a future sign-flip / mis-scale of the term
+    the ticket ships to discipline fuel use."""
+    import rl.env as E
+
+    def run(w_fuel: float) -> tuple[float, float]:
+        monkeypatch.setattr(E, "W_FUEL", w_fuel)
+        env = E.StarshipCatchEnv()
+        env.reset(seed=0)
+        prop0 = float(env.world.propellant_mass)
+        # Full throttle → the engines actually burn this step.
+        _, r, _, _, info = env.step(np.full(env.n_act, 1.0))
+        return r, prop0 - float(info["fuel"])
+
+    r_free, burned = run(0.0)
+    r_pen, burned2 = run(3.0e-5)
+
+    assert burned > 0.0  # full throttle really burned propellant
+    assert burned == pytest.approx(burned2, rel=1e-6)  # identical dynamics
+    assert r_pen < r_free  # burning is penalised
+    assert (r_free - r_pen) == pytest.approx(3.0e-5 * burned, rel=1e-5)

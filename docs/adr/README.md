@@ -60,3 +60,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 020 | [Booster collision capsule + catch-as-collision](020-booster-capsule-collision-and-catch.md)      | Proposed                                    |
 | 021 | [VitePress docs site, nested into the Pages artifact](021-vitepress-docs-site.md)                  | Accepted                                    |
 | 022 | [Active catch-assist — cooperating tower-side controller](022-active-catch-assist.md)              | Accepted                                    |
+| 023 | [Booster fuel budget + descent-profile realism (continuous-burn root cause)](023-booster-fuel-realism.md) | Accepted                          |
