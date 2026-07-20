@@ -76,6 +76,36 @@ Approximations, documented on purpose:
   altitude error below 60 km, ~1.5 % at 100 km — matches the code
   comment in `atmosphere.ts`).
 
+## Descent profile + landing-burn fuel budget (SLS-80)
+
+**Real Super Heavy (Flight 5, Oct 2024).** The booster re-enters on
+aerodynamics + **grid fins**, engines off, through most of the descent. With
+~1 km to go it lights the **central 13 engines** for the landing burn to shed
+velocity, then drops to the **central 3** for the near-hover + horizontal slide
+onto the chopstick arms, and shuts down at the catch. It retains only about
+**7 % propellant reserve** for that vertical landing — enough to null the
+velocity with margin to divert to a sea splashdown as a safety abort. So the
+realistic profile is: **long unpowered aero descent → short, late landing burn
+on a bounded reserve.**
+
+**Simulator fuel budget** (single-sourced; `presets/super-heavy.ts`,
+`scenarios.ts`, mirrored in `services/rl/rl_consts.json`):
+
+| Quantity | Value |
+|---|---|
+| Dry mass | 200 t |
+| Full tank | ≈ 3 274 t (π·r²·h·ρ, r = 4.5 m, h = 62 m, ρ = 830 kg/m³) |
+| `booster-descent-*` start | 10 % of tank = **327.4 t** (`INITIAL_FUEL_FRACTION = 0.1`) |
+| Raptor | thrust 2.05 MN (SL) / 2.3 MN (vac); Isp 327 / 350 s; min throttle 0.4 |
+
+**Realism gap (ADR-023).** The shipped booster policy keeps the centre engines
+lit through the *whole* coast (~231 t burned) — it is behaviour-cloned from a
+scripted teacher (`services/rl/src/rl/cascade.py`) that holds the centre ring at
+0.45 throttle for attitude authority. This is unphysical vs the profile above;
+the fix (coast on fins, burn late) is deferred to SLS-89 because it needs a
+policy re-clone and may trade catch rate. The **MPC** already encodes the
+realistic coast+burn with a min-fuel objective + reserve constraint (ADR-009).
+
 ## Sources (accessed 2026-07-04)
 
 1. Hoerner, S.F., *Fluid-Dynamic Drag*, 1965 — axial-flow cylinder Cd via
@@ -99,3 +129,7 @@ Approximations, documented on purpose:
 6. NASA — ["Advancing Supersonic Retropropulsion Using Mars-Relevant Flight
    Data"](https://ntrs.nasa.gov/api/citations/20170008725/downloads/20170008725.pdf),
    NTRS 20170008725, 2017 — plume-drag interaction caveat.
+7. Super Heavy Flight 5 catch (descent profile + landing burn 13→3 engines,
+   ~7 % reserve; accessed 2026-07-20): [NASASpaceflight, "Starship Flight 5
+   catch"](https://www.nasaspaceflight.com/2024/10/starship-flight-5-catch/);
+   [Wikipedia, "SpaceX Super Heavy"](https://en.wikipedia.org/wiki/SpaceX_Super_Heavy).

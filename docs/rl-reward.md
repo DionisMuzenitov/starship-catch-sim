@@ -62,13 +62,19 @@ terms — the earliest anti-tumble signals.
 
 ```
 Φ(s) = −( W_POS·‖r − r_target‖             # distance to the catch point
-        + W_VSPEED·|v_y|                    # vertical speed
+        + W_VSPEED·|v_y − v_y,ref|          # vertical speed vs a descent profile
         + W_HSPEED·‖(v_x, v_z)‖             # horizontal speed
-        + W_TILT·tilt_from_upright )        # attitude error
+        + W_TILT·tilt_from_upright          # attitude error
+        + W_OMEGA·‖ω‖ )                     # angular rate — earliest anti-tumble
 ```
 
+The vertical term tracks a **reference descent profile**, not `|v_y|`:
+`v_y,ref = −clip(0.06·alt_above_target, 2, 90)` m/s — rewarding `|v_y|→0`
+unconditionally paid the policy to thrust into an ascent (SLS-29 diagnostic).
+
 Defaults (`env.py`): `W_POS=5e-3` /m, `W_VSPEED=2.5e-2` /(m/s),
-`W_HSPEED=2.5e-2` /(m/s), `W_TILT=1.0` /rad. **Scale matters** (SLS-29
+`W_HSPEED=2.5e-2` /(m/s), `W_TILT=3.0` /rad, `W_OMEGA=3.0` /(rad/s).
+**Scale matters** (SLS-29
 smoke-run finding): at the original ×5-smaller weights the telescoped shaping
 contributed ~±3 per episode against a −100 terminal, and PPO saw a flat
 return for 150k steps. The current scale makes shaping O(10–50) per episode —
@@ -108,6 +114,17 @@ dominates the return once the agent is near the tower.
 `−W_CTRL·Σ throttle` (default `W_CTRL=1e-3`) nudges toward fuel efficiency and
 away from chattering full-throttle policies. Kept small so it never overrides
 the shaping/terminal signal — it breaks ties between equally-good trajectories.
+
+### Propellant penalty (SLS-80 / ADR-023)
+
+`−W_FUEL·kg_burned` per step (default `W_FUEL=3e-5` /kg) mirrors the MPC's
+min-fuel objective (`services/mpc`: minimise Σσ·dt), so a fuel-optimal policy
+coasts on the fins and burns only for the short late landing burn instead of a
+continuous centre-ring coast burn. Sized like Φ: a wasteful ~231 t episode costs
+~7 reward — commensurate with the shaping, far below the ±100 terminal, so it
+never overrides the catch signal. **Guards future RL/fine-tune runs only** — the
+*shipped* policy is behaviour-cloned from the scripted teacher (`cascade.py`) and
+is unaffected until re-cloned (SLS-89 / ADR-023).
 
 ## Validation (the cheap, reliable check)
 

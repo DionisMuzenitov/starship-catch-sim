@@ -64,6 +64,16 @@ R_MISS_BONUS = 60.0
 # ~20 reward points of gradient across the approach problem.
 MISS_SOFTNESS = 8.0
 W_CTRL = 1.0e-3  # per unit of summed throttle (fuel-efficiency nudge)
+# Propellant penalty (SLS-80): reward -= W_FUEL * kg burned this step. Mirrors
+# the MPC's min-fuel objective (services/mpc: minimise Σσ·dt = min propellant),
+# so a fuel-optimal policy naturally coasts on the fins and only burns for the
+# short late landing burn — instead of the teacher's continuous centre-ring
+# coast burn (ADR-023). Sized like the shaping (Φ): a wasteful continuous-burn
+# episode (~231 t) costs ~7 reward — commensurate with the shaping, well below
+# the ±100 terminal, so it never overrides the catch/miss signal. NOTE: this
+# guards *future* RL training only; the shipped policy is behaviour-cloned from
+# the scripted teacher and is unaffected until re-cloned (SLS-89).
+W_FUEL = 3.0e-5  # per kg of propellant burned
 
 # Attitude inner loop (SLS-51): PD gains mapping lean-target error + body
 # rates -> gimbal command. Signs from the SLS-29 cascade sign search; gains
@@ -468,6 +478,7 @@ class StarshipCatchEnv(gym.Env):
             control = self._decode(action)
         outcome = "none"
         terminated = False
+        prop_before = float(self.world.propellant_mass)
         for _ in range(self.frame_skip):
             if self.attitude_inner_loop:
                 self._inner_gimbal(control, lean_x, lean_z)
@@ -484,7 +495,8 @@ class StarshipCatchEnv(gym.Env):
         phi = self._potential(self.world)
         shaping = self.gamma * phi - self._prev_phi
         self._prev_phi = phi
-        reward = shaping - W_CTRL * self._throttle_sum(action)
+        fuel_burned = max(0.0, prop_before - float(self.world.propellant_mass))
+        reward = shaping - W_CTRL * self._throttle_sum(action) - W_FUEL * fuel_burned
         if terminated:
             if outcome == "caught":
                 reward += R_CATCH
