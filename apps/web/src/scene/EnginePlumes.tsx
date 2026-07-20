@@ -63,6 +63,10 @@ export function EnginePlumes() {
       ref={meshRef}
       args={[geometry, material, MAX_PLUMES]}
       frustumCulled={false}
+      // Draw after the camera-centred Sky (which sorts as the nearest
+      // transparent and would otherwise paint over the plumes against open
+      // sky); depthTest still lets the opaque booster occlude them.
+      renderOrder={2}
     />
   );
 }

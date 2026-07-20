@@ -109,6 +109,10 @@ export type PlumeFrame = {
    *  nozzle ring. Defaults to `MODEL_SCALE`; the `/sandbox/plumes` lab exposes
    *  it as a slider so the ring can be dialled to the GLB. */
   readonly mountScale?: number;
+  /** Body-frame translation applied to the whole plume cluster (m), on top of
+   *  the scaled mounts — lets the cluster centre be nudged onto the model.
+   *  Defaults to zero; tuned via the lab's X/Y/Z sliders. */
+  readonly centerOffset?: { readonly x: number; readonly y: number; readonly z: number };
 };
 
 // Per-frame scratch — never allocate inside the update loop.
@@ -127,6 +131,9 @@ const _white = new Color(1, 1, 1);
 export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
   const sea = seaLevelFactor(f.altitudeM);
   const mountScale = f.mountScale ?? MODEL_SCALE;
+  const ox = f.centerOffset?.x ?? 0;
+  const oy = f.centerOffset?.y ?? 0;
+  const oz = f.centerOffset?.z ?? 0;
   for (let i = 0; i < MAX_PLUMES; i++) {
     const st = i < f.plumeCount ? f.engineStates[i] : undefined;
     const dims = st ? plumeDims(plumeIntensity(st), sea) : null;
@@ -141,7 +148,7 @@ export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
     // (Physics mounts are metric, but the plume is a visual overlay on the
     // scaled model — it must match the model, not the physics frame.)
     const m = f.engines[i].mount;
-    _posV.set(m.x * mountScale, m.y * mountScale, m.z * mountScale);
+    _posV.set(m.x * mountScale + ox, m.y * mountScale + oy, m.z * mountScale + oz);
     _eul.set(st.gimbalPitch, 0, st.gimbalYaw, "XYZ");
     _quat.setFromEuler(_eul);
     _scaleV.set(dims.radius, dims.length, dims.radius);

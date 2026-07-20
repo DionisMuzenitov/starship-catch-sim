@@ -43,6 +43,9 @@ type Controls = {
   engineCount: number;
   gimbalDeg: number;
   mountScale: number;
+  centerX: number;
+  centerY: number;
+  centerZ: number;
 };
 
 function Slider(props: {
@@ -83,6 +86,9 @@ function LabPlumes({
   engineCount,
   gimbalDeg,
   mountScale,
+  centerX,
+  centerY,
+  centerZ,
 }: Controls) {
   const meshRef = useRef<InstancedMesh>(null);
   const geometry = useMemo(makePlumeGeometry, []);
@@ -106,6 +112,7 @@ function LabPlumes({
       altitudeM: altitudeKm * 1000,
       t: state.clock.elapsedTime,
       mountScale,
+      centerOffset: { x: centerX, y: centerY, z: centerZ },
     });
   });
 
@@ -114,6 +121,7 @@ function LabPlumes({
       ref={meshRef}
       args={[geometry, material, MAX_PLUMES]}
       frustumCulled={false}
+      renderOrder={2}
     />
   );
 }
@@ -125,6 +133,9 @@ export function EnginePlumeLab() {
     engineCount: 3,
     gimbalDeg: 0,
     mountScale: MODEL_SCALE,
+    centerX: 0,
+    centerY: 0,
+    centerZ: 0,
   });
   const set = (patch: Partial<Controls>) => setC((s) => ({ ...s, ...patch }));
 
@@ -225,9 +236,37 @@ export function EnginePlumeLab() {
           unit="×"
           onChange={(v) => set({ mountScale: v })}
         />
+        <Slider
+          label="center X"
+          value={c.centerX}
+          min={-4}
+          max={4}
+          step={0.05}
+          unit=" m"
+          onChange={(v) => set({ centerX: v })}
+        />
+        <Slider
+          label="center Y"
+          value={c.centerY}
+          min={-4}
+          max={4}
+          step={0.05}
+          unit=" m"
+          onChange={(v) => set({ centerY: v })}
+        />
+        <Slider
+          label="center Z"
+          value={c.centerZ}
+          min={-4}
+          max={4}
+          step={0.05}
+          unit=" m"
+          onChange={(v) => set({ centerZ: v })}
+        />
         <div className="mt-1 text-emerald-300">
-          center the flames on the bells, then tell me this value →{" "}
-          {c.mountScale.toFixed(3)}
+          center the flames on the bells, then tell me these →{" "}
+          scale {c.mountScale.toFixed(3)} · offset ({c.centerX.toFixed(2)},{" "}
+          {c.centerY.toFixed(2)}, {c.centerZ.toFixed(2)})
         </div>
         <div className="mt-1 text-white/50">
           sea level = tight + bright · high altitude = wide + faint
