@@ -38,10 +38,10 @@ export function CameraRig() {
 
   useFrame(({ camera }, dt) => {
     const mode = useCameraStore.getState().mode;
-    // Orbit modes (chase / tower / ground / free) are driven by
-    // <OrbitCameraRig> + OrbitControls; the rig only drives the scripted
-    // first-person / movie modes. Remember the mode so re-entering a rig mode
-    // still snaps its lookAt.
+    // The user-driven modes are owned elsewhere — chase/tower by
+    // <OrbitCameraRig> (OrbitControls), ground/free by <FreeLookRig>; this rig
+    // only drives the scripted first-person / movie modes (onboard, cinematic).
+    // Remember the mode so re-entering a rig mode still snaps its lookAt.
     if (!isRigMode(mode)) {
       prevModeRef.current = mode;
       return;

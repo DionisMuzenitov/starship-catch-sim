@@ -26,14 +26,11 @@ import {
   rightFromYaw,
   yawPitchFromDir,
 } from "./freeLookMath";
-import { DEFAULT_ENV, modeTargetFor, SITE_GROUND_Y_M } from "./modes";
+import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
 
 const LOOK_SENS = 0.0026; // rad per pixel of drag
 const FLY_SPEED = 90; // m/s
 const WHEEL_STEP = 12; // m per wheel notch (fly dolly)
-// Keep the cam a touch above the visual site ground (terrain shifted up by
-// SITE_OFFSET.y) so it never drops underground.
-const GROUND_FLOOR_M = SITE_GROUND_Y_M + 1;
 
 // Scratch for reading the camera's current look direction on free-cam seed.
 const _dir = new Vector3();

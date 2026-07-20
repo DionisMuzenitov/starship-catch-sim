@@ -27,14 +27,10 @@ import { useCameraStore, type CameraMode } from "../../state/cameraStore";
 import { useSimStore } from "../../state/simStore";
 
 import { isOrbitMode, MODE_POLICY } from "./cameraPolicy";
-import { DEFAULT_ENV, modeTargetFor, SITE_GROUND_Y_M } from "./modes";
+import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
 
 type Controls = ElementRef<typeof OrbitControls>;
 type World = ReturnType<typeof useSimStore.getState>["world"];
-
-/** Minimum camera Y (m) — keeps orbit from tunnelling below the visual site
- *  ground (terrain shifted up by SITE_OFFSET.y). */
-const GROUND_FLOOR_M = SITE_GROUND_Y_M + 1;
 
 export function OrbitCameraRig() {
   const mode = useCameraStore((s) => s.mode);
@@ -52,14 +48,17 @@ export function OrbitCameraRig() {
     }
     const world = useSimStore.getState().world;
 
-    if (prevModeRef.current !== mode) {
+    const seeding = prevModeRef.current !== mode;
+    if (seeding) {
       seedOrbit(controls, camera, mode, world, prevTargetRef.current);
       prevModeRef.current = mode;
     }
 
     // Chase follows: translate camera + pivot by the booster's motion, keeping
     // the user's orbit offset. Tower's pivot is fixed, so nothing to update.
-    if (MODE_POLICY[mode] === "orbit-follow") {
+    // Skip on the seed frame — seedOrbit already framed the current world, so
+    // the delta would be zero (avoids recomputing modeTargetFor twice).
+    if (!seeding && MODE_POLICY[mode] === "orbit-follow") {
       const target = modeTargetFor(mode, world, DEFAULT_ENV, world.t);
       if (target) {
         const prev = prevTargetRef.current;

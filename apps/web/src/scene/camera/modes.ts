@@ -21,6 +21,11 @@ import { cinematicTarget } from "./cinematicRigs";
 // this so they don't spawn underground.
 export const SITE_GROUND_Y_M = SITE_OFFSET[1];
 
+// Minimum camera Y (m) for the user-driven ground/free/orbit rigs — a touch
+// above the visual site ground so they never tunnel below the terrain. Shared
+// by OrbitCameraRig + FreeLookRig so the floor can't drift between them.
+export const GROUND_FLOOR_M = SITE_GROUND_Y_M + 1;
+
 export type CameraTarget = {
   position: Vec3;
   lookAt: Vec3;

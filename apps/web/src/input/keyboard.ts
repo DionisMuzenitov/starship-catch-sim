@@ -33,7 +33,7 @@
 import type { ManualInputState } from "@starship-catch-sim/controllers";
 import type { EngineGroup } from "@starship-catch-sim/physics";
 
-import { flyDirForCode, flyInput } from "../scene/camera/flyInput.js";
+import { flyDirForCode, flyInput, resetFlyInput } from "../scene/camera/flyInput.js";
 import { useCameraStore, type CameraMode } from "../state/cameraStore.js";
 import { useDebugStore } from "../state/debugStore.js";
 import { useHelpStore } from "../state/helpStore.js";
@@ -90,29 +90,24 @@ const SIM_KEYS = new Set([
 export function installKeyboardBindings(b: Bindings): () => void {
   const onKeyDown = (ev: KeyboardEvent) => {
     if (shouldIgnoreEvent(ev.target)) return;
-    // Lock sim-control keys while replay is playing; camera + HUD keys
-    // (C/T/G/O/N/M/V/H/U/P) stay live so the user can still pan around the
-    // recording.
-    if (
-      useReplayStore.getState().mode === "replay" &&
-      SIM_KEYS.has(ev.code)
-    ) {
-      return;
-    }
     if (ev.repeat) {
       // Edge-triggered keys (toggle / pause / scale / reset / rewind)
-      // already fired; held-down keys (throttle, gimbal) are polled
+      // already fired; held-down keys (throttle, gimbal, fly) are polled
       // each tick via the booleans, so repeat events add nothing.
       return;
     }
     // Help overlay (SLS-55). Matched on `ev.key` because "?" is Shift+Slash and
     // has no stable `ev.code`. Not in SIM_KEYS, so it stays live during replay.
+    // Toggling help clears any held fly flag so the free cam can't keep drifting
+    // behind the modal (keyup is swallowed while help is open).
     if (ev.key === "?") {
       useHelpStore.getState().toggleHelp();
+      resetFlyInput();
       return;
     }
     if (ev.code === "Escape") {
       useHelpStore.getState().closeHelp();
+      resetFlyInput();
       return;
     }
     // While the help overlay is open it behaves as a modal: swallow every other
@@ -121,14 +116,24 @@ export function installKeyboardBindings(b: Bindings): () => void {
     if (useHelpStore.getState().helpOpen) return;
     // Free-cam fly (SLS-58): in the `free` camera mode WASD/RF drive the camera
     // (via FreeLookRig), not the vehicle — consume them so throttle/fins/reset
-    // don't also fire. Camera-switch + HUD keys are not fly keys, so they pass
-    // through and still work.
+    // don't also fire. Handled BEFORE the replay lock so you can still fly the
+    // free camera around a recording — the fly keys W/S/R/F live in SIM_KEYS and
+    // would otherwise be swallowed during replay (only A/D would pass).
     if (useCameraStore.getState().mode === "free") {
       const dir = flyDirForCode(ev.code);
       if (dir) {
         flyInput[dir] = true;
         return;
       }
+    }
+    // Lock sim-control keys while replay is playing; camera + HUD keys
+    // (C/T/G/O/N/M/V/H/U/P) stay live so the user can still pan around the
+    // recording.
+    if (
+      useReplayStore.getState().mode === "replay" &&
+      SIM_KEYS.has(ev.code)
+    ) {
+      return;
     }
     switch (ev.code) {
       case "KeyW":
