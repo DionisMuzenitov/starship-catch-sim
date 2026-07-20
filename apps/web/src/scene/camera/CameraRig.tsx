@@ -1,12 +1,12 @@
 /**
- * R3F camera driver. Each rAF:
- *  1. Read current mode + world from the zustand stores.
- *  2. Resolve a per-mode target via `modeTargetFor`. `null` ⇒ free; we
- *     leave the camera to `<OrbitControls>`.
- *  3. Damp the three.js camera position and an internal lookAt vector
- *     toward the target with a per-mode τ.
- *  4. Clamp camera Y above ground so it can't tunnel below.
- *  5. Apply `camera.lookAt(internalLookAt)`.
+ * R3F camera driver for the SCRIPTED modes only (onboard, cinematic). The other
+ * modes are user-controlled and owned by `OrbitCameraRig` (chase, tower) or
+ * `FreeLookRig` (ground, free); this rig bails for them (see `isRigMode`). Each
+ * rAF, for a rig mode:
+ *  1. Resolve a per-mode target via `modeTargetFor`.
+ *  2. Damp the three.js camera position + an internal lookAt vector toward it
+ *     with a per-mode τ.
+ *  3. Clamp camera Y above ground; apply `camera.lookAt(internalLookAt)`.
  *
  * State (`prevMode`, the damped `lookAt` Vector3) is kept in refs so the
  * component never re-renders.
@@ -18,20 +18,13 @@ import { MathUtils, Vector3 } from "three";
 
 import { useCameraStore, type CameraMode } from "../../state/cameraStore";
 import { useSimStore } from "../../state/simStore";
-import { towerTuneEnabled } from "../../state/towerTuneStore";
 
+import { isRigMode, type RigMode } from "./cameraPolicy";
 import { DEFAULT_ENV, modeTargetFor } from "./modes";
 
-/** Where the free camera jumps to when entered from the tuning panel — a
- *  close SE vantage looking at the tower catch point, so O lands you on the
- *  chopsticks instead of wherever the previous mode left the camera (SLS-76). */
-const TUNE_FREE_START = new Vector3(70, 110, 70);
-
-/** Per-mode damping time constants (seconds). */
-const TAU_BY_MODE: Record<Exclude<CameraMode, "free">, number> = {
-  chase: 0.4,
-  tower: 0.6,
-  ground: 0.6,
+/** Per-mode damping time constants (seconds). Only the rig modes reach the
+ *  damping; the orbit modes are owned by OrbitControls and bail first. */
+const TAU_BY_MODE: Record<RigMode, number> = {
   onboard: 0.2,
   cinematic: 1.0,
 };
@@ -45,14 +38,11 @@ export function CameraRig() {
 
   useFrame(({ camera }, dt) => {
     const mode = useCameraStore.getState().mode;
-    if (mode === "free") {
-      // On entering free mode from the tuning panel, jump next to the tower
-      // (OrbitControls then pivots on the catch point) so the owner isn't
-      // stranded wherever the descent view left the camera (km away).
-      if (prevModeRef.current !== "free" && towerTuneEnabled()) {
-        camera.position.copy(TUNE_FREE_START);
-        camera.lookAt(8.5, 91, 0);
-      }
+    // The user-driven modes are owned elsewhere — chase/tower by
+    // <OrbitCameraRig> (OrbitControls), ground/free by <FreeLookRig>; this rig
+    // only drives the scripted first-person / movie modes (onboard, cinematic).
+    // Remember the mode so re-entering a rig mode still snaps its lookAt.
+    if (!isRigMode(mode)) {
       prevModeRef.current = mode;
       return;
     }
