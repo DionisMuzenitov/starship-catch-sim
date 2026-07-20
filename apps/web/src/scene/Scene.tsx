@@ -20,6 +20,7 @@ import { CameraRig } from "./camera/CameraRig";
 import { FreeLookRig } from "./camera/FreeLookRig";
 import { OrbitCameraRig } from "./camera/OrbitCameraRig";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "./constants";
+import { EnginePlumes } from "./EnginePlumes";
 import { DebugHud, DebugSampler, type DebugSample } from "./DebugOverlay";
 import { Fog } from "./Fog";
 import { LaunchSite } from "./LaunchSite";
@@ -67,6 +68,7 @@ export function Scene() {
         {towerTuneEnabled() && <LandingGhost />}
         {towerTuneEnabled() && <CollisionDebug />}
         <BoosterFlight />
+        <EnginePlumes />
         <CameraRig />
         <ImpactReticle />
         <DragTrajectoryOverlay />
