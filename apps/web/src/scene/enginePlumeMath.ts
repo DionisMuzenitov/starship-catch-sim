@@ -81,7 +81,8 @@ export function plumeDims(intensity: number, seaLevel: number): PlumeDims {
 
 /**
  * Cheap per-engine brightness flicker so the flame looks alive without a
- * particle system. Deterministic in (time, engine index); amplitude ±8 %.
+ * particle system. Deterministic in (time, engine index); returns 0.92 ± 0.08,
+ * i.e. the range [0.84, 1.0] (a slight dimming flutter, never brighter).
  */
 export function plumeFlicker(t: number, engineIndex: number): number {
   return 0.92 + 0.08 * Math.sin(t * 37 + engineIndex * 1.7);

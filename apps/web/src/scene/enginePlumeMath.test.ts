@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,6 +9,13 @@ import {
   plumeIntensity,
   seaLevelFactor,
 } from "./enginePlumeMath";
+
+const unit = () => fc.double({ min: 0, max: 1, noNaN: true });
+const altitude = () =>
+  fc.double({ min: -2_000, max: 120_000, noNaN: true, noDefaultInfinity: true });
+// An ordered pair a ≤ b, for monotonicity properties.
+const ordered = (arb: () => fc.Arbitrary<number>) =>
+  fc.tuple(arb(), arb()).map(([x, y]) => (x <= y ? [x, y] : [y, x]));
 
 describe("plumeIntensity", () => {
   it("is zero when the engine is off, whatever the throttle", () => {
@@ -74,6 +82,61 @@ describe("plumeDims", () => {
 
   it("clamps out-of-range intensity + regime", () => {
     expect(plumeDims(2, 2)).toEqual(plumeDims(1, 1));
+  });
+});
+
+describe("plumeMath invariants (property)", () => {
+  it("plumeIntensity: always in [0,1], zero when off, monotonic in throttle", () => {
+    fc.assert(
+      fc.property(fc.boolean(), unit(), (on, throttle) => {
+        const i = plumeIntensity({ on, throttle });
+        expect(i).toBeGreaterThanOrEqual(0);
+        expect(i).toBeLessThanOrEqual(1);
+        if (!on) expect(i).toBe(0);
+      }),
+    );
+    fc.assert(
+      fc.property(ordered(unit), ([lo, hi]) => {
+        expect(plumeIntensity({ on: true, throttle: hi })).toBeGreaterThanOrEqual(
+          plumeIntensity({ on: true, throttle: lo }),
+        );
+      }),
+    );
+  });
+
+  it("seaLevelFactor: in [0,1] and monotonically non-increasing with altitude", () => {
+    fc.assert(
+      fc.property(altitude(), (a) => {
+        const s = seaLevelFactor(a);
+        expect(s).toBeGreaterThanOrEqual(0);
+        expect(s).toBeLessThanOrEqual(1);
+      }),
+    );
+    fc.assert(
+      fc.property(ordered(altitude), ([lo, hi]) => {
+        expect(seaLevelFactor(hi)).toBeLessThanOrEqual(seaLevelFactor(lo));
+      }),
+    );
+  });
+
+  it("plumeDims: non-negative, and length/radius/brightness non-decreasing in intensity", () => {
+    fc.assert(
+      fc.property(unit(), unit(), (intensity, sea) => {
+        const d = plumeDims(intensity, sea);
+        expect(d.length).toBeGreaterThanOrEqual(0);
+        expect(d.radius).toBeGreaterThanOrEqual(0);
+        expect(d.brightness).toBeGreaterThanOrEqual(0);
+      }),
+    );
+    fc.assert(
+      fc.property(ordered(unit), unit(), ([lo, hi], sea) => {
+        const a = plumeDims(lo, sea);
+        const b = plumeDims(hi, sea);
+        expect(b.length).toBeGreaterThanOrEqual(a.length);
+        expect(b.radius).toBeGreaterThanOrEqual(a.radius);
+        expect(b.brightness).toBeGreaterThanOrEqual(a.brightness);
+      }),
+    );
   });
 });
 

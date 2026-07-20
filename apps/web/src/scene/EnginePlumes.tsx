@@ -35,7 +35,6 @@ import {
   Vector3,
 } from "three";
 
-import { MODEL_SCALE } from "../models/glb/assetTransform";
 import { useSimStore } from "../state/simStore.js";
 
 import {
@@ -45,8 +44,15 @@ import {
   seaLevelFactor,
 } from "./enginePlumeMath";
 
-/** Instance slots — the booster's 33 Raptors is the max (ship uses 6). */
-const MAX_ENGINES = SuperHeavyEngines.length;
+/**
+ * Only the engines with a modelled nozzle bell get a plume, so a flame never
+ * hangs in empty space. `BoosterModelGLB` models 13 booster Raptors (centre 3
+ * + inner 10; its `ENGINE_NODES`) — the outer 20 aren't modelled, and firing
+ * them is an ascent-phase thing, not the catch. The ship models all 6. 13 is
+ * the max, so it sizes the instance buffer.
+ */
+const MODELLED_BOOSTER_PLUMES = 13;
+const MAX_PLUMES = MODELLED_BOOSTER_PLUMES;
 
 // Flame colour gradient from nozzle (t=0) to tip (t=1): pale blue-white core →
 // white-hot → orange → dark. Under additive blending "dark" reads as
@@ -111,14 +117,18 @@ export function EnginePlumes() {
     if (!mesh) return;
     const world = useSimStore.getState().world;
     const { rigidBody: rb, engineStates, t } = world;
-    const engines =
-      engineStates.length === StarshipEngines.length
-        ? StarshipEngines
-        : SuperHeavyEngines;
+    const isShip = engineStates.length === StarshipEngines.length;
+    const engines = isShip ? StarshipEngines : SuperHeavyEngines;
+    // Plume only the engines with a modelled bell (see MAX_PLUMES) so a flame
+    // never hangs detached below the skirt.
+    const plumeCount = isShip
+      ? StarshipEngines.length
+      : MODELLED_BOOSTER_PLUMES;
 
     // Body frame: put the whole instanced mesh at the engine plane
     // (rigidBody.position) with the body attitude; instance matrices are then
-    // pure body-frame (mount + gimbal + scale).
+    // pure body-frame (mount + gimbal + scale). Mounts are already physics
+    // metres, matching rigidBody.position — no model-unit rescale.
     mesh.position.set(rb.position.x, rb.position.y, rb.position.z);
     mesh.quaternion.set(
       rb.attitude.x,
@@ -129,17 +139,17 @@ export function EnginePlumes() {
 
     const sea = seaLevelFactor(rb.position.y);
 
-    for (let i = 0; i < MAX_ENGINES; i++) {
-      const st = i < engines.length ? engineStates[i] : undefined;
+    for (let i = 0; i < MAX_PLUMES; i++) {
+      const st = i < plumeCount ? engineStates[i] : undefined;
       const dims = st ? plumeDims(plumeIntensity(st), sea) : null;
-      if (!dims || dims.length <= 0 || !st) {
+      if (!st || !dims || dims.length <= 0) {
         _mat.makeScale(0, 0, 0); // collapse to a point → invisible
         mesh.setMatrixAt(i, _mat);
-        mesh.setColorAt(i, _white.setRGB(0, 0, 0));
+        mesh.setColorAt(i, _col.setRGB(0, 0, 0)); // scratch — never mutate _white
         continue;
       }
       const m = engines[i].mount;
-      _posV.set(m.x * MODEL_SCALE, m.y * MODEL_SCALE, m.z * MODEL_SCALE);
+      _posV.set(m.x, m.y, m.z);
       _eul.set(st.gimbalPitch, 0, st.gimbalYaw, "XYZ");
       _quat.setFromEuler(_eul);
       _scaleV.set(dims.radius, dims.length, dims.radius);
@@ -155,7 +165,7 @@ export function EnginePlumes() {
   return (
     <instancedMesh
       ref={meshRef}
-      args={[geometry, material, MAX_ENGINES]}
+      args={[geometry, material, MAX_PLUMES]}
       frustumCulled={false}
     />
   );
