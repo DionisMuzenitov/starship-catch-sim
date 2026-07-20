@@ -8,6 +8,12 @@ import { expect, test } from "@playwright/test";
 test("camera modes switch and accept wheel + drag without console errors", async ({
   page,
 }) => {
+  // Heaviest e2e in the suite: boots a full WebGL scene (GLB tower + terrain),
+  // switches through all six camera modes, then does real wheel/drag input. It
+  // runs ~29 s on a fast dev box and tips over the 30 s default on CI's
+  // throttled 2-core runner, so give it explicit headroom (a slow render loop
+  // starves the input queue, not a logic bug).
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
