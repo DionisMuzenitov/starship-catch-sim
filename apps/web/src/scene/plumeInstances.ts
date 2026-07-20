@@ -24,8 +24,6 @@ import {
   Vector3,
 } from "three";
 
-import { MODEL_SCALE } from "../models/glb/assetTransform";
-
 import {
   plumeDims,
   plumeFlicker,
@@ -42,6 +40,13 @@ import {
  */
 export const MODELLED_BOOSTER_PLUMES = 13;
 export const MAX_PLUMES = MODELLED_BOOSTER_PLUMES;
+
+// Owner-tuned alignment of the plumes onto the DRAWN GLB nozzle bells
+// (`/sandbox/plumes`, SLS-60). The physics mount ring doesn't match the model's
+// nozzle ring, so these are measured empirically, not derived: a radius
+// multiplier + a body-frame translation of the whole cluster.
+export const PLUME_MOUNT_SCALE = 1.42;
+export const PLUME_CENTER_OFFSET = { x: 0.3, y: 0.45, z: 0.2 } as const;
 
 // Flame colour gradient from nozzle (t=0) to tip (t=1): yellow-white core →
 // golden yellow → orange → dark red. Brightness is kept modest (see
@@ -130,10 +135,10 @@ const _white = new Color(1, 1, 1);
  */
 export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
   const sea = seaLevelFactor(f.altitudeM);
-  const mountScale = f.mountScale ?? MODEL_SCALE;
-  const ox = f.centerOffset?.x ?? 0;
-  const oy = f.centerOffset?.y ?? 0;
-  const oz = f.centerOffset?.z ?? 0;
+  const mountScale = f.mountScale ?? PLUME_MOUNT_SCALE;
+  const ox = f.centerOffset?.x ?? PLUME_CENTER_OFFSET.x;
+  const oy = f.centerOffset?.y ?? PLUME_CENTER_OFFSET.y;
+  const oz = f.centerOffset?.z ?? PLUME_CENTER_OFFSET.z;
   for (let i = 0; i < MAX_PLUMES; i++) {
     const st = i < f.plumeCount ? f.engineStates[i] : undefined;
     const dims = st ? plumeDims(plumeIntensity(st), sea) : null;
@@ -143,10 +148,9 @@ export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
       mesh.setColorAt(i, _col.setRGB(0, 0, 0)); // scratch — never mutate _white
       continue;
     }
-    // Anchor at the DRAWN nozzle: the GLB body is rendered scaled by
-    // MODEL_SCALE, so the visible engine ring sits at mount × MODEL_SCALE.
-    // (Physics mounts are metric, but the plume is a visual overlay on the
-    // scaled model — it must match the model, not the physics frame.)
+    // Anchor at the DRAWN nozzle: scale the physics mount ring onto the GLB
+    // nozzle ring and translate the cluster onto the model (owner-tuned in the
+    // lab — the plume is a visual overlay, not the physics frame).
     const m = f.engines[i].mount;
     _posV.set(m.x * mountScale + ox, m.y * mountScale + oy, m.z * mountScale + oz);
     _eul.set(st.gimbalPitch, 0, st.gimbalYaw, "XYZ");

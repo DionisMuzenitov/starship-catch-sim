@@ -22,11 +22,12 @@ import {
 } from "@starship-catch-sim/physics";
 import { type InstancedMesh } from "three";
 
-import { MODEL_SCALE } from "../models/glb/assetTransform";
 import { VehicleModel } from "../models/glb";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
 import {
   MAX_PLUMES,
+  PLUME_CENTER_OFFSET,
+  PLUME_MOUNT_SCALE,
   makePlumeGeometry,
   makePlumeMaterial,
   updatePlumeInstances,
@@ -130,12 +131,12 @@ export function EnginePlumeLab() {
   const [c, setC] = useState<Controls>({
     throttle: 0.8,
     altitudeKm: 0,
-    engineCount: 3,
+    engineCount: 13,
     gimbalDeg: 0,
-    mountScale: MODEL_SCALE,
-    centerX: 0,
-    centerY: 0,
-    centerZ: 0,
+    mountScale: PLUME_MOUNT_SCALE,
+    centerX: PLUME_CENTER_OFFSET.x,
+    centerY: PLUME_CENTER_OFFSET.y,
+    centerZ: PLUME_CENTER_OFFSET.z,
   });
   const set = (patch: Partial<Controls>) => setC((s) => ({ ...s, ...patch }));
 
