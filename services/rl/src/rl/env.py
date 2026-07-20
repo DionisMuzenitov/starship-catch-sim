@@ -68,11 +68,15 @@ W_CTRL = 1.0e-3  # per unit of summed throttle (fuel-efficiency nudge)
 # the MPC's min-fuel objective (services/mpc: minimise Σσ·dt = min propellant),
 # so a fuel-optimal policy naturally coasts on the fins and only burns for the
 # short late landing burn — instead of the teacher's continuous centre-ring
-# coast burn (ADR-023). Sized like the shaping (Φ): a wasteful continuous-burn
-# episode (~231 t) costs ~7 reward — commensurate with the shaping, well below
-# the ±100 terminal, so it never overrides the catch/miss signal. NOTE: this
-# guards *future* RL training only; the shipped policy is behaviour-cloned from
-# the scripted teacher and is unaffected until re-cloned (SLS-89).
+# coast burn (ADR-023). W_FUEL is the ACTUAL propellant cost; the separate
+# W_CTRL above stays a small anti-chatter throttle-sum proxy, not a fuel term.
+# Sized like the shaping (Φ): a wasteful continuous-burn episode (~231 t) costs
+# ~7 reward — commensurate with the shaping, well below the ±100 terminal, so it
+# never overrides the catch/miss signal. NOTE: this guards *future* RL training
+# only; the shipped policy is behaviour-cloned from the scripted teacher and is
+# unaffected until re-cloned (SLS-89). Changing any reward term also invalidates
+# the raw rewards stored in old demo buffers (demos/*.npz) for a SAC replay
+# warm-start — regenerate demos (SLS-89 re-collects them) before such a run.
 W_FUEL = 3.0e-5  # per kg of propellant burned
 
 # Attitude inner loop (SLS-51): PD gains mapping lean-target error + body

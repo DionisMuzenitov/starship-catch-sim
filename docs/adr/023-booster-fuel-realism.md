@@ -101,6 +101,11 @@ catch rate.
   session).
 - **Cost:** the visible behaviour (continuous centre burn) is unchanged until
   SLS-89 lands — the deployed policy still burns through the coast.
+- **Artifact note:** changing the reward invalidates the raw rewards stored in
+  any pre-SLS-80 demo buffers (`demos/*.npz`) for a SAC replay warm-start (they'd
+  mix reward scales). Behaviour cloning ignores stored rewards, so the shipped
+  lineage is unaffected; a future SAC warm-start must regenerate demos — which
+  SLS-89 does anyway.
 
 ## Alternatives considered
 
