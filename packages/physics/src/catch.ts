@@ -128,19 +128,29 @@ export function evaluateCatchOutcome(
   site?: SiteCollision,
   body?: BodyCapsule,
 ): CatchOutcome {
-  const metrics = computeMetrics(world, envelope);
   const captureVol = chopstickCaptureVolume(tower);
+  // The success target tracks the LIVE arm catch point (SLS-82 / ADR-021): the
+  // envelope's position tolerance is measured from where the arms actually are.
+  // For a stationary tower (DEFAULT_TOWER_STATE, zero reach) this equals the
+  // fixed `CATCH_POINT_WORLD` the envelope already carried, so the benches and
+  // the headline catch rates are byte-identical; only an actively-reaching
+  // tower widens the effective envelope.
+  const liveEnvelope: CatchEnvelope = {
+    ...envelope,
+    targetPosition: captureVol.center,
+  };
+  const metrics = computeMetrics(world, liveEnvelope);
   const p = world.rigidBody.position;
   const bodyUp = Quat.rotateVec3(world.rigidBody.attitude, Vec3.of(0, 1, 0));
   const armHit = (arm: Aabb): boolean =>
     body ? capsuleOverlapsAabb(p, bodyUp, body, arm) : pointInAabb(p, arm);
 
-  // Capture volume wins over everything (physics-pinned catch target). This is
-  // the success gate — CoM-point based so the benches are unaffected — and it is
-  // checked BEFORE structure hits, so the capsule overlapping the closing arms
-  // during a valid catch (the grip) reads `caught`, never a graze.
+  // Capture volume wins over everything (live arm catch target). This is the
+  // success gate — CoM-point based so the fixed-tower benches are unaffected —
+  // and it is checked BEFORE structure hits, so the capsule overlapping the
+  // closing arms during a valid catch (the grip) reads `caught`, never a graze.
   if (pointInAabb(p, captureVol)) {
-    const verdict = evaluateCatch(world, envelope);
+    const verdict = evaluateCatch(world, liveEnvelope);
     return {
       kind: verdict.caught ? "caught" : "near_miss",
       verdict,

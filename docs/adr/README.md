@@ -59,3 +59,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 019 | [Print-kit tower pipeline (STL kit → assembled GLB)](019-print-kit-tower-pipeline.md)              | Accepted                                    |
 | 020 | [Booster collision capsule + catch-as-collision](020-booster-capsule-collision-and-catch.md)      | Proposed                                    |
 | 021 | [VitePress docs site, nested into the Pages artifact](021-vitepress-docs-site.md)                  | Accepted                                    |
+| 022 | [Active catch-assist — cooperating tower-side controller](022-active-catch-assist.md)              | Accepted                                    |

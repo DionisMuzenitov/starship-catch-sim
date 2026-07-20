@@ -2,17 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import { Vec3 } from "./math/vec3.js";
 import {
+  ARM_HEIGHT_MAX_M,
+  ARM_HEIGHT_MIN_M,
   ARM_HINGE_OFFSET_X_M,
   ARM_HINGE_OFFSET_Z_M,
   DEFAULT_ARM_HEIGHT_M,
   DEFAULT_TOWER_STATE,
   HARDPOINT_AFT_OFFSET_M,
   HARDPOINT_FORE_OFFSET_M,
+  MAX_ARM_REACH_M,
   TOWER_FOOTPRINT_M,
   TOWER_HEIGHT_M,
   chopstickCaptureVolume,
   chopstickCatchPoints,
+  clampArmReach,
   pointInAabb,
+  stepTowerState,
   towerStructureAabb,
 } from "./tower.js";
 
@@ -109,6 +114,99 @@ describe("chopstickCaptureVolume", () => {
     const closed = chopstickCaptureVolume(DEFAULT_TOWER_STATE);
     expect(negative.halfExtents).toEqual(closed.halfExtents);
     expect(overOne.halfExtents.x).toBeCloseTo(0, 9);
+  });
+});
+
+describe("active catch-assist (SLS-82)", () => {
+  it("HEADLINE GUARD: default tower catch target is unchanged (8.5, 91, 0)", () => {
+    // The whole SLS-82 design rests on this: with zero reach the live capture
+    // centre must equal the pre-assist fixed catch point, so the Monte-Carlo
+    // benches + SLS-66 floor never move.
+    const c = chopstickCaptureVolume(DEFAULT_TOWER_STATE).center;
+    expect(c.x).toBeCloseTo(8.5, 9);
+    expect(c.y).toBeCloseTo(DEFAULT_ARM_HEIGHT_M, 9);
+    expect(c.z).toBeCloseTo(0, 9);
+    expect(DEFAULT_TOWER_STATE.armLateral).toEqual(Vec3.ZERO);
+  });
+
+  it("lateral reach shifts the capture volume by exactly that offset", () => {
+    const base = chopstickCaptureVolume(DEFAULT_TOWER_STATE);
+    const reached = chopstickCaptureVolume({
+      ...DEFAULT_TOWER_STATE,
+      armLateral: Vec3.of(2, 0, -3),
+    });
+    expect(reached.center.x).toBeCloseTo(base.center.x + 2, 9);
+    expect(reached.center.z).toBeCloseTo(base.center.z - 3, 9);
+    // Shape is unchanged — the arms translate, they don't grow.
+    expect(reached.halfExtents).toEqual(base.halfExtents);
+  });
+
+  it("lateral reach does NOT move the tower structure box", () => {
+    const a = towerStructureAabb({
+      ...DEFAULT_TOWER_STATE,
+      armLateral: Vec3.of(5, 0, 5),
+    });
+    expect(a).toEqual(towerStructureAabb(DEFAULT_TOWER_STATE));
+  });
+
+  describe("clampArmReach", () => {
+    it("passes a within-reach vector through (zeroing y)", () => {
+      expect(clampArmReach(Vec3.of(2, 9, -1))).toEqual(Vec3.of(2, 0, -1));
+    });
+    it("clamps an over-reach vector to the max magnitude, keeping direction", () => {
+      const out = clampArmReach(Vec3.of(30, 0, 0));
+      expect(Math.hypot(out.x, out.z)).toBeCloseTo(MAX_ARM_REACH_M, 9);
+      expect(out.x).toBeGreaterThan(0);
+    });
+    it("leaves zero as zero", () => {
+      expect(clampArmReach(Vec3.ZERO)).toEqual(Vec3.ZERO);
+    });
+  });
+
+  describe("stepTowerState", () => {
+    const cmd = {
+      armLateral: Vec3.of(4, 0, 0),
+      armHeightM: 80,
+      armOpeningT: 0,
+    };
+    it("moves partway toward the command in one tick (first-order lag)", () => {
+      const next = stepTowerState(DEFAULT_TOWER_STATE, cmd, 0.02);
+      expect(next.armLateral.x).toBeGreaterThan(0);
+      expect(next.armLateral.x).toBeLessThan(cmd.armLateral.x); // not teleported
+      expect(next.armHeightM).toBeLessThan(DEFAULT_TOWER_STATE.armHeightM);
+      expect(next.armHeightM).toBeGreaterThan(cmd.armHeightM);
+    });
+    it("never oversteps the command however large dt is", () => {
+      const next = stepTowerState(DEFAULT_TOWER_STATE, cmd, 100);
+      expect(next.armLateral.x).toBeCloseTo(cmd.armLateral.x, 3);
+      expect(next.armHeightM).toBeCloseTo(cmd.armHeightM, 3);
+    });
+    it("clamps the commanded reach + carriage travel", () => {
+      const next = stepTowerState(
+        DEFAULT_TOWER_STATE,
+        { armLateral: Vec3.of(999, 0, 0), armHeightM: 9999, armOpeningT: 5 },
+        100,
+      );
+      expect(Math.hypot(next.armLateral.x, next.armLateral.z)).toBeCloseTo(
+        MAX_ARM_REACH_M,
+        3,
+      );
+      expect(next.armHeightM).toBeCloseTo(ARM_HEIGHT_MAX_M, 3);
+      expect(next.armOpeningT).toBeLessThanOrEqual(1);
+      expect(next.armOpeningT).toBeGreaterThanOrEqual(0);
+      // and the low end of carriage travel
+      const low = stepTowerState(
+        DEFAULT_TOWER_STATE,
+        { armLateral: Vec3.ZERO, armHeightM: -100, armOpeningT: 0 },
+        100,
+      );
+      expect(low.armHeightM).toBeCloseTo(ARM_HEIGHT_MIN_M, 3);
+    });
+    it("dt = 0 is a no-op", () => {
+      expect(stepTowerState(DEFAULT_TOWER_STATE, cmd, 0)).toEqual(
+        DEFAULT_TOWER_STATE,
+      );
+    });
   });
 });
 

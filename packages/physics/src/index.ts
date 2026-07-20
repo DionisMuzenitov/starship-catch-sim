@@ -96,6 +96,8 @@ export { currentPhase } from "./phase.js";
 export type { Phase } from "./phase.js";
 export {
   ARM_ANGLE_OPEN_RAD,
+  ARM_HEIGHT_MAX_M,
+  ARM_HEIGHT_MIN_M,
   ARM_HINGE_OFFSET_X_M,
   ARM_HINGE_OFFSET_Z_M,
   ARM_LENGTH_M,
@@ -104,14 +106,26 @@ export {
   DEFAULT_TOWER_STATE,
   HARDPOINT_AFT_OFFSET_M,
   HARDPOINT_FORE_OFFSET_M,
+  MAX_ARM_REACH_M,
+  TAU_ARM_HEIGHT_S,
+  TAU_ARM_LATERAL_S,
+  TAU_ARM_OPENING_S,
   TOWER_FOOTPRINT_M,
   TOWER_HEIGHT_M,
   chopstickCaptureVolume,
   chopstickCatchPoints,
+  clampArmReach,
   pointInAabb,
+  stepTowerState,
   towerStructureAabb,
 } from "./tower.js";
-export type { Aabb, BodyCapsule, CaptureVolume, TowerState } from "./tower.js";
+export type {
+  Aabb,
+  BodyCapsule,
+  CaptureVolume,
+  TowerCommand,
+  TowerState,
+} from "./tower.js";
 export { GROUND_Y_M, evaluateCatchOutcome } from "./catch.js";
 export type {
   CatchOutcome,

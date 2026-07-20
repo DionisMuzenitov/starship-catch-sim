@@ -103,3 +103,15 @@ choreography trigger, not a physics gate, so it can't change bench outcomes.
   physically hold the booster) — rejected: redefines "caught", invalidating every
   RL/MPC/PID bench and the M6 neural-policy result, which are all defined by the
   envelope. The envelope stays the gate; collision is the physical/visual layer.
+
+## Amendment (2026-07-20, ADR-022)
+
+**ADR-022 (active catch-assist, SLS-82) extends this ADR.** It makes the
+`evaluateCatch` success **target** track the *live* arm catch point instead of
+the fixed `CATCH_POINT_WORLD` constant this ADR assumed. This does **not**
+violate the sole-gate / no-headline-move constraint above: `CATCH_POINT_WORLD` is
+*defined as* `chopstickCaptureVolume(DEFAULT_TOWER_STATE).center`, so a
+stationary tower yields the identical target and identical outcomes — only an
+*actively-reaching* tower (a tower-side controller attached, opt-in on the
+bench) moves it. The tolerances are unchanged and the numpy port is untouched.
+See [ADR-022](022-active-catch-assist.md).
