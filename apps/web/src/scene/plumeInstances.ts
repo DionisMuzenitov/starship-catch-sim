@@ -43,13 +43,14 @@ import {
 export const MODELLED_BOOSTER_PLUMES = 13;
 export const MAX_PLUMES = MODELLED_BOOSTER_PLUMES;
 
-// Flame colour gradient from nozzle (t=0) to tip (t=1): pale blue-white core →
-// white-hot → orange → dark. Under additive blending "dark" reads as
-// transparent, so the plume fades out at its tip with no alpha channel.
-const CORE = new Color(0.75, 0.88, 1.0);
-const HOT = new Color(1.0, 0.95, 0.85);
-const MID = new Color(1.0, 0.5, 0.15);
-const TIP = new Color(0.05, 0.01, 0.0);
+// Flame colour gradient from nozzle (t=0) to tip (t=1): yellow-white core →
+// golden yellow → orange → dark red. Brightness is kept modest (see
+// enginePlumeMath) so the palette shows through as fire instead of clamping to
+// a white cone (owner feedback).
+const CORE = new Color(1.0, 0.95, 0.55);
+const HOT = new Color(1.0, 0.8, 0.3);
+const MID = new Color(1.0, 0.5, 0.12);
+const TIP = new Color(0.25, 0.06, 0.0);
 
 function gradientColor(t: number, out: Color): Color {
   if (t < 0.25) return out.copy(CORE).lerp(HOT, t / 0.25);
@@ -104,6 +105,10 @@ export type PlumeFrame = {
   readonly altitudeM: number;
   /** Time (s) for the flicker phase. */
   readonly t: number;
+  /** Multiplier on the engine mount radius so the plumes land on the DRAWN
+   *  nozzle ring. Defaults to `MODEL_SCALE`; the `/sandbox/plumes` lab exposes
+   *  it as a slider so the ring can be dialled to the GLB. */
+  readonly mountScale?: number;
 };
 
 // Per-frame scratch — never allocate inside the update loop.
@@ -121,6 +126,7 @@ const _white = new Color(1, 1, 1);
  */
 export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
   const sea = seaLevelFactor(f.altitudeM);
+  const mountScale = f.mountScale ?? MODEL_SCALE;
   for (let i = 0; i < MAX_PLUMES; i++) {
     const st = i < f.plumeCount ? f.engineStates[i] : undefined;
     const dims = st ? plumeDims(plumeIntensity(st), sea) : null;
@@ -135,7 +141,7 @@ export function updatePlumeInstances(mesh: InstancedMesh, f: PlumeFrame): void {
     // (Physics mounts are metric, but the plume is a visual overlay on the
     // scaled model — it must match the model, not the physics frame.)
     const m = f.engines[i].mount;
-    _posV.set(m.x * MODEL_SCALE, m.y * MODEL_SCALE, m.z * MODEL_SCALE);
+    _posV.set(m.x * mountScale, m.y * mountScale, m.z * mountScale);
     _eul.set(st.gimbalPitch, 0, st.gimbalYaw, "XYZ");
     _quat.setFromEuler(_eul);
     _scaleV.set(dims.radius, dims.length, dims.radius);

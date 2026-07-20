@@ -22,6 +22,7 @@ import {
 } from "@starship-catch-sim/physics";
 import { type InstancedMesh } from "three";
 
+import { MODEL_SCALE } from "../models/glb/assetTransform";
 import { VehicleModel } from "../models/glb";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
 import {
@@ -41,6 +42,7 @@ type Controls = {
   altitudeKm: number;
   engineCount: number;
   gimbalDeg: number;
+  mountScale: number;
 };
 
 function Slider(props: {
@@ -75,7 +77,13 @@ function Slider(props: {
 }
 
 /** The plume instanced mesh, driven by the lab controls (not the sim store). */
-function LabPlumes({ throttle, altitudeKm, engineCount, gimbalDeg }: Controls) {
+function LabPlumes({
+  throttle,
+  altitudeKm,
+  engineCount,
+  gimbalDeg,
+  mountScale,
+}: Controls) {
   const meshRef = useRef<InstancedMesh>(null);
   const geometry = useMemo(makePlumeGeometry, []);
   const material = useMemo(makePlumeMaterial, []);
@@ -97,6 +105,7 @@ function LabPlumes({ throttle, altitudeKm, engineCount, gimbalDeg }: Controls) {
       plumeCount: engineCount,
       altitudeM: altitudeKm * 1000,
       t: state.clock.elapsedTime,
+      mountScale,
     });
   });
 
@@ -115,6 +124,7 @@ export function EnginePlumeLab() {
     altitudeKm: 0,
     engineCount: 3,
     gimbalDeg: 0,
+    mountScale: MODEL_SCALE,
   });
   const set = (patch: Partial<Controls>) => setC((s) => ({ ...s, ...patch }));
 
@@ -206,6 +216,19 @@ export function EnginePlumeLab() {
           unit="°"
           onChange={(v) => set({ gimbalDeg: v })}
         />
+        <Slider
+          label="mount scale"
+          value={c.mountScale}
+          min={0.7}
+          max={1.6}
+          step={0.005}
+          unit="×"
+          onChange={(v) => set({ mountScale: v })}
+        />
+        <div className="mt-1 text-emerald-300">
+          center the flames on the bells, then tell me this value →{" "}
+          {c.mountScale.toFixed(3)}
+        </div>
         <div className="mt-1 text-white/50">
           sea level = tight + bright · high altitude = wide + faint
         </div>

@@ -50,8 +50,10 @@ const LENGTH_VAC_M = 55;
 // — the earlier 1.1 m looked too thin for the engine size).
 const RADIUS_SEA_M = 2.2;
 const RADIUS_VAC_M = 4.5;
-const BRIGHT_SEA = 1.8; // >1 so the additive core blooms
-const BRIGHT_VAC = 0.7;
+// Kept near 1 so the yellow-orange palette shows through instead of clamping to
+// white; the core is still bright enough to bloom through PostFX.
+const BRIGHT_SEA = 1.05;
+const BRIGHT_VAC = 0.6;
 
 /** Engine throttle as a plume intensity, gated on ignition. */
 export function plumeIntensity(s: PlumeSample): number {
