@@ -59,7 +59,7 @@ export function OrbitCameraRig() {
     // Skip on the seed frame — seedOrbit already framed the current world, so
     // the delta would be zero (avoids recomputing modeTargetFor twice).
     if (!seeding && MODE_POLICY[mode] === "orbit-follow") {
-      const target = modeTargetFor(mode, world, DEFAULT_ENV, world.t);
+      const target = modeTargetFor(mode, world, DEFAULT_ENV);
       if (target) {
         const prev = prevTargetRef.current;
         camera.position.x += target.lookAt.x - prev.x;
@@ -95,7 +95,7 @@ function seedOrbit(
   world: World,
   prevTarget: Vector3,
 ): void {
-  const target = modeTargetFor(mode, world, DEFAULT_ENV, world.t);
+  const target = modeTargetFor(mode, world, DEFAULT_ENV);
   if (!target) return;
   camera.position.set(target.position.x, target.position.y, target.position.z);
   controls.target.set(target.lookAt.x, target.lookAt.y, target.lookAt.z);

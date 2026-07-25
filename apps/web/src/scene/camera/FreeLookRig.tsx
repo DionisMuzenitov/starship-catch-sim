@@ -168,7 +168,7 @@ function seedFreeLook(
   }
   // ground: scripted fixed vantage looking toward the catch.
   const world = useSimStore.getState().world;
-  const target = modeTargetFor(mode, world, DEFAULT_ENV, world.t);
+  const target = modeTargetFor(mode, world, DEFAULT_ENV);
   if (!target) return;
   posX.current = target.position.x;
   posY.current = target.position.y;
