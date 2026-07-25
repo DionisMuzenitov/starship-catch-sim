@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Canvas } from "@react-three/fiber";
 
+import { FlyTouchPad } from "../hud/FlyTouchPad";
 import { Hud } from "../hud/Hud";
 import { ImpactReticle } from "../hud/ImpactReticle";
 import { ControllerSwitcher } from "../menu/ControllerSwitcher";
@@ -88,6 +89,7 @@ export function Scene() {
       <MpcServiceBanner />
       <PidTuningPanel />
       <Hud />
+      <FlyTouchPad />
       {towerTuneEnabled() && <TowerTunePanel />}
       <DocsLink />
       <ReplayDriver />

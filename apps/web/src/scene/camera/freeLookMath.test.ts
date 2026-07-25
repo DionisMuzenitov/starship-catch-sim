@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   clampPitch,
+  clampToRadius,
   forwardFromYawPitch,
   MAX_PITCH,
   rightFromYaw,
@@ -51,5 +52,19 @@ describe("freeLookMath (SLS-58)", () => {
     expect(clampPitch(10)).toBeCloseTo(MAX_PITCH, 6);
     expect(clampPitch(-10)).toBeCloseTo(-MAX_PITCH, 6);
     expect(clampPitch(0.3)).toBeCloseTo(0.3, 6);
+  });
+
+  it("clampToRadius pulls a far position onto the cap sphere, leaves near ones", () => {
+    // Inside the cap → unchanged.
+    const near = { x: 10, y: 20, z: 30 };
+    expect(clampToRadius(near, 1000)).toBe(near);
+    // Origin → unchanged (no divide-by-zero).
+    expect(clampToRadius({ x: 0, y: 0, z: 0 }, 1000)).toEqual({ x: 0, y: 0, z: 0 });
+    // Outside → scaled onto the sphere, direction preserved.
+    const far = { x: 300, y: 0, z: 400 }; // |far| = 500
+    const c = clampToRadius(far, 100);
+    expect(Math.hypot(c.x, c.y, c.z)).toBeCloseTo(100, 6);
+    expect(c.x).toBeCloseTo(60, 6); // 300 * (100/500)
+    expect(c.z).toBeCloseTo(80, 6); // 400 * (100/500)
   });
 });

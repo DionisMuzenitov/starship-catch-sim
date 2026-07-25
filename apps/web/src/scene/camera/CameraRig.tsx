@@ -24,13 +24,16 @@ import { useSimStore } from "../../state/simStore";
 
 import { isRigMode } from "./cameraPolicy";
 import { CATCH_CAM_ALT_M, cinematicView } from "./cinematicRigs";
-import { DEFAULT_ENV, modeTargetFor } from "./modes";
+import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
 
 /** Damping time constant for the onboard rig (s). */
 const ONBOARD_TAU = 0.2;
 
-/** Minimum camera Y in world frame (m) — keeps it above the ground. */
-const GROUND_FLOOR_M = 2;
+/** Onboard is MOUNTED on the booster, so it keeps a low physics-frame floor and
+ *  stays glued to the vehicle (unlike the positioned cinematic cam, which floors
+ *  at the shifted visual ground, `GROUND_FLOOR_M`, so it never renders through
+ *  the drawn terrain — SLS-87). */
+const ONBOARD_FLOOR_M = 2;
 
 export function CameraRig() {
   const lookAtRef = useRef(new Vector3(0, 800, 0));
@@ -106,7 +109,7 @@ export function CameraRig() {
       lambda,
       dt,
     );
-    if (camera.position.y < GROUND_FLOOR_M) camera.position.y = GROUND_FLOOR_M;
+    if (camera.position.y < ONBOARD_FLOOR_M) camera.position.y = ONBOARD_FLOOR_M;
 
     lookAtRef.current.x = MathUtils.damp(
       lookAtRef.current.x,
