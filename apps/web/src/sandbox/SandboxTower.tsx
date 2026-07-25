@@ -13,7 +13,11 @@ import {
 
 import { BoosterModel } from "../models";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
-import { DebugHud, DebugSampler, type DebugSample } from "../scene/DebugOverlay";
+import {
+  DebugHud,
+  DebugSampler,
+  type DebugSample,
+} from "../scene/DebugOverlay";
 import { Fog } from "../scene/Fog";
 import { Ground } from "../scene/Ground";
 import {
@@ -42,12 +46,7 @@ const BOOSTER_Z = 0;
 
 export function SandboxTower() {
   const [controls, setControls] = useState<TowerControlState>(DEFAULT_TOWER_STATE);
-  const [sample, setSample] = useState<DebugSample>({
-    fps: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-  });
+  const [sample, setSample] = useState<DebugSample>({ fps: 0, ms: 0, worstMs: 0, x: 0, y: 0, z: 0 });
   const towerRef = useRef<MechazillaApi>(null);
 
   // Drive the tower's imperative API from the panel state.

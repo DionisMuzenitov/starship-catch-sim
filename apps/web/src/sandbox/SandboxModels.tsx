@@ -15,7 +15,11 @@ import {
 
 import { VehicleModel } from "../models/glb";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "../scene/constants";
-import { DebugHud, DebugSampler, type DebugSample } from "../scene/DebugOverlay";
+import {
+  DebugHud,
+  DebugSampler,
+  type DebugSample,
+} from "../scene/DebugOverlay";
 import { Fog } from "../scene/Fog";
 import { Ground } from "../scene/Ground";
 import { PostFX } from "../scene/PostFX";
@@ -36,12 +40,7 @@ const SHIP_POS: Vec3 = { x: 30, y: HOVER_HEIGHT, z: 0 };
 
 export function SandboxModels() {
   const [controls, setControls] = useState(DEFAULT_CONTROL_STATE);
-  const [sample, setSample] = useState<DebugSample>({
-    fps: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-  });
+  const [sample, setSample] = useState<DebugSample>({ fps: 0, ms: 0, worstMs: 0, x: 0, y: 0, z: 0 });
 
   const boosterEngineStates = useMemo<EngineState[]>(
     () =>
