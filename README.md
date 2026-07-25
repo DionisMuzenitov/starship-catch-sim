@@ -97,7 +97,7 @@ the service dependency is tracked as ADR-008 / SLS-31.
 | M5        | Convex MPC guidance (SOCP/SCvx service + client + benchmarks)                              | Done¹      |
 | M6        | RL: gym env, numpy physics port, imitation-learned neural policy, in-browser inference     | Done²      |
 | M7        | Hosted demo, leaderboard, docs site, write-up                                              | Demo live³ |
-| M8        | Visual environment: Earth terrain, launch tower, engine plumes, camera & performance tiers | Planned    |
+| M8        | Visual environment: Earth terrain, launch tower, engine plumes, camera & performance tiers | In progress⁴ |
 
 ¹ MPC infrastructure is shipped and verified; the catch-capability exit
 gate (coast-phase ignition planning) met on 2026-07-05 (≥50 % catch, SLS-47).
@@ -111,6 +111,13 @@ is deployed (SLS-49, pulled forward from M7) and the
 [docs site](https://dionismuzenitov.github.io/starship-catch-sim/docs/) is live
 (SLS-32); leaderboard and replay-verification server remain planned
 (SLS-31/33).
+
+⁴ Shipped: Earth terrain (SLS-57), Mechazilla tower (SLS-76), engine-plume VFX
+(SLS-60), the full six-mode camera system incl. a cinematic auto-director
+(SLS-58/59), and quality tiers + a perf HUD (SLS-61). The **≥ 60 fps** perf
+outcome gate is **met** on the reference laptop at the default tier
+(`docs/reference/perf-budget.md`). Remaining before M8 closes: the demo-grade
+screenshot / hero-GIF set (SLS-64/33).
 
 ## Deep dives
 
