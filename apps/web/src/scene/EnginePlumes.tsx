@@ -1,33 +1,28 @@
 /**
  * Engine plume VFX (SLS-60) — the live-sim wrapper. Owns one `InstancedMesh`
- * of additive cones (a single draw call, no per-particle CPU) and hands the
- * live sim world to the shared `updatePlumeInstances` core. The rendering/
- * tuning lives in `plumeInstances.ts` so the `/sandbox/plumes` lab drives the
- * exact same flame.
+ * of alpha-blended cones (a single draw call, no per-particle CPU) and, each
+ * frame, writes the per-instance matrices/colours from the live sim world via
+ * the shared `updatePlumeInstances` core. The rendering/tuning lives in
+ * `plumeInstances.ts` so the `/sandbox/plumes` lab drives the exact same flame.
  *
- * **Subscription-driven, NOT imperative (SLS-88).** SLS-60 originally read the
- * world via `getState()` inside `useFrame` to avoid re-renders. But the drawn
- * booster (`BoosterFlight`/`BoosterModelGLB`) applies its whole-body transform
- * through the React commit path (`position` prop + `attitude` in a layout
- * effect) off the *subscribed* store, while `useFrame` reads whatever the
- * runner last wrote — up to one runner-step newer. Per-step displacement scales
- * with the sim speed, so at 8× the plume anchor visibly led the model. Reading
- * the SAME committed `world` on the SAME commit (via a subscription, mirroring
- * `BoosterFlight`) keeps the anchor and the model matrix byte-identical every
- * painted frame — glued at 1×, 8×, and paused. Cost: one cheap extra reconcile
- * per frame (a single `<instancedMesh>` element); the heavy instance write runs
- * once per frame either way.
+ * **No anchor of its own (SLS-88 / SLS-91).** This mesh is a CHILD of the
+ * vehicle body group in `BoosterFlight`, which owns the whole-body transform
+ * (position + attitude) and drives it imperatively in `useFrame`. So the plumes
+ * inherit exactly the pose the model is drawn at — one anchor, zero drift, at
+ * any sim speed — and this component only writes body-frame instances (mount +
+ * gimbal + throttle-scaled cone). It reads the store imperatively (like the
+ * camera rig) so it never triggers a React re-render.
  */
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 
+import { useFrame } from "@react-three/fiber";
 import {
   SuperHeavyEngines,
   StarshipEngines,
 } from "@starship-catch-sim/physics";
 import { type InstancedMesh } from "three";
 
-import { isShipWorld } from "../models/glb";
 import { useSimStore } from "../state/simStore.js";
 
 import {
@@ -40,31 +35,33 @@ import {
   updatePlumeInstances,
 } from "./plumeInstances";
 
-export function EnginePlumes() {
+type Props = {
+  /** Booster vs ship — decided ONCE by the parent (`BoosterFlight`) from the
+   *  same world the model is chosen from, so the plume set can never disagree
+   *  with the drawn vehicle. Per-frame throttle/gimbal still come from the live
+   *  store read below. */
+  readonly isShip: boolean;
+};
+
+export function EnginePlumes({ isShip }: Props) {
   const meshRef = useRef<InstancedMesh>(null);
 
   const geometry = useMemo(makePlumeGeometry, []);
   const material = useMemo(makePlumeMaterial, []);
 
-  // Subscribe to the SAME `world` slice the model draws from, so the plume
-  // anchor is committed on the exact React pass that positions the booster.
-  const world = useSimStore((s) => s.world);
-  const { rigidBody: rb, engineStates, t } = world;
-  const isShip = isShipWorld(world);
   const engines = isShip ? StarshipEngines : SuperHeavyEngines;
   const plumeCount = isShip ? StarshipEngines.length : MODELLED_BOOSTER_PLUMES;
   // Alignment is per-vehicle — the ship's nozzles aren't the booster's.
   const align = isShip ? SHIP_PLUME_ALIGN : BOOSTER_PLUME_ALIGN;
 
-  // Anchor (attitude) + instance shapes applied in the layout phase, in
-  // lockstep with the model's own whole-body `useLayoutEffect`. Body position
-  // rides the `position` prop below (same as `BoosterModelGLB`'s outer group);
-  // mounts are already physics metres, so the plume sits at the model's OUTER
-  // transform with no `MODEL_SCALE`.
-  useLayoutEffect(() => {
+  useFrame(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
-    mesh.quaternion.set(rb.attitude.x, rb.attitude.y, rb.attitude.z, rb.attitude.w);
+    const { rigidBody: rb, engineStates, t } = useSimStore.getState().world;
+
+    // Instances only — the parent body group already carries the world anchor
+    // (position + attitude). Mounts are physics metres, in body frame, matching
+    // the group origin at the engine plane.
     updatePlumeInstances(mesh, {
       engines,
       engineStates,
@@ -80,7 +77,6 @@ export function EnginePlumes() {
     <instancedMesh
       ref={meshRef}
       args={[geometry, material, MAX_PLUMES]}
-      position={[rb.position.x, rb.position.y, rb.position.z]}
       frustumCulled={false}
       // Draw after the camera-centred Sky (which sorts as the nearest
       // transparent and would otherwise paint over the plumes against open
