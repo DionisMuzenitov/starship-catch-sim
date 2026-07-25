@@ -12,7 +12,6 @@ import { Quat, Vec3, type World } from "@starship-catch-sim/physics";
 import { SITE_OFFSET } from "../../state/towerTuneStore";
 
 import type { CameraMode } from "../../state/cameraStore";
-import { cinematicTarget } from "./cinematicRigs";
 
 // Visual ground level near the launch site. The terrain + site are drawn in a
 // group shifted up by SITE_OFFSET.y (~63 m) so the drawn catch cradle meets the
@@ -127,13 +126,11 @@ function onboardTarget(world: World): CameraTarget {
  * @param mode  Current camera mode.
  * @param world Current sim state.
  * @param env   Static environment constants (ground level, etc.).
- * @param t     Sim time (s) — used by cinematic rig cycling.
  */
 export function modeTargetFor(
   mode: CameraMode,
   world: World,
   env: CameraEnv,
-  t: number,
 ): CameraTarget | null {
   switch (mode) {
     case "chase":
@@ -145,7 +142,10 @@ export function modeTargetFor(
     case "onboard":
       return onboardTarget(world);
     case "cinematic":
-      return cinematicTarget(world, t);
+      // The cinematic director is a moving, real-time-driven rig applied
+      // directly by <CameraRig> (delta-follow, not damped-to-target), so it does
+      // not go through this per-frame target path — see `cinematicView`.
+      return null;
     case "free":
       return null;
   }
