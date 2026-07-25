@@ -22,6 +22,7 @@ import { isFreeLookMode, MODE_POLICY } from "./cameraPolicy";
 import { flyInput, resetFlyInput } from "./flyInput";
 import {
   clampPitch,
+  clampToRadius,
   forwardFromYawPitch,
   rightFromYaw,
   yawPitchFromDir,
@@ -31,6 +32,10 @@ import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
 const LOOK_SENS = 0.0026; // rad per pixel of drag
 const FLY_SPEED = 90; // m/s
 const WHEEL_STEP = 12; // m per wheel notch (fly dolly)
+/** Soft far-cap on the fly cam so an unbounded dolly/fly can't lose the scene
+ *  (SLS-87). Generous — the booster starts ~66 km out, so this still lets you
+ *  fly out to watch the whole descent. */
+const MAX_FREE_RADIUS_M = 150_000;
 
 // Scratch for reading the camera's current look direction on free-cam seed.
 const _dir = new Vector3();
@@ -117,6 +122,19 @@ export function FreeLookRig() {
       if (flyInput.left) move(r, -s, posX, posY, posZ);
       if (flyInput.up) posY.current += s;
       if (flyInput.down) posY.current -= s;
+    }
+    // Soft far-cap so an unbounded dolly/fly can't lose the scene (SLS-87).
+    // The squared-magnitude test avoids a per-frame alloc + sqrt on the common
+    // path (the 150 km cap is essentially never hit); applied BEFORE the floor so
+    // the uniform scale onto the cap sphere can't pull Y under the ground.
+    const px = posX.current;
+    const py = posY.current;
+    const pz = posZ.current;
+    if (px * px + py * py + pz * pz > MAX_FREE_RADIUS_M * MAX_FREE_RADIUS_M) {
+      const capped = clampToRadius({ x: px, y: py, z: pz }, MAX_FREE_RADIUS_M);
+      posX.current = capped.x;
+      posY.current = capped.y;
+      posZ.current = capped.z;
     }
     if (posY.current < GROUND_FLOOR_M) posY.current = GROUND_FLOOR_M;
 

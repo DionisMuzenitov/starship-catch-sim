@@ -34,3 +34,14 @@ export function yawPitchFromDir(x: number, y: number, z: number): YawPitch {
 export function clampPitch(p: number): number {
   return Math.max(-MAX_PITCH, Math.min(MAX_PITCH, p));
 }
+
+/** Soft far-cap for the free (fly) cam: if the position is more than `maxR`
+ *  from the origin, pull it back onto that sphere so the user can't dolly/fly
+ *  off into empty space and lose the scene (SLS-87). Returns the input
+ *  unchanged when already inside the cap, or at the origin. */
+export function clampToRadius(p: Vec3Lit, maxR: number): Vec3Lit {
+  const r = Math.hypot(p.x, p.y, p.z);
+  if (r <= maxR || r === 0) return p;
+  const k = maxR / r;
+  return { x: p.x * k, y: p.y * k, z: p.z * k };
+}
