@@ -11,8 +11,11 @@ import { FirstRunTutorial } from "../menu/FirstRunTutorial";
 import { HelpOverlay } from "../menu/HelpOverlay";
 import { MpcServiceBanner } from "../menu/MpcServiceBanner";
 import { PidTuningPanel } from "../menu/PidTuningPanel";
+import { QualityPicker } from "../menu/QualityPicker";
 import { ScenarioPicker } from "../menu/ScenarioPicker";
 import { ReplayDriver } from "../replay/ReplayDriver";
+import { useQualityStore } from "../state/qualityStore";
+import { QualityController } from "./QualityController";
 import { ReplayPlayer } from "../replay/ReplayPlayer";
 import { BoosterFlight } from "../sim/BoosterFlight";
 import { useSimRunner } from "../sim/useSimRunner";
@@ -21,7 +24,11 @@ import { CameraRig } from "./camera/CameraRig";
 import { FreeLookRig } from "./camera/FreeLookRig";
 import { OrbitCameraRig } from "./camera/OrbitCameraRig";
 import { CAMERA_FAR_M, CAMERA_NEAR_M } from "./constants";
-import { DebugHud, DebugSampler, type DebugSample } from "./DebugOverlay";
+import {
+  DebugHud,
+  DebugSampler,
+  type DebugSample,
+} from "./DebugOverlay";
 import { Fog } from "./Fog";
 import { LaunchSite } from "./LaunchSite";
 import { PostFX } from "./PostFX";
@@ -37,12 +44,8 @@ import { SITE_OFFSET, towerTuneEnabled } from "../state/towerTuneStore";
 
 export function Scene() {
   useSimRunner();
-  const [sample, setSample] = useState<DebugSample>({
-    fps: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-  });
+  const [sample, setSample] = useState<DebugSample>({ fps: 0, ms: 0, worstMs: 0, x: 0, y: 0, z: 0 });
+  const perfHud = useQualityStore((s) => s.perfHud);
 
   return (
     <div className="relative h-full w-full">
@@ -81,10 +84,12 @@ export function Scene() {
         <OrbitCameraRig />
         <FreeLookRig />
         <PostFX />
-        <DebugSampler onSample={setSample} />
+        <QualityController />
+        {perfHud && <DebugSampler onSample={setSample} />}
       </Canvas>
-      <DebugHud sample={sample} />
+      {perfHud && <DebugHud sample={sample} />}
       <ScenarioPicker />
+      <QualityPicker />
       <ControllerSwitcher />
       <MpcServiceBanner />
       <PidTuningPanel />
