@@ -78,6 +78,85 @@ describe("SimRunner smoke", () => {
     expect(b.runner.getWorld().t).toBeGreaterThan(a.runner.getWorld().t * 1.5);
   });
 
+  it("real-time cap clamps fast-forward to ×1 but leaves slow-motion (SLS-94)", () => {
+    const { runner } = runnerFor(new Idle());
+    runner.scaleUp();
+    runner.scaleUp();
+    expect(runner.getScale()).toBe(4);
+    // Engaging the cap clamps the fast-forward down to real time…
+    runner.setScaleLocked(true);
+    expect(runner.getScale()).toBe(1);
+    // …fast-forward past ×1 is blocked…
+    runner.scaleUp();
+    expect(runner.getScale()).toBe(1);
+    // …but slow-motion is still allowed (safe: fresher MPC plans), and can
+    // climb back up to — but not past — the ×1 ceiling.
+    runner.scaleDown();
+    expect(runner.getScale()).toBe(0.5);
+    runner.scaleUp();
+    expect(runner.getScale()).toBe(1);
+    runner.scaleUp();
+    expect(runner.getScale()).toBe(1);
+    // Releasing restores the full fast-forward range.
+    runner.setScaleLocked(false);
+    runner.scaleUp();
+    expect(runner.getScale()).toBe(2);
+  });
+
+  it("engaging the cap preserves a slow-motion setting the pilot chose (SLS-94)", () => {
+    const { runner } = runnerFor(new Idle());
+    runner.scaleDown();
+    runner.scaleDown();
+    expect(runner.getScale()).toBe(0.25);
+    // ¼× is at/below real time, so the cap leaves it untouched.
+    runner.setScaleLocked(true);
+    expect(runner.getScale()).toBe(0.25);
+  });
+
+  it("releasing the cap restores the clamped fast-forward (SLS-94)", () => {
+    const { runner } = runnerFor(new Idle());
+    runner.scaleUp();
+    runner.scaleUp();
+    runner.scaleUp(); // ×8
+    expect(runner.getScale()).toBe(8);
+    runner.setScaleLocked(true); // MPC steers → clamp to ×1, remember ×8
+    expect(runner.getScale()).toBe(1);
+    runner.setScaleLocked(false); // MPC hands back → restore ×8
+    expect(runner.getScale()).toBe(8);
+  });
+
+  it("a manual scale change under the cap overrides the restore (SLS-94)", () => {
+    const { runner } = runnerFor(new Idle());
+    runner.scaleUp();
+    runner.scaleUp();
+    runner.scaleUp(); // ×8
+    runner.setScaleLocked(true); // clamp to ×1, remember ×8
+    runner.scaleDown(); // pilot chooses ½× while capped → forget ×8
+    expect(runner.getScale()).toBe(0.5);
+    runner.setScaleLocked(false); // release honours the live ½×, not ×8
+    expect(runner.getScale()).toBe(0.5);
+  });
+
+  it("emits scaleLocked in the meta callback (SLS-94)", () => {
+    const scenario = boosterDescentScenario();
+    const metas: boolean[] = [];
+    const runner = new SimRunner({
+      vehicle: scenario.vehicle,
+      initialWorld: scenario.initialWorld,
+      controller: new Idle(),
+      callbacks: {
+        onRender: () => undefined,
+        onMeta: (m) => metas.push(m.scaleLocked),
+      },
+    });
+    runner.setScaleLocked(true);
+    runner.setScaleLocked(false);
+    expect(metas).toEqual([true, false]);
+    // A no-op re-lock does not re-notify.
+    runner.setScaleLocked(false);
+    expect(metas).toEqual([true, false]);
+  });
+
   it("reset returns to the scenario initial conditions", () => {
     const { runner, scenario } = runnerFor(new FullThrottle());
     runner.setPaused(false);
