@@ -29,3 +29,25 @@ Notes:
 - The three JSON cells in each file correspond to the calm / standard / stormy
   scenarios (M6) or the wind 0 / 1 / 2× sweep (M5).
 - These files are also attached to the `v0.5.0` / `v0.6.0` GitHub Releases.
+
+> **⚠ M5 MPC record — read before quoting "53 / 50 / 50 %" (SLS-93).** Three
+> caveats, being repaired:
+>
+> 1. **The three cells are not calm / standard / stormy.** They are the
+>    `booster-descent-calm` scenario at windScale 0 / 1 / 2× — but calm's base
+>    wind is zero, so scaling it is a **no-op**: the ×1 and ×2 cells are
+>    byte-identical and the "53 vs 50" gap is a single seed flipping on solver
+>    nondeterminism. The MPC has **never** been benched on the genuine
+>    `-standard` / `-stormy` wind scenarios the M6 (RL) columns use, so pitting
+>    the two rows column-for-column compares different environments.
+> 2. **Measured with sim time paused during each solve.** `mpc-bench.ts` awaits
+>    the in-flight HTTP solve with the clock stopped, so the vehicle sees zero
+>    guidance latency. Interactive play at ×1 approximates this; fast-forward
+>    does not (that gap is what SLS-94 clamps).
+> 3. **Predates SLS-78 zero-fuel gating.** A few of the record's caught runs
+>    burned the tank to exactly 0 kg under the old physics where empty tanks
+>    still thrust; the record has not been re-run since.
+>
+> A real-wind, dual-clock, higher-seed re-bench (100 seeds, `-standard` /
+> `-stormy`) is the SLS-93 campaign; this record and the README/report columns
+> will be corrected when it lands.

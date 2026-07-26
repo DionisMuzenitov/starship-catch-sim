@@ -26,8 +26,10 @@ Three controller generations, benchmarked on the TypeScript physics core (250 Hz
 | Controller             | Calm     | Standard | Stormy   |
 | ---------------------- | -------- | -------- | -------- |
 | Cascaded PID (M4)      | 0 %      | 0 %      | 0 %      |
-| Convex MPC (M5)        | 53 %     | 50 %     | 50 %     |
+| Convex MPC (M5)†       | 53 %     | 50 %     | 50 %     |
 | **Neural policy (M6)** | **87 %** | **87 %** | **90 %** |
+
+† The MPC row's three cells are the M5 gate record's zero-wind sweep (calm at windScale 0/1/2×), **not** the calm/standard/stormy scenarios the other rows use, so the two are not directly comparable yet; a real-wind re-bench is pending ([SLS-93](https://yanismuzenitov.atlassian.net/browse/SLS-93)). See the [comparison report](eval/reports/v1-controller-comparison.md) and [gate-record `MANIFEST`](eval/results/gate-records/MANIFEST.md) for the full caveat.
 
 ![Booster catch rate by controller generation — cascaded PID catches 0 % across all wind scenarios, convex MPC 53/50/50 %, and the imitation-learned neural policy 87/87/90 % (calm/standard/stormy), 30-seed Monte-Carlo per cell.](docs/media/progression.svg)
 
