@@ -15,6 +15,7 @@ import { useSimStore } from "../state/simStore";
 export function SimStatusBanner() {
   const paused = useSimStore((s) => s.paused);
   const scale = useSimStore((s) => s.scale);
+  const scaleLocked = useSimStore((s) => s.scaleLocked);
   const t = useSimStore((s) => s.t);
   const world = useSimStore((s) => s.world);
   const camMode = useCameraStore((s) => s.mode);
@@ -32,6 +33,15 @@ export function SimStatusBanner() {
         {paused ? "PAUSED" : "RUNNING"}
       </span>
       <span className="mx-2 opacity-40">·</span>×{scale}
+      {scaleLocked && (
+        <span
+          className="ml-1 text-emerald-300/90"
+          title="MPC steers in real time — fast-forward is disabled while it flies (slow-motion is fine)"
+          data-testid="hud-scale-locked"
+        >
+          🔒 ×1 max
+        </span>
+      )}
       <span className="mx-2 opacity-40">·</span>cam: {camMode}
       <span className="mx-2 opacity-40">·</span>t = {t.toFixed(2)} s
       <span className="mx-2 opacity-40">·</span>

@@ -173,6 +173,7 @@ export function useSimRunner(): UseSimRunner {
     const setWorld = useSimStore.getState().setWorld;
     const setPaused = useSimStore.getState().setPaused;
     const setScale = useSimStore.getState().setScale;
+    const setScaleLocked = useSimStore.getState().setScaleLocked;
     const setOutcome = useSimStore.getState().setOutcome;
     const setLastReplay = useSimStore.getState().setLastReplay;
     // Booster vs ship is the only vehicle distinction so far; mark it from
@@ -196,11 +197,17 @@ export function useSimRunner(): UseSimRunner {
         onMeta: (meta) => {
           setPaused(meta.paused);
           setScale(meta.scale);
+          setScaleLocked(meta.scaleLocked);
         },
         onOutcome: (outcome) => setOutcome(outcome),
         onReplay: (replay) => setLastReplay(replay),
       },
     });
+    // The render-side scale-lock flag is module-level and survives scene
+    // remounts, but a fresh runner always starts uncapped — reset it so a
+    // stale `true` from a prior MPC scene can't leave the HUD lock showing on
+    // the new controller until the next scale/pause key (SLS-94).
+    setScaleLocked(false);
     // Push the scenario's initial world into the store synchronously so
     // the first paint after a scenario switch already reflects the new
     // vehicle shape — otherwise the booster-shaped stale world would be
@@ -271,6 +278,28 @@ export function useSimRunner(): UseSimRunner {
       unsubReplay();
       cancelled = true;
     };
+  }, []);
+
+  // Cap the sim at real time whenever MPC is ACTUALLY steering (SLS-94). MPC
+  // solves in wall-clock time, so the [ ]/×2 fast-forward would land plans
+  // seconds of sim-time stale and silently drop the controller to its PID
+  // fallback (the audit's 0/3 regime). Keying on the live `usingFallback`
+  // (not service flags) is what makes this correct: during the pre-first-solve
+  // window, a divergence-abort, or a down/absent service the controller is on
+  // its PID fallback — latency-insensitive — so the cap lifts and fast-forward
+  // returns. `kind` is constant for this hook's lifetime (a kind switch
+  // remounts the Scene), so only the MPC store needs a subscription.
+  useEffect(() => {
+    const kind = useControllerStore.getState().kind;
+    // The cap is MPC-only, so for the other three kinds there is nothing to
+    // subscribe to — the flag was already reset to false at construction.
+    if (kind !== "mpc") return;
+    const { runner } = ref.current!;
+    const evaluate = () => {
+      runner.setScaleLocked(!useMpcStore.getState().usingFallback);
+    };
+    evaluate();
+    return useMpcStore.subscribe(evaluate);
   }, []);
 
   return ref.current;

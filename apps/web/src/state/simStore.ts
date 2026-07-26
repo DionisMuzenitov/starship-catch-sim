@@ -21,6 +21,9 @@ export type SimState = {
   t: number;
   paused: boolean;
   scale: number;
+  /** True while the time scale is pinned to ×1 (MPC steering in real time,
+   *  SLS-94); the HUD shows a lock hint and ÷2/×2 are inert. */
+  scaleLocked: boolean;
   outcome: CatchOutcome | null;
   /** Frozen replay of the most recent attempt. Set when the runner fires
    *  its terminal outcome; consumed by the post-attempt "Save .json"
@@ -29,6 +32,7 @@ export type SimState = {
   setWorld: (world: World) => void;
   setPaused: (paused: boolean) => void;
   setScale: (scale: number) => void;
+  setScaleLocked: (scaleLocked: boolean) => void;
   setT: (t: number) => void;
   setOutcome: (outcome: CatchOutcome | null) => void;
   setLastReplay: (replay: Replay | null) => void;
@@ -41,11 +45,13 @@ export const useSimStore = create<SimState>((set) => ({
   t: 0,
   paused: true,
   scale: 1,
+  scaleLocked: false,
   outcome: null,
   lastReplay: null,
   setWorld: (world) => set({ world, t: world.t }),
   setPaused: (paused) => set({ paused }),
   setScale: (scale) => set({ scale }),
+  setScaleLocked: (scaleLocked) => set({ scaleLocked }),
   setT: (t) => set({ t }),
   setOutcome: (outcome) => set({ outcome }),
   setLastReplay: (lastReplay) => set({ lastReplay }),

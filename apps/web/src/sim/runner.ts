@@ -46,7 +46,11 @@ export type RunnerCallbacks = {
   /** Called once per advance with the interpolated world for rendering. */
   onRender: (world: World) => void;
   /** Called when pause/scale changes so the UI can reflect it. */
-  onMeta?: (meta: { paused: boolean; scale: number }) => void;
+  onMeta?: (meta: {
+    paused: boolean;
+    scale: number;
+    scaleLocked: boolean;
+  }) => void;
   /** Called once when the catch detector reports a non-`none` outcome. */
   onOutcome?: (outcome: CatchOutcome) => void;
   /** Called once when recording finalises (immediately after `onOutcome`). */
@@ -132,6 +136,18 @@ export class SimRunner {
   private tickIndex = 0;
   private paused = true;
   private scale = 1;
+  /** When true, the time scale is capped at real time (×1): fast-forward is
+   *  disabled but slow-motion stays available. Used while MPC is actively
+   *  steering (SLS-94): its guidance solves in real wall-clock time, so
+   *  fast-forwarding lands plans seconds of sim-time stale and silently
+   *  degrades the controller to its PID fallback. Slowing the sim is safe (it
+   *  gives MPC *more* wall-clock per sim-second → fresher plans), so ÷2 is not
+   *  blocked. */
+  private scaleLocked = false;
+  /** The fast-forward scale (>1) that the cap clamped to ×1, remembered so it
+   *  can be restored when the cap lifts. Null when there is nothing to restore
+   *  (the pilot was at ≤×1, or has since adjusted the scale by hand). */
+  private scaleBeforeCap: number | null = null;
   private lastTimeMs: number | null = null;
   private rafId: number | null = null;
   /** Once an outcome fires, the runner stops stepping the world. */
@@ -187,12 +203,39 @@ export class SimRunner {
   }
 
   scaleUp(): void {
-    this.scale = Math.min(8, this.scale * 2);
+    // The real-time cap (SLS-94) is a CEILING, not a hard pin: fast-forward is
+    // blocked while MPC steers, but the scale can still climb back up to ×1
+    // from slow-motion.
+    const ceiling = this.scaleLocked ? 1 : 8;
+    if (this.scale >= ceiling) return;
+    // A deliberate scale change under the cap overrides the remembered
+    // fast-forward, so releasing the cap honours the pilot's live choice.
+    if (this.scaleLocked) this.scaleBeforeCap = null;
+    this.scale = Math.min(ceiling, this.scale * 2);
     this.notifyMeta();
   }
 
   scaleDown(): void {
+    // Always allowed — slow-motion never stales MPC's wall-clock plans.
+    if (this.scaleLocked) this.scaleBeforeCap = null;
     this.scale = Math.max(1 / 16, this.scale / 2);
+    this.notifyMeta();
+  }
+
+  /** Engage (or release) the real-time ceiling. Engaging clamps a fast-forward
+   *  down to ×1 (remembering it) — a slow-motion setting (≤ ×1) the pilot chose
+   *  is preserved. Releasing restores the remembered fast-forward, unless the
+   *  pilot changed the scale by hand while capped. */
+  setScaleLocked(locked: boolean): void {
+    if (locked === this.scaleLocked) return;
+    this.scaleLocked = locked;
+    if (locked) {
+      this.scaleBeforeCap = this.scale > 1 ? this.scale : null;
+      if (this.scale > 1) this.scale = 1;
+    } else if (this.scaleBeforeCap !== null) {
+      this.scale = this.scaleBeforeCap;
+      this.scaleBeforeCap = null;
+    }
     this.notifyMeta();
   }
 
@@ -342,7 +385,11 @@ export class SimRunner {
   }
 
   private notifyMeta(): void {
-    this.callbacks.onMeta?.({ paused: this.paused, scale: this.scale });
+    this.callbacks.onMeta?.({
+      paused: this.paused,
+      scale: this.scale,
+      scaleLocked: this.scaleLocked,
+    });
   }
 }
 
