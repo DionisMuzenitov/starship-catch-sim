@@ -112,4 +112,20 @@ describe("dispersedEnv (SLS-110)", () => {
     const b = dispersedEnv(BoosterDescentStormy, 11).wind.at(P, 2.5);
     expect(a).toEqual(b);
   });
+
+  it("IC and wind RNG streams are independent — no neighbour collision (review fix)", () => {
+    // Regression guard: a one-bit gap between the IC and wind salts previously
+    // made run s's IC stream byte-identical to run (s^1)'s wind stream, so
+    // icNorm(s) === windNorm(s^1). Sample the first gaussian of each.
+    const std = BoosterDescentStandard;
+    const p0 = std.initialWorld.rigidBody.position;
+    const top = Vec3.of(0, 65_000, 0); // above the top layer → last layer + offset
+    const icNorm = (s: number) =>
+      (dispersedInitialWorld(std, s).rigidBody.position.x - p0.x) / DISPERSION.posHorizM;
+    const windNorm = (s: number) =>
+      (dispersedEnv(std, s).wind.at(top, 0).x - 20) / DISPERSION.windMeanMps;
+    for (let s = 0; s < 6; s++) {
+      expect(Math.abs(icNorm(s) - windNorm(s ^ 1))).toBeGreaterThan(1e-6);
+    }
+  });
 });

@@ -82,6 +82,8 @@ export {
   ShipDescentStandard,
   ShipDescentStormy,
   ShipVehicle,
+  STANDARD_WIND_LAYERS,
+  STORMY_WIND_LAYERS,
   boosterDescentScenario,
   evaluateCatch,
   scenarioById,

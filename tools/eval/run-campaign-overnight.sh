@@ -30,21 +30,31 @@ echo "=== v2 sweep overnight run @ ${STAMP} ===" | tee "$LOG"
 echo "seeds=${SEEDS} widths=${WIDTHS} controllers=${CONTROLLERS}" | tee -a "$LOG"
 echo "commit=$(git rev-parse --short HEAD)" | tee -a "$LOG"
 
-MPC_PID=""
+STARTED_MPC=0
 cleanup() {
-  if [ -n "$MPC_PID" ]; then
-    echo "stopping MPC service (pid $MPC_PID)" | tee -a "$LOG"
-    kill "$MPC_PID" 2>/dev/null || true
+  if [ "$STARTED_MPC" = "1" ]; then
+    # Kill the uvicorn we started by its command pattern, not a captured PID:
+    # `uv run uvicorn …` runs in a subshell, so `$!` is the subshell, not the
+    # server — SIGTERMing that leaves uvicorn orphaned on :8100, and the NEXT
+    # run's health check then passes against the stale, previous-code server.
+    echo "stopping MPC service…" | tee -a "$LOG"
+    pkill -f "uvicorn mpc.server:app" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
 
 # Start the MPC service only if MPC is in scope.
 if printf '%s' "$CONTROLLERS" | grep -q mpc; then
+  # Refuse to run against a server we didn't start — it could be a stale build
+  # from a crashed previous run, which would silently benchmark old code.
+  if curl -sf http://localhost:8100/health >/dev/null 2>&1; then
+    echo "A server is already bound to :8100. Stop it first (pkill -f 'uvicorn mpc.server') — refusing to benchmark a server this run didn't start." | tee -a "$LOG"
+    exit 1
+  fi
   echo "starting MPC service…" | tee -a "$LOG"
-  ( cd services/mpc && uv run uvicorn mpc.server:app --host 127.0.0.1 --port 8100 ) \
+  ( cd services/mpc && exec uv run uvicorn mpc.server:app --host 127.0.0.1 --port 8100 ) \
     >> "eval/results/mpc-service-${STAMP}.log" 2>&1 &
-  MPC_PID=$!
+  STARTED_MPC=1
   # Wait up to 60 s for health.
   ready=0
   for _ in $(seq 1 60); do

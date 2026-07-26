@@ -23,6 +23,8 @@
 
 import {
   Quat,
+  STANDARD_WIND_LAYERS,
+  STORMY_WIND_LAYERS,
   Vec3,
   constantWind,
   currentInertia,
@@ -32,6 +34,7 @@ import {
   type Scenario,
   type SimEnv,
   type WindField,
+  type WindLayer,
   type World,
 } from "@starship-catch-sim/physics";
 
@@ -60,9 +63,14 @@ export const DISPERSION = {
   windMeanMps: 3,
 } as const;
 
-// Independent RNG streams so the IC draw and the wind draw don't correlate.
-const IC_SALT = 0x0d15_0000;
-const WIND_SALT = 0x0d15_0001;
+// Independent RNG streams for the IC draw and the wind draw. The two salts are
+// XOR-distant (high Hamming distance) so `IC_SALT ^ s` can never equal
+// `WIND_SALT ^ s'` for any nearby seeds s, s' — that requires `s ^ s'` to equal
+// `IC_SALT ^ WIND_SALT`, which is huge, whereas neighbouring seeds differ by a
+// small XOR. (A one-bit gap here silently made run N's IC stream identical to
+// run N±1's wind stream.)
+const IC_SALT = 0x9e3779b1; // golden-ratio constant
+const WIND_SALT = 0x85ebca77; // murmur mix constant — XOR-distant from IC_SALT
 
 /**
  * A dispersed initial world for `seed` — deterministic in `seed`, distinct
@@ -138,34 +146,17 @@ export function dispersedInitialWorld(
 
 // --- Per-run wind ---------------------------------------------------------
 //
-// Wind layer specs are duplicated from `scenarios.ts` on purpose: this is the
-// v2 measurement methodology, deliberately decoupled from the shipped
-// scenarios (and from `gen-physics-consts`'s own `windSpec`, which crosses the
-// numpy parity boundary and must not move). Keep the nominal layers in sync by
-// hand if the scenarios ever change; the per-run Dryden seed + mean offset are
-// v2-only.
-
-type Layer = { altitude: number; wind: Vec3 };
-
-const STANDARD_LAYERS: Layer[] = [
-  { altitude: 0, wind: Vec3.of(5, 0, 0) },
-  { altitude: 10_000, wind: Vec3.of(12, 0, 0) },
-  { altitude: 30_000, wind: Vec3.of(20, 0, 0) },
-  { altitude: 65_000, wind: Vec3.of(20, 0, 0) },
-];
-const STORMY_LAYERS: Layer[] = [
-  { altitude: 0, wind: Vec3.of(15, 0, 5) },
-  { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
-  { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
-  { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
-];
+// The nominal layers come straight from the shipped scenario (single-sourced
+// via `STANDARD_WIND_LAYERS` / `STORMY_WIND_LAYERS`), so the v2 bench can never
+// drift from the wind the interactive app actually flies. This module only adds
+// the v2-only pieces on top: a per-run mean offset and a per-run Dryden seed.
 
 function sumWind(a: WindField, b: WindField): WindField {
   return { at: (p, t) => Vec3.add(a.at(p, t), b.at(p, t)) };
 }
 
 /** Offset every layer's mean wind by one per-run Gaussian draw per axis. */
-function offsetLayers(layers: Layer[], rng: () => number): Layer[] {
+function offsetLayers(layers: readonly WindLayer[], rng: () => number): WindLayer[] {
   const off = Vec3.of(
     DISPERSION.windMeanMps * gaussian(rng),
     0, // vertical mean wind is negligible; leave it
@@ -181,19 +172,21 @@ function offsetLayers(layers: Layer[], rng: () => number): Layer[] {
  * the initial state); Standard gains a light per-run turbulence it never had.
  */
 export function dispersedEnv(scenario: Scenario, seed: number): SimEnv {
+  const gravity = scenario.env.gravity;
+  // Calm has no wind at all — skip the PRNG work.
+  if (scenario.difficulty === "calm") {
+    return { wind: constantWind(Vec3.ZERO), gravity };
+  }
   const rng = makeRng(WIND_SALT ^ seed);
   const drydenSeed = (WIND_SALT ^ (seed * 0x9e3779b1)) | 0;
-  const gravity = scenario.env.gravity;
 
   // Wind is always fully per-run realized (this is the frozen-gust fix, and it
   // applies at every point of the IC-width sweep — the sweep varies the START,
   // not the weather).
   let wind: WindField;
-  if (scenario.difficulty === "calm") {
-    wind = constantWind(Vec3.ZERO);
-  } else if (scenario.difficulty === "standard") {
+  if (scenario.difficulty === "standard") {
     wind = sumWind(
-      layeredWind(offsetLayers(STANDARD_LAYERS, rng)),
+      layeredWind(offsetLayers(STANDARD_WIND_LAYERS, rng)),
       drydenTurbulence({
         sigma: Vec3.of(2, 0.5, 2),
         tau: Vec3.of(2, 2, 2),
@@ -202,7 +195,7 @@ export function dispersedEnv(scenario: Scenario, seed: number): SimEnv {
     );
   } else {
     wind = sumWind(
-      layeredWind(offsetLayers(STORMY_LAYERS, rng)),
+      layeredWind(offsetLayers(STORMY_WIND_LAYERS, rng)),
       drydenTurbulence({
         sigma: Vec3.of(6, 1, 6),
         tau: Vec3.of(2, 2, 2),

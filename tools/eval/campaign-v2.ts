@@ -2,16 +2,22 @@
  * v2 dispersion-sensitivity sweep (SLS-93 + SLS-110).
  *
  * The headline v2 deliverable (owner decision 2026-07-26): **catch rate vs.
- * entry-dispersion width**, for PID / RL / MPC, across calm / standard / stormy.
- * The old benchmark used ±20 m initial-position jitter — a *touchdown*
- * tolerance — and a frozen wind seed, so 30/100 seeds sampled near-clones and
- * the 87/87/90 headline was measured on an artificially easy distribution. This
- * sweep widens the entry-corridor spread from ±20 m out to ±400 m (1σ, within
- * the sim's ~1–2 km fin-steering authority) and reports the degradation curve —
- * turning "the benchmark was too narrow" into a measured result.
+ * entry-position dispersion width**, for PID / RL / MPC, across calm / standard
+ * / stormy. The x-axis is the initial-position σ (±20 → ±400 m, 1σ, within the
+ * sim's ~1–2 km fin authority).
  *
- * Per-run wind is fully realized at EVERY width (the frozen-gust fix from
- * SLS-110): the sweep varies the START, not the weather.
+ * IMPORTANT — the ±20 m column is NOT the v1 87/87/90 baseline, and must not be
+ * read as it. Two things differ from v1 at every width:
+ *   1. Per-run wind is fully realized (the frozen-seed-42 fix). v1's windy
+ *      numbers were measured against ONE gust sequence; giving the policy a
+ *      fresh realization each run drops standard/stormy on its own.
+ *   2. The IC also disperses velocity / flight-path-angle / attitude / rates /
+ *      propellant, not just position.
+ * So the leftmost points are already below 87 % for the windy scenarios — that
+ * drop is the *wind-realization* effect, and the slope across widths is the
+ * *position-dispersion* effect. The calm row (no wind) isolates the pure
+ * position-width curve. The v2 report will state this decomposition explicitly;
+ * v1 stays the separate historical record.
  *
  * Usage:
  *   pnpm mpc:serve                          # terminal 1 (only if MPC in scope)
@@ -67,7 +73,6 @@ type Args = {
   widthsM: number[];
   url: string;
   controllers: string[];
-  smoke: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
@@ -78,27 +83,35 @@ function parseArgs(argv: string[]): Args {
   const smoke = argv.includes("--smoke");
   const seedsRaw = Number(val("--seeds"));
   const seeds = Number.isInteger(seedsRaw) && seedsRaw > 0 ? seedsRaw : smoke ? 3 : 30;
+  // Widths must be strictly > 0: width 0 collapses the dispersion to the exact
+  // nominal for every seed, which would report N byte-identical runs as an
+  // N-seed measurement.
   const widthsM = (val("--widths") ?? (smoke ? "20,200" : "20,50,100,200,400"))
     .split(",")
     .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n >= 0);
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (widthsM.length === 0) {
+    throw new Error("--widths must list at least one positive width (m)");
+  }
   const controllers = (val("--controllers") ?? "pid,rl,mpc")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  return { seeds, widthsM, url: val("--url") ?? DEFAULT_URL, controllers, smoke };
+  return { seeds, widthsM, url: val("--url") ?? DEFAULT_URL, controllers };
 }
 
 function ts(): string {
   return new Date().toISOString().replace("T", " ").slice(0, 19);
 }
-function gitCommit(): string {
+
+// Resolve the commit once — it can't change mid-run.
+const COMMIT: string = (() => {
   try {
     return execSync("git rev-parse --short HEAD", { cwd: repo }).toString().trim();
   } catch {
     return "unknown";
   }
-}
+})();
 
 /** Position-σ width (m) → the dispersion scale the module multiplies by. */
 const scaleFor = (widthM: number): number => widthM / DISPERSION.posHorizM;
@@ -153,7 +166,7 @@ function writeSweep(controller: string, cells: Cell[], args: Args): void {
       {
         controller,
         methodology: "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept",
-        gitCommit: gitCommit(),
+        gitCommit: COMMIT,
         generatedAt: stamp,
         seedsPerCell: args.seeds,
         widthsM: args.widthsM,
@@ -258,7 +271,7 @@ async function main(): Promise<void> {
   console.log(
     `v2 dispersion-sensitivity sweep (SLS-93/110)\n` +
       `  widths (±m, 1σ pos): ${args.widthsM.join(", ")}   seeds/cell: ${args.seeds}\n` +
-      `  controllers: ${args.controllers.join(", ")}   commit: ${gitCommit()}   started: ${ts()}`,
+      `  controllers: ${args.controllers.join(", ")}   commit: ${COMMIT}   started: ${ts()}`,
   );
 
   if (args.controllers.includes("pid")) {

@@ -43,6 +43,7 @@ import {
   drydenTurbulence,
   layeredWind,
   type WindField,
+  type WindLayer,
 } from "./wind.js";
 import {
   defineVehicle,
@@ -326,15 +327,25 @@ function makeInitialWorld(env: SimEnv): World {
 // scenario instantiation gets a fresh field; `scenarioById` rebuilds.
 const calmWind = (): WindField => constantWind(Vec3.ZERO);
 
+// Nominal wind layers, exported as data so the eval-layer dispersion (SLS-110)
+// can reconstruct the per-run wind from the SAME source — no hand-copied
+// duplicate to drift out of sync.
+export const STANDARD_WIND_LAYERS: readonly WindLayer[] = [
+  { altitude: 0, wind: Vec3.of(5, 0, 0) },
+  { altitude: 10_000, wind: Vec3.of(12, 0, 0) },
+  { altitude: 30_000, wind: Vec3.of(20, 0, 0) },
+  { altitude: 65_000, wind: Vec3.of(20, 0, 0) },
+];
+export const STORMY_WIND_LAYERS: readonly WindLayer[] = [
+  { altitude: 0, wind: Vec3.of(15, 0, 5) },
+  { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
+  { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
+  { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
+];
+
 // Mild westerly that strengthens with altitude — gives the player a
 // gentle but real environmental disturbance.
-const standardWind = (): WindField =>
-  layeredWind([
-    { altitude: 0, wind: Vec3.of(5, 0, 0) },
-    { altitude: 10_000, wind: Vec3.of(12, 0, 0) },
-    { altitude: 30_000, wind: Vec3.of(20, 0, 0) },
-    { altitude: 65_000, wind: Vec3.of(20, 0, 0) },
-  ]);
+const standardWind = (): WindField => layeredWind(STANDARD_WIND_LAYERS);
 
 // Stormy: layered base + Dryden turbulence (sums via a small combinator).
 // Seeded, so every freshly built field reproduces the same gust sequence.
@@ -348,12 +359,7 @@ function combinedWind(base: WindField, gust: WindField): WindField {
 
 const stormyWind = (): WindField =>
   combinedWind(
-    layeredWind([
-      { altitude: 0, wind: Vec3.of(15, 0, 5) },
-      { altitude: 5_000, wind: Vec3.of(25, 0, 5) },
-      { altitude: 20_000, wind: Vec3.of(35, 0, 0) },
-      { altitude: 65_000, wind: Vec3.of(35, 0, 0) },
-    ]),
+    layeredWind(STORMY_WIND_LAYERS),
     drydenTurbulence({
       sigma: Vec3.of(6, 1, 6),
       tau: Vec3.of(2, 2, 2),
