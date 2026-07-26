@@ -4,6 +4,18 @@
 - **Date:** 2026-07-20
 - **Tickets:** SLS-80 (root cause + guardrails, this ADR), SLS-89 (the behaviour-changing retrain). Relates ADR-009 (coast-burn guidance), ADR-014/015 (PPO + BC campaign), SLS-78 (zero-fuel gating), SLS-66 (headline floor).
 
+> **Amendment (2026-07-26, SLS-93).** The original text below twice asserted
+> that "the MPC catches 0 % in this sim". <!-- docs-check:ignore amendment quotes the corrected-away claim to refute it --> That was a stale recall of ADR-009's
+> *pre-SLS-47* intermediate result ("Catch rate: 0 % — the SLS-47 gate is NOT
+> met") and is **contradicted by the committed M5 gate record**, where the MPC
+> catches on the order of half its attempts (the "53/50/50 %" figure — itself a
+> zero-wind sweep pending a real-wind re-bench, see the M5 record `MANIFEST`).
+> The two sentences are corrected in place; the ADR's *decision* (defer the
+> behaviour change to SLS-89) is unchanged. The point those sentences made —
+> that a fins-only coast is the hardest attitude regime, so a re-cloned
+> coast-on-fins policy is an uncertain bet — stands on its own without the
+> false "0 %" evidence.
+
 ## Context
 
 Owner observation (SLS-80): the shipped RL policy keeps the booster's **3 centre
@@ -44,10 +56,11 @@ The ticket hypothesised a free-fuel **RL reward exploit** and/or an oversized
 
 **The hard part:** the continuous burn may be **load-bearing for the catch**, not
 merely wasteful. The realistic fix (coast on fins, burn late) is exactly what the
-**MPC already does — and the MPC catches 0 %** in this sim, because attitude <!-- docs-check:ignore stale claim (record says 53/50/50); correction tracked in SLS-93 -->
-tracking through a low-dynamic-pressure fins-only coast is where it fails. And
-the deployed policy **is** the M6 headline result (87/87/90, guarded by the
-SLS-66 CI floor). So a naïve de-burn risks tanking the headline.
+**MPC already does** — and the fins-only coast, where attitude authority is
+weakest (low dynamic pressure), is the hardest regime for *any* controller to
+track. And the deployed policy **is** the M6 headline result (87/87/90, guarded
+by the SLS-66 CI floor). So a naïve de-burn — moving the RL policy onto that same
+fins-only coast — is an uncertain bet that risks tanking the headline.
 
 ## Decision
 
@@ -85,8 +98,8 @@ catch rate.
 
 - **Can this session meet it?** No — and it shouldn't try. The behaviour lives in
   a *trained artifact*; changing it needs a re-clone whose outcome is genuinely
-  uncertain (fins-only coast attitude control is unproven for catching here — the
-  MPC gets 0 %). Committing to swap the M6 policy now would gamble the headline on <!-- docs-check:ignore stale claim (record says 53/50/50); correction tracked in SLS-93 -->
+  uncertain (fins-only coast attitude control is unproven for the RL policy
+  here). Committing to swap the M6 policy now would gamble the headline on
   an unrun campaign. SLS-80 therefore delivers the *diagnosis + guardrails +
   documented target*; SLS-89 runs the campaign and **must verify the catch rate
   survives before any swap** — or record the null result (fins-only coast can't

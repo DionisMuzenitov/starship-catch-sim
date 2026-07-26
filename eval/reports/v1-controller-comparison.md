@@ -11,12 +11,21 @@ jittered initial worlds (`jitterInitialWorld`), catch per
 | controller                               | calm     | standard | stormy   |
 | ---------------------------------------- | -------- | -------- | -------- |
 | PID (cascaded, M4)                       | 0 %      | 0 %      | 0 %      |
-| MPC (convex planner, M5 gate record¹)    | 53 %     | 50 %     | 50 %     |
+| MPC (convex planner, M5 gate record¹)    | 53 %¹    | 50 %¹    | 50 %¹    |
 | **RL — imitation-learned neural policy** | **87 %** | **87 %** | **90 %** |
 
-¹ MPC numbers are the recorded SLS-47 gate results (same 30-seed protocol);
-they are not re-run here because the MPC service is a separate Python
-process. Re-run with `pnpm mpc:serve` + `pnpm bench:mpc --seeds 30`.
+¹ **The MPC row is not directly comparable to the RL row yet, and a re-bench is
+pending (SLS-93).** Its three cells are the M5 gate record's `booster-descent-calm`
+scenario at windScale 0 / 1 / 2× — but calm has zero base wind, so the sweep is a
+near-no-op (the ×1 and ×2 cells are byte-identical; "53 vs 50" is one seed
+flipping on solver nondeterminism). They are **not** the calm / standard / stormy
+scenarios the RL row uses, so reading the two rows column-for-column compares
+different wind environments. The record was also measured with sim time paused
+during each solve (zero guidance latency), and predates SLS-78 zero-fuel gating.
+See the [gate-record `MANIFEST`](../results/gate-records/MANIFEST.md) for the full
+caveat. Re-bench on the real wind scenarios: `pnpm mpc:serve` + `pnpm bench:mpc
+--seeds 30` (the SLS-93 campaign runs 100 seeds on `-standard` / `-stormy`, both
+clock modes).
 
 ## Median terminal accuracy & fuel (successful RL runs land; PID never does)
 
