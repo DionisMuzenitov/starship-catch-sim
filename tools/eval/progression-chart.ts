@@ -15,16 +15,21 @@
  * scenario as an ordinal blue ramp (darker = harsher wind), validated
  * colourblind-safe. Self-contained light card so it reads on any page theme.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import {
+  GENERATIONS,
+  SCENARIOS,
+  loadGateCells,
+  ratesByScenario,
+  type Scenario,
+} from "./generations";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "../..");
 const gateDir = join(repo, "eval/results/gate-records");
-
-type Scenario = "calm" | "standard" | "stormy";
-const SCENARIOS: Scenario[] = ["calm", "standard", "stormy"];
 
 /** Ordinal blue ramp — calm (light) -> stormy (dark). Validated:
  *  monotone L, adjacent ΔL > 0.06, light end 2.06:1 on the #fcfcfb surface. */
@@ -34,66 +39,10 @@ const SCENARIO_COLOR: Record<Scenario, string> = {
   stormy: "#104281",
 };
 
-interface Generation {
-  label: string;
-  milestone: string;
-  /** committed gate-record file holding this generation's winning bench */
-  file: string;
-}
-
-// One entry per controller generation, oldest -> newest. Append a row when a
-// new milestone gate lands its gate-record.
-const GENERATIONS: Generation[] = [
-  { label: "PID", milestone: "M4", file: "m6-rl-bench-pid-30seed.json" },
-  { label: "MPC", milestone: "M5", file: "m5-mpc-bench-mpc-30seed.json" },
-  {
-    label: "Neural policy",
-    milestone: "M6",
-    file: "m6-rl-bench-rl-30seed.json",
-  },
-];
-
-interface Cell {
-  scenarioId: string;
-  windScale: number;
-  summary: { successRate: number };
-}
-
-/** Gate records come in two shapes: a `{...meta, cells}` object (mpc-bench)
- *  or a bare cell array (rl-bench). Normalise to the cell list. */
-function loadCells(file: string): Cell[] {
-  const raw = JSON.parse(readFileSync(join(gateDir, file), "utf8"));
-  return Array.isArray(raw) ? raw : raw.cells;
-}
-
-/** Map a generation's cells to a {calm,standard,stormy} success-rate record.
- *  Prefer the scenarioId suffix; when every cell shares one scenarioId (the
- *  M5 bench varies wind by windScale, not id) fall back to windScale
- *  0/1/2 -> calm/standard/stormy. */
-function ratesByScenario(cells: Cell[]): Record<Scenario, number> {
-  const uniqueIds = new Set(cells.map((c) => c.scenarioId));
-  const out = {} as Record<Scenario, number>;
-  const byWind: Record<number, Scenario> = {
-    0: "calm",
-    1: "standard",
-    2: "stormy",
-  };
-  for (const c of cells) {
-    let scen: Scenario | undefined;
-    if (uniqueIds.size > 1) {
-      scen = SCENARIOS.find((s) => c.scenarioId.endsWith(s));
-    } else {
-      scen = byWind[c.windScale];
-    }
-    if (!scen)
-      throw new Error(`cannot bucket cell ${c.scenarioId}/${c.windScale}`);
-    out[scen] = c.summary.successRate;
-  }
-  for (const s of SCENARIOS) {
-    if (out[s] === undefined) throw new Error(`missing scenario ${s}`);
-  }
-  return out;
-}
+// GENERATIONS + gate-record loading/normalisation live in ./generations —
+// shared with tools/docs-check.ts so the chart and the docs-freshness guard
+// can never disagree about which records back which generation (SLS-107).
+const loadCells = (file: string) => loadGateCells(gateDir, file);
 
 // --- ink & geometry (reference-palette chrome, light surface) ---
 const INK = {

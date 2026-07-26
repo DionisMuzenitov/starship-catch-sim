@@ -44,6 +44,13 @@ jobs:
       - name: Physics constants single-sourced (R1)
         run: pnpm gen:consts:check
 
+      # R14 (SLS-107): docs quoting benchmark numbers (README results table,
+      # ADR prose, eval reports) must agree with the committed gate records,
+      # and the ADR index must match each ADR's own status line. Fails on the
+      # drift class that went undetected twice (SLS-63, ADR-023).
+      - name: Docs freshness (R14)
+        run: pnpm docs:check
+
       - name: Lint
         run: pnpm lint
 

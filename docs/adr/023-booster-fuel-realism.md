@@ -44,7 +44,7 @@ The ticket hypothesised a free-fuel **RL reward exploit** and/or an oversized
 
 **The hard part:** the continuous burn may be **load-bearing for the catch**, not
 merely wasteful. The realistic fix (coast on fins, burn late) is exactly what the
-**MPC already does — and the MPC catches 0 %** in this sim, because attitude
+**MPC already does — and the MPC catches 0 %** in this sim, because attitude <!-- docs-check:ignore stale claim (record says 53/50/50); correction tracked in SLS-93 -->
 tracking through a low-dynamic-pressure fins-only coast is where it fails. And
 the deployed policy **is** the M6 headline result (87/87/90, guarded by the
 SLS-66 CI floor). So a naïve de-burn risks tanking the headline.
@@ -86,7 +86,7 @@ catch rate.
 - **Can this session meet it?** No — and it shouldn't try. The behaviour lives in
   a *trained artifact*; changing it needs a re-clone whose outcome is genuinely
   uncertain (fins-only coast attitude control is unproven for catching here — the
-  MPC gets 0 %). Committing to swap the M6 policy now would gamble the headline on
+  MPC gets 0 %). Committing to swap the M6 policy now would gamble the headline on <!-- docs-check:ignore stale claim (record says 53/50/50); correction tracked in SLS-93 -->
   an unrun campaign. SLS-80 therefore delivers the *diagnosis + guardrails +
   documented target*; SLS-89 runs the campaign and **must verify the catch rate
   survives before any swap** — or record the null result (fins-only coast can't

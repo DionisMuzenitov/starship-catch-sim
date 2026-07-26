@@ -21,6 +21,8 @@
     "gen:consts:check": "tsx tools/gen-physics-consts.ts --check",
     "gen:parity-fixtures": "tsx tools/eval/gen-parity-fixtures.ts",
     "gen:parity-fixtures:check": "tsx tools/eval/gen-parity-fixtures.ts --check",
+    "docs:check": "tsx tools/docs-check.ts",
+    "loop:check": "bash tools/loop-check.sh",
     "rl:train": "cd services/rl && uv sync --group train && uv run python scripts/train_ppo.py --config configs/ppo-booster.yaml",
     "rl:eval": "cd services/rl && uv run python scripts/eval_policy.py --checkpoint checkpoints/latest.zip",
     "rl:campaign": "cd services/rl && uv sync --group train && nohup uv run python scripts/campaign.py --plan configs/campaign-night1.yaml > runs/campaign.log 2>&1 & echo 'campaign launched: tail -f services/rl/runs/campaign.log'",
