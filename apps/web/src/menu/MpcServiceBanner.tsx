@@ -1,8 +1,14 @@
 /**
- * Degradation notice for the public static demo (SLS-49). Shows only when
- * MPC is the active controller AND the guidance service is declared absent
- * (`VITE_MPC_URL=""`). The sim keeps flying the PID fallback with no
- * network calls; this explains why and links the local-run instructions.
+ * Degradation notice shown when MPC is the active controller but no guidance
+ * service is actually flying it — so the sim is on its PID fallback. Two
+ * causes, one banner (SLS-49 + SLS-92):
+ *   - `serviceDisabled`   — static-host build (`VITE_MPC_URL=""`); the service
+ *                           can't exist here. No network calls are made.
+ *   - `serviceUnreachable` — a live service URL was configured but a health-
+ *                           ping failed: it just isn't running (dev without
+ *                           `pnpm dev:full`).
+ * Without this, selecting MPC silently flew the PID baseline with only
+ * per-second connection errors in the console — the bug SLS-92 repaired.
  */
 
 import { useControllerStore } from "../state/controllerStore";
@@ -14,8 +20,15 @@ const README_MPC_URL =
 export function MpcServiceBanner() {
   const kind = useControllerStore((s) => s.kind);
   const serviceDisabled = useMpcStore((s) => s.serviceDisabled);
+  const serviceUnreachable = useMpcStore((s) => s.serviceUnreachable);
 
-  if (kind !== "mpc" || !serviceDisabled) return null;
+  if (kind !== "mpc" || !(serviceDisabled || serviceUnreachable)) return null;
+
+  // `serviceDisabled` (the build can't host the service) takes precedence over
+  // a runtime unreachable-ping when both are somehow set.
+  const message = serviceDisabled
+    ? "MPC guidance needs the local Python service — flying the PID baseline instead."
+    : "MPC service unreachable — flying the PID baseline. Start it with pnpm dev:full.";
 
   return (
     <div
@@ -26,8 +39,7 @@ export function MpcServiceBanner() {
       <span aria-hidden className="mr-1">
         ⓘ
       </span>
-      MPC guidance needs the local Python service — flying the PID baseline
-      instead.{" "}
+      {message}{" "}
       <a
         href={README_MPC_URL}
         target="_blank"

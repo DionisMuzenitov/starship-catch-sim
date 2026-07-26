@@ -104,6 +104,15 @@ export type MPCPlan = {
 
 export type MPCPlanObserver = (plan: MPCPlan | null) => void;
 
+/**
+ * Notified whenever the controller transitions between steering with an
+ * accepted MPC plan (`false`) and flying the PID fallback (`true`). Fires only
+ * on a genuine change, so a UI can reflect "MPC steering vs PID fallback" live
+ * without polling — including the service-down case, where no plan ever lands
+ * and the plan observer therefore never fires (SLS-92).
+ */
+export type MPCFallbackObserver = (usingFallback: boolean) => void;
+
 export type MPCControllerOpts = {
   vehicle: Vehicle;
   targetPosition: Vec3;
@@ -552,7 +561,9 @@ export class MPCController implements Controller {
   private readonly targetPosition: Vec3;
   private inFlight = false;
   private observer: MPCPlanObserver | null = null;
-  /** Exposed for the HUD: true while the PID fallback is steering. */
+  private fallbackObserver: MPCFallbackObserver | null = null;
+  /** Exposed for the HUD: true while the PID fallback is steering. Write only
+   *  via {@link setFallback} so the observer sees every transition. */
   private usingFallback = true;
   /** Terminal dock phase latch (SLS-49). */
   private dockMode = false;
@@ -635,6 +646,20 @@ export class MPCController implements Controller {
     this.observer = observer;
   }
 
+  /** Register a fallback-transition callback and immediately push the current
+   *  state, so the UI is correct from the moment it subscribes. */
+  setFallbackObserver(observer: MPCFallbackObserver | null): void {
+    this.fallbackObserver = observer;
+    observer?.(this.usingFallback);
+  }
+
+  /** The single write path for `usingFallback`: fires the observer on change. */
+  private setFallback(usingFallback: boolean): void {
+    if (usingFallback === this.usingFallback) return;
+    this.usingFallback = usingFallback;
+    this.fallbackObserver?.(usingFallback);
+  }
+
   isUsingFallback(): boolean {
     return this.usingFallback;
   }
@@ -651,7 +676,7 @@ export class MPCController implements Controller {
     this.dockTiltZ = 0;
     this.lastWorldT = 0;
     this.lastRequestT = -Infinity;
-    this.usingFallback = true;
+    this.setFallback(true);
     this.fallback.reset();
     this.attPidPitch.reset();
     this.attPidYaw.reset();
@@ -693,14 +718,14 @@ export class MPCController implements Controller {
           dy < DOCK_MAX_ALT_M)
       ) {
         this.dockMode = true;
-        this.usingFallback = false;
+        this.setFallback(false);
         return this.dockStep(world, dt);
       }
-      this.usingFallback = true;
+      this.setFallback(true);
       return this.fallback.step(world, dt);
     }
     if (plan === null || tInPlan < 0) {
-      this.usingFallback = true;
+      this.setFallback(true);
       return this.fallback.step(world, dt);
     }
     // Once burning, COMMIT to the plan even if re-plans fail — a landing
@@ -718,11 +743,11 @@ export class MPCController implements Controller {
         Vec3.sub(plan.positions[kAbort]!, world.rigidBody.position),
       );
       if (drift > BURN_ABORT_DIVERGENCE_M) {
-        this.usingFallback = true;
+        this.setFallback(true);
         return this.fallback.step(world, dt);
       }
     }
-    this.usingFallback = false;
+    this.setFallback(false);
 
     if (tBurn < 0) {
       // --- Coast phase (SLS-47/49). Engines off; the fall is steered by
@@ -810,7 +835,7 @@ export class MPCController implements Controller {
       const dyE = world.rigidBody.position.y - this.targetPosition.y;
       if (dyE < DOCK_ENGAGE_ALT_M && Math.hypot(dxE, dzE) < DOCK_MAX_LATERAL_M) {
         this.dockMode = true;
-        this.usingFallback = false;
+        this.setFallback(false);
         return this.dockStep(world, dt);
       }
     }

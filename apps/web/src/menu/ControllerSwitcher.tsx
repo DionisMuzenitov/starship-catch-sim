@@ -66,8 +66,11 @@ export function ControllerSwitcher() {
             {k.label}
             {PLACEHOLDER_KINDS.includes(k.kind) ? " (soon)" : ""}
             {/* On the public demo MPC has no guidance service; it stays
-                selectable (flies PID + shows a banner) but is marked. */}
-            {k.kind === "mpc" && MPC_SERVICE_DISABLED ? " (local)" : ""}
+                selectable (flies PID + shows a banner) but is marked so the
+                degradation is legible in the picker itself (SLS-92). */}
+            {k.kind === "mpc" && MPC_SERVICE_DISABLED
+              ? " (needs local service)"
+              : ""}
           </option>
         ))}
       </select>

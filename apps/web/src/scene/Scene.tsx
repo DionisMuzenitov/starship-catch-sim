@@ -9,6 +9,7 @@ import { ControllerSwitcher } from "../menu/ControllerSwitcher";
 import { DocsLink } from "../menu/DocsLink";
 import { FirstRunTutorial } from "../menu/FirstRunTutorial";
 import { HelpOverlay } from "../menu/HelpOverlay";
+import { MpcFallbackBadge } from "../menu/MpcFallbackBadge";
 import { MpcServiceBanner } from "../menu/MpcServiceBanner";
 import { PidTuningPanel } from "../menu/PidTuningPanel";
 import { QualityPicker } from "../menu/QualityPicker";
@@ -92,6 +93,7 @@ export function Scene() {
       <QualityPicker />
       <ControllerSwitcher />
       <MpcServiceBanner />
+      <MpcFallbackBadge />
       <PidTuningPanel />
       <Hud />
       <FlyTouchPad />

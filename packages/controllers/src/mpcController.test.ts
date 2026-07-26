@@ -87,6 +87,50 @@ describe("MPCController", () => {
     expect(input.engineGroups.centre).toBeGreaterThan(0);
   });
 
+  it("fires the fallback observer on subscribe and on each steering↔fallback transition only (SLS-92)", async () => {
+    const transport = vi.fn(async () => cannedResponse());
+    const { ctl, scenario } = makeController(transport);
+    const fallback: boolean[] = [];
+    // Subscribing pushes the current state immediately, so the UI is correct
+    // from the moment it wires up — even if a plan never lands.
+    ctl.setFallbackObserver((v) => fallback.push(v));
+    expect(fallback).toEqual([true]);
+
+    // Steps before the solve settles stay on PID: no new events (change-only).
+    ctl.step(scenario.initialWorld, 1 / 250);
+    ctl.step(scenario.initialWorld, 1 / 250);
+    expect(fallback).toEqual([true]);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The plan is now tracked → one transition to steering.
+    ctl.step(scenario.initialWorld, 1 / 250);
+    expect(ctl.isUsingFallback()).toBe(false);
+    expect(fallback).toEqual([true, false]);
+
+    // Continuing to steer emits nothing further.
+    ctl.step(scenario.initialWorld, 1 / 250);
+    expect(fallback).toEqual([true, false]);
+  });
+
+  it("never fires the fallback observer while the service is down (no plan lands)", async () => {
+    const transport = vi.fn(async () => {
+      throw new Error("service down");
+    });
+    const { ctl, scenario } = makeController(transport);
+    const fallback: boolean[] = [];
+    ctl.setFallbackObserver((v) => fallback.push(v));
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    ctl.step(scenario.initialWorld, 1 / 250);
+    // Still true (subscribe push only): the UI stays on "PID fallback", which
+    // is exactly the down-service signal the badge/banner needs.
+    expect(fallback).toEqual([true]);
+    expect(ctl.isUsingFallback()).toBe(true);
+  });
+
   it("respects the re-plan cadence (one request per interval)", async () => {
     const transport = vi.fn(async () => cannedResponse());
     const { ctl, scenario } = makeController(transport);
