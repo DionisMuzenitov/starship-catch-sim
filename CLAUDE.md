@@ -101,6 +101,17 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
   consciously defer) its findings. This is the review gate — there is no cloud
   PR-reviewer workflow (removed in SLS-73; a silent reviewer that never posted
   was worse than none). Merges still require explicit owner approval.
+- **Docs freshness is CI-enforced (SLS-107, risk R14).** `pnpm docs:check`
+  (also a CI step) fails when the README results table, ADR prose, or eval
+  reports quote a benchmark number that contradicts the committed gate
+  records, or when the ADR index status drifts from an ADR's own status line.
+  If you change a gate record, update the prose in the same PR (escape hatch
+  for deliberately historical text: a `docs-check:ignore <reason>` marker on
+  the claim's own line, or a standalone marker comment on the line above —
+  inline markers deliberately do not exempt the following line). The Jira half runs locally: `pnpm loop:check`
+  warns when the newest SLS-43 comment predates today — run it before ending
+  any session that touched board or repo state (it automates the loop-closure
+  guard in step 7).
 
 ## Git / Jira conventions (smart commits)
 
