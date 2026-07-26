@@ -30,3 +30,60 @@ export const MPC_SERVICE_URL: string | null = resolveMpcServiceUrl(
 
 /** True on builds with no guidance service (the public static demo). */
 export const MPC_SERVICE_DISABLED = MPC_SERVICE_URL === null;
+
+/** How long to wait for the health-ping before declaring the service down. */
+export const MPC_HEALTH_TIMEOUT_MS = 2000;
+
+/**
+ * One-shot reachability check for the MPC guidance service (SLS-92): a `GET
+ * /health` that resolves `true` when the service answers and `false` on any
+ * failure (connection refused, non-2xx, or timeout). Never throws — the caller
+ * gets a plain boolean it can push to the store.
+ *
+ * Used at MPC-selection time so the app can show the degradation banner in dev
+ * (service not running) rather than silently flying the PID fallback with only
+ * per-second connection errors in the console. `fetchImpl` is injectable for
+ * tests; production passes the global `fetch`.
+ */
+export async function pingMpcHealth(
+  serviceUrl: string,
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs: number = MPC_HEALTH_TIMEOUT_MS,
+): Promise<boolean> {
+  // An explicit controller + cleared timer (rather than AbortSignal.timeout)
+  // so no abort timer lingers after the request resolves — otherwise every
+  // ping leaves a timer armed for the full timeout, which surfaces as an
+  // open-handle warning in tests and needless scheduled work in the app.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetchImpl(`${serviceUrl}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Decide whether a resolved health-ping should raise the "service unreachable"
+ * banner (SLS-92). Kept pure so the reconciliation rules the code review
+ * flagged are directly testable:
+ *   - `cancelled`  — the session was torn down / MPC re-selected before the
+ *                    ping resolved; a stale result must not clobber it.
+ *   - `reachable`  — the ping succeeded; nothing to flag.
+ *   - `usingFallback` — if MPC is already steering when the ping resolves, the
+ *                    service is demonstrably up, so a slow or 404 `/health` is
+ *                    not evidence to the contrary.
+ */
+export function shouldFlagUnreachable(args: {
+  cancelled: boolean;
+  reachable: boolean;
+  usingFallback: boolean;
+}): boolean {
+  return !args.cancelled && !args.reachable && args.usingFallback;
+}

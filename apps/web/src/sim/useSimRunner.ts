@@ -32,7 +32,12 @@ import {
   installPointerBindings,
 } from "../input/keyboard.js";
 import { installGamepadPolling } from "../input/gamepad.js";
-import { MPC_SERVICE_DISABLED, MPC_SERVICE_URL } from "./mpcService.js";
+import {
+  MPC_SERVICE_DISABLED,
+  MPC_SERVICE_URL,
+  pingMpcHealth,
+  shouldFlagUnreachable,
+} from "./mpcService.js";
 import { useControllerStore } from "../state/controllerStore.js";
 import { useMpcStore } from "../state/mpcStore.js";
 import { usePidStore } from "../state/pidStore.js";
@@ -80,6 +85,11 @@ function isManualInputActive(s: ManualInputState): boolean {
 
 export function useSimRunner(): UseSimRunner {
   const ref = useRef<UseSimRunner | null>(null);
+  // Holds the live MPC instance (when MPC is the active controller) so the
+  // effect below can health-ping the service after mount. Null for other
+  // kinds. (Fallback state reaches the store via the controller's push
+  // observer, not this ref.)
+  const mpcRef = useRef<MPCController | null>(null);
   if (ref.current === null) {
     const scenarioId = useScenarioStore.getState().currentScenarioId;
     const scenario: Scenario =
@@ -120,11 +130,31 @@ export function useSimRunner(): UseSimRunner {
           ? { transport: () => Promise.reject(new Error("mpc-service-disabled")) }
           : { serviceUrl: MPC_SERVICE_URL ?? undefined }),
       });
-      useMpcStore.getState().setServiceDisabled(MPC_SERVICE_DISABLED);
-      useMpcStore.getState().setPlan(null);
+      mpcRef.current = mpc;
+      const mpcStore = useMpcStore.getState();
+      mpcStore.setServiceDisabled(MPC_SERVICE_DISABLED);
+      // Optimistic until the effect's health-ping answers (SLS-92).
+      mpcStore.setServiceUnreachable(false);
+      mpcStore.setPlan(null);
+      // Fallback state is single-sourced from the controller: it pushes the
+      // current value on subscribe and fires on every steering↔fallback
+      // transition, so the badge is live with no polling and the service-down
+      // case (no plan ever lands) is still reported. Actual steering
+      // (usingFallback=false) — like a landed plan — is proof the service is
+      // up, so it clears any stale "unreachable" flag from the startup ping.
+      mpc.setFallbackObserver((usingFallback) => {
+        const s = useMpcStore.getState();
+        s.setUsingFallback(usingFallback);
+        if (!usingFallback) s.setServiceUnreachable(false);
+      });
       mpc.setPlanObserver((plan) => {
-        useMpcStore.getState().setPlan(plan);
-        useMpcStore.getState().setUsingFallback(mpc.isUsingFallback());
+        const s = useMpcStore.getState();
+        s.setPlan(plan);
+        // A landed plan is proof the service is up — NOT redundant with the
+        // fallback-observer clear: on the divergence path a plan lands but the
+        // vehicle immediately aborts to PID, so `usingFallback` never goes
+        // false. Without this clear the banner would falsely persist. Keep it.
+        if (plan !== null) s.setServiceUnreachable(false);
       });
       controller = wrapWithOverride(mpc);
     } else if (controllerKind === "rl") {
@@ -202,12 +232,44 @@ export function useSimRunner(): UseSimRunner {
     });
     if (useReplayStore.getState().mode === "replay") runner.setPaused(true);
 
+    // One-shot MPC reachability check (SLS-92) so a dev without `pnpm dev:full`
+    // sees the banner instead of silently flying PID. Skipped on static builds
+    // (`serviceDisabled` already drives the banner, and a fetch would only add
+    // the console error SLS-49 avoids). Two guards keep it honest:
+    //   - `cancelled` drops a late result after unmount/re-select, so a stale
+    //     ping can't clobber a fresh session's state.
+    //   - we only flag "unreachable" if MPC is STILL on the fallback when the
+    //     ping resolves: once a solve has landed the service is demonstrably
+    //     up, so a slow or 404 /health is not evidence to the contrary.
+    // This makes /health a fast HINT, not the source of truth: a healthy
+    // /solve lands a plan (~1 s) and flips usingFallback=false before the 2 s
+    // ping resolves, so a broken /health on an otherwise-working service does
+    // not raise a false banner. The only residual case is a service whose
+    // /solve is itself slow/down — where "flying PID" is the honest state, and
+    // a landed plan later clears it anyway.
+    const mpc = mpcRef.current;
+    let cancelled = false;
+    if (mpc !== null && !MPC_SERVICE_DISABLED && MPC_SERVICE_URL !== null) {
+      void pingMpcHealth(MPC_SERVICE_URL).then((reachable) => {
+        if (
+          shouldFlagUnreachable({
+            cancelled,
+            reachable,
+            usingFallback: mpc.isUsingFallback(),
+          })
+        ) {
+          useMpcStore.getState().setServiceUnreachable(true);
+        }
+      });
+    }
+
     return () => {
       runner.stop();
       removeKeys();
       removePad();
       removePointer();
       unsubReplay();
+      cancelled = true;
     };
   }, []);
 

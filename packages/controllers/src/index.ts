@@ -40,6 +40,7 @@ export {
 export {
   MPCController,
   type MPCControllerOpts,
+  type MPCFallbackObserver,
   type MPCPlan,
   type MPCPlanObserver,
   type MPCSolveRequest,
