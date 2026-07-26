@@ -33,6 +33,11 @@ export {
   type MonteCarloAsyncConfig,
 } from "./eval/monteCarloAsync.js";
 export {
+  DISPERSION,
+  dispersedEnv,
+  dispersedInitialWorld,
+} from "./eval/dispersion.js";
+export {
   OverrideController,
   type OverrideControllerOpts,
   type OverrideMode,

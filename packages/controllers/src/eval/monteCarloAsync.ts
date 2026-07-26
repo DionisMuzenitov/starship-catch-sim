@@ -22,6 +22,7 @@ import {
   type CatchOutcomeKind,
   type Scenario,
   type SimEnv,
+  type World,
   type TerminalMetrics,
 } from "@starship-catch-sim/physics";
 
@@ -65,8 +66,8 @@ async function runOneAsync(
   env: SimEnv,
   seed: number,
   onSimSecond: () => Promise<unknown>,
+  startWorld: World = jitterInitialWorld(scenario, seed),
 ): Promise<RunResult> {
-  const startWorld = jitterInitialWorld(scenario, seed);
   const startPropellantKg = startWorld.mass.propellantMass;
   let world = startWorld;
   const maxTicks = Math.round(MAX_SIM_TIME_S / PHYSICS_DT);
@@ -145,7 +146,11 @@ export async function runMonteCarloAsync(
   const runs: RunResult[] = [];
   for (const seed of seeds) {
     const controller = await config.controllerFactory(scenario);
-    runs.push(await runOneAsync(scenario, controller, env, seed, onSimSecond));
+    const runEnv = config.envFor?.(scenario, seed) ?? env;
+    const startWorld = config.initialWorldFor?.(scenario, seed);
+    runs.push(
+      await runOneAsync(scenario, controller, runEnv, seed, onSimSecond, startWorld),
+    );
   }
   return {
     scenarioId: config.scenarioId,

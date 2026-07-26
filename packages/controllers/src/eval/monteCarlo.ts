@@ -63,6 +63,14 @@ export type MonteCarloConfig = {
    *  `DEFAULT_TOWER_STATE` — the canonical bench, byte-identical to pre-SLS-82,
    *  so the headline catch rates + the SLS-66 floor never move. */
   towerControllerFactory?: (scenario: Scenario) => TowerController;
+  /** Per-seed initial-world source (SLS-110 v2 dispersion). Defaults to the
+   *  narrow `jitterInitialWorld`; the realistic-dispersion campaign passes
+   *  `dispersedInitialWorld`. */
+  initialWorldFor?: (scenario: Scenario, seed: number) => World;
+  /** Per-seed environment source (SLS-110). Defaults to the scenario's env
+   *  (wind × `windScale`); the campaign passes `dispersedEnv` for a fresh
+   *  per-run wind realization. When set, `windScale` is ignored. */
+  envFor?: (scenario: Scenario, seed: number) => SimEnv;
 };
 
 export type RunResult = {
@@ -213,8 +221,8 @@ function runOne(
   env: SimEnv,
   seed: number,
   towerController?: TowerController,
+  startWorld: World = jitterInitialWorld(scenario, seed),
 ): RunResult {
-  const startWorld = jitterInitialWorld(scenario, seed);
   const startPropellantKg = startWorld.mass.propellantMass;
   let world = startWorld;
   // Live tower pose. With no assist it stays DEFAULT_TOWER_STATE for every
@@ -324,9 +332,12 @@ export function runMonteCarlo(config: MonteCarloConfig): MonteCarloResult {
       : Array.from({ length: config.nRuns }, (_, i) => i);
   const runs: RunResult[] = [];
   for (let i = 0; i < seeds.length; i++) {
+    const seed = seeds[i]!;
     const controller = config.controllerFactory(scenario);
     const towerController = config.towerControllerFactory?.(scenario);
-    runs.push(runOne(scenario, controller, env, seeds[i]!, towerController));
+    const runEnv = config.envFor?.(scenario, seed) ?? env;
+    const startWorld = config.initialWorldFor?.(scenario, seed);
+    runs.push(runOne(scenario, controller, runEnv, seed, towerController, startWorld));
   }
   return {
     scenarioId: config.scenarioId,
