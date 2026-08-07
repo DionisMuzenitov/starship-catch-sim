@@ -61,3 +61,4 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 021 | [VitePress docs site, nested into the Pages artifact](021-vitepress-docs-site.md)                  | Accepted                                    |
 | 022 | [Active catch-assist — cooperating tower-side controller](022-active-catch-assist.md)              | Accepted                                    |
 | 023 | [Booster fuel budget + descent-profile realism (continuous-burn root cause)](023-booster-fuel-realism.md) | Accepted                          |
+| 024 | [Domain-randomized acceptance-evaluation harness](024-acceptance-evaluation-harness.md)            | Proposed                                    |
