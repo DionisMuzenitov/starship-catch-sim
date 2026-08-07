@@ -22,7 +22,7 @@ features:
     link: /dynamics
     linkText: Read the dynamics
   - title: Four ways to fly it
-    details: Manual stick, a cascaded PID, a convex-MPC guidance service, and a reinforcement-learning policy trained against the catch envelope. Swap between them live.
+    details: Manual stick, a cascaded PID, a convex-MPC guidance service, and a neural policy — imitation-learned by behaviour cloning (direct RL never caught at laptop compute). Swap between them live.
     link: /controllers/
     linkText: How the controllers work
   - title: Write your own controller
