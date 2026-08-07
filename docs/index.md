@@ -30,7 +30,7 @@ features:
     link: /api/controllers
     linkText: Build a controller
   - title: Benchmarked & documented
-    details: PID vs MPC vs RL on the same scenarios, plus 20 architecture decision records tracing every load-bearing choice.
+    details: PID vs MPC vs RL on the same scenarios, plus 24 architecture decision records tracing every load-bearing choice.
     link: /benchmarks
     linkText: See the benchmarks
 ---

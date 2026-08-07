@@ -32,6 +32,19 @@ A **catch** is a touchdown inside the tower's chopstick envelope within the
 speed, tilt, and angular-rate limits (see the [RL reward page](/rl-reward) for
 the exact thresholds).
 
+### Things to try
+
+- **Cameras** — cycle modes with `C` / `T` / `G` / `O` / `N` / `M`, including a
+  cinematic **auto-director** that frames the descent and catch for you.
+- **MPC controller** — on the hosted demo it shows a **“service offline” banner**
+  and flies the PID baseline, because the convex-MPC guidance needs a local
+  Python service (see [Run it locally](#run-it-locally) below); a live badge shows
+  whether real MPC or the fallback is steering.
+- **Engine plumes** ignite when engines burn, and **quality tiers**
+  (low / medium / high) plus a frame-time HUD live in the menu.
+- The **first run** pops a short tutorial; press **`?`** anytime for the full
+  help overlay.
+
 ## Run it locally
 
 The project is a pnpm monorepo (Vite + React + react-three-fiber, TypeScript

@@ -32,9 +32,11 @@ Conventions are fixed in
 
 - Quaternion order `(x, y, z, w)` with `w` scalar, Hamilton algebra.
 - Right-handed world frame.
-- Inertia tensor is symmetric, expressed in the body frame, and constant
-  within a single integrator step. Variable mass / propellant depletion lands
-  in [SLS-9](https://yanismuzenitov.atlassian.net/browse/SLS-9).
+- Inertia tensor is symmetric and expressed in the body frame; it is constant
+  within a single integrator step but **recomputed between steps as propellant
+  drains** — the shipped variable-mass model
+  ([SLS-9](https://yanismuzenitov.atlassian.net/browse/SLS-9),
+  [ADR-023](/adr/023-booster-fuel-realism)).
 
 ## Translational equations of motion
 

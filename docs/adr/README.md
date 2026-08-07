@@ -57,7 +57,7 @@ Fill it in, open a PR, and link the PR from the relevant Jira ticket. Reviewers 
 | 017 | [Defer the global leaderboard to post-launch demand](017-leaderboard-defer.md)                     | Accepted                                    |
 | 018 | [Launch-site sourcing — Pad A era, PD terrain bake, CC-BY detail](018-launch-site-environment-sourcing.md) | Accepted                            |
 | 019 | [Print-kit tower pipeline (STL kit → assembled GLB)](019-print-kit-tower-pipeline.md)              | Accepted                                    |
-| 020 | [Booster collision capsule + catch-as-collision](020-booster-capsule-collision-and-catch.md)      | Proposed                                    |
+| 020 | [Booster collision capsule + catch-as-collision](020-booster-capsule-collision-and-catch.md)      | Accepted                                    |
 | 021 | [VitePress docs site, nested into the Pages artifact](021-vitepress-docs-site.md)                  | Accepted                                    |
 | 022 | [Active catch-assist — cooperating tower-side controller](022-active-catch-assist.md)              | Accepted                                    |
 | 023 | [Booster fuel budget + descent-profile realism (continuous-burn root cause)](023-booster-fuel-realism.md) | Accepted                          |
