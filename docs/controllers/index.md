@@ -28,7 +28,7 @@ for the full type and a runnable example. The interface itself is fixed by
 | **Manual** | Direct keyboard / mouse stick input. | — |
 | **[PID](/controllers/pid)** | Cascaded PID: outer position/velocity → inner attitude → gimbal + throttle. | [ADR-006](/adr/006-cascaded-pid-baseline), [ADR-015](/adr/015-attitude-inner-loop-and-bc-campaign) |
 | **[MPC](/controllers/mpc)** | Convex (SOCP) guidance outer loop over a 3-DOF model, PID inner loop; runs as a service. | [ADR-007](/adr/007-convex-mpc-guidance), [ADR-009](/adr/009-coast-burn-guidance) |
-| **RL** | A neural-network policy trained with PPO against the catch envelope. | [ADR-013](/adr/013-rl-numpy-port-and-parity)–[ADR-016](/adr/016-ts-policy-runtime) |
+| **RL** | A neural-network policy, **imitation-learned** by behaviour cloning on a scripted-cascade teacher (not RL-trained — direct PPO/SAC never caught). | [ADR-013](/adr/013-rl-numpy-port-and-parity)–[ADR-016](/adr/016-ts-policy-runtime) |
 
 ## Override: take the stick mid-flight
 
@@ -42,10 +42,13 @@ or RL.
 
 ## The RL policy
 
-The reinforcement-learning controller is the headline result — a policy trained
-entirely in a numpy port of this exact physics (single-sourced constants,
-TS ↔ Python [parity-tested](/adr/013-rl-numpy-port-and-parity)) and then run in
-the browser as pure TypeScript from JSON weights (no ONNX runtime —
-[ADR-016](/adr/016-ts-policy-runtime)). Its reward function — potential-based
-shaping toward the catch point plus a sparse terminal bonus — is documented in
-full on the **[RL reward design](/rl-reward)** page.
+The RL-slot controller is the headline result — but it is **imitation-learned,
+not RL-trained**: behaviour cloning on a scripted-cascade teacher, because direct
+PPO/SAC never produced a catching policy at laptop compute
+([ADR-015](/adr/015-attitude-inner-loop-and-bc-campaign)). It is trained in a
+numpy port of this exact physics (single-sourced constants, TS ↔ Python
+[parity-tested](/adr/013-rl-numpy-port-and-parity)) and then run in the browser as
+pure TypeScript from JSON weights (no ONNX runtime —
+[ADR-016](/adr/016-ts-policy-runtime)). The reward shaping from the RL training
+pipeline — potential-based toward the catch point plus a sparse terminal bonus —
+is documented in full on the **[RL reward design](/rl-reward)** page.
