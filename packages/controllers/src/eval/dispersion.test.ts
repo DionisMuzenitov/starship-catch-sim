@@ -7,7 +7,13 @@ import {
 } from "@starship-catch-sim/physics";
 import { describe, expect, it } from "vitest";
 
-import { DISPERSION, dispersedEnv, dispersedInitialWorld } from "./dispersion";
+import {
+  ACCEPTANCE_SEED_BASE,
+  DISPERSION,
+  acceptanceSeeds,
+  dispersedEnv,
+  dispersedInitialWorld,
+} from "./dispersion";
 
 const sc = BoosterDescentStandard;
 
@@ -70,6 +76,45 @@ describe("dispersedInitialWorld (SLS-110)", () => {
       expect(w.mass.propellantMass).toBeGreaterThanOrEqual(0);
       expect(w.rigidBody.mass).toBeCloseTo(currentMass(w.mass), 6);
     }
+  });
+});
+
+describe("held-out acceptance seeds (SLS-97 / ADR-024)", () => {
+  it("draws from the reserved high band, contiguously", () => {
+    const s = acceptanceSeeds(5);
+    expect(s).toEqual([
+      ACCEPTANCE_SEED_BASE,
+      ACCEPTANCE_SEED_BASE + 1,
+      ACCEPTANCE_SEED_BASE + 2,
+      ACCEPTANCE_SEED_BASE + 3,
+      ACCEPTANCE_SEED_BASE + 4,
+    ]);
+    // The whole band must sit far above any training/dev seed range, and
+    // base + N must stay under 2^31 for any realistic N.
+    expect(ACCEPTANCE_SEED_BASE).toBeGreaterThan(1_000_000_000);
+    expect(ACCEPTANCE_SEED_BASE + 100_000).toBeLessThan(2 ** 31);
+  });
+
+  it("held-out realizations are independent of the same-index dev seed", () => {
+    // Overfitting-to-test guard: the acceptance draw for index i must NOT
+    // equal the dev-range draw for seed i — different specific realizations of
+    // the same distribution.
+    for (let i = 0; i < 5; i++) {
+      const held = dispersedInitialWorld(sc, ACCEPTANCE_SEED_BASE + i);
+      const dev = dispersedInitialWorld(sc, i);
+      expect(held.rigidBody.position).not.toEqual(dev.rigidBody.position);
+    }
+  });
+
+  it("stays deterministic and finite at a large acceptance seed (Math.imul guard)", () => {
+    // A plain `seed * 0x9e3779b1` loses precision above 2^53 once seeds come
+    // from the ~1.5e9 band; Math.imul keeps the Dryden seed a clean 32-bit hash.
+    const P = Vec3.of(0, 30_000, 0);
+    const s = ACCEPTANCE_SEED_BASE + 7;
+    const a = dispersedEnv(BoosterDescentStormy, s).wind.at(P, 2.5);
+    const b = dispersedEnv(BoosterDescentStormy, s).wind.at(P, 2.5);
+    expect(a).toEqual(b);
+    expect(Number.isFinite(a.x) && Number.isFinite(a.z)).toBe(true);
   });
 });
 

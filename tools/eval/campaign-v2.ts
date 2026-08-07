@@ -43,11 +43,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  ACCEPTANCE_SEED_BASE,
   DEFAULT_PID_GAINS,
   DISPERSION,
   MPCController,
   PIDController,
   RLController,
+  acceptanceSeeds,
   dispersedEnv,
   dispersedInitialWorld,
   runMonteCarlo,
@@ -165,10 +167,12 @@ function writeSweep(controller: string, cells: Cell[], args: Args): void {
     JSON.stringify(
       {
         controller,
-        methodology: "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept",
+        methodology:
+          "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept; held-out acceptance seeds (ADR-024)",
         gitCommit: COMMIT,
         generatedAt: stamp,
         seedsPerCell: args.seeds,
+        acceptanceSeedBase: ACCEPTANCE_SEED_BASE,
         widthsM: args.widthsM,
         scenarios: SCENARIOS,
         cells,
@@ -202,6 +206,7 @@ function sweepSync(
         scenarioId,
         controllerFactory: factory,
         nRuns: args.seeds,
+        seeds: acceptanceSeeds(args.seeds), // held-out band (ADR-024)
         ...dispersionHooks(widthM),
       });
       const cell = toCell(controller, scenarioId, widthM, args.seeds, r);
@@ -223,6 +228,7 @@ async function sweepMpc(args: Args): Promise<void> {
       const r = await runMonteCarloAsync({
         scenarioId,
         nRuns: args.seeds,
+        seeds: acceptanceSeeds(args.seeds), // held-out band (ADR-024)
         ...dispersionHooks(widthM),
         controllerFactory: (s) =>
           new MPCController({
