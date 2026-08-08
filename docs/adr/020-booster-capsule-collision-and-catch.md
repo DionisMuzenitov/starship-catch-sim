@@ -1,6 +1,6 @@
 # ADR-020: Booster collision capsule + catch-as-collision
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-19
 - **Tickets:** SLS-84 (arm segment collider), SLS-82 (active catch-assist), relates SLS-79, SLS-28
 

@@ -10,7 +10,7 @@
  *   radians per second.
  *
  * `mass` and `inertia` are treated as constant within a single `step`. They
- * may change *between* steps (e.g. propellant depletion in SLS-9).
+ * change *between* steps as propellant drains (variable-mass model, SLS-9).
  */
 
 import { Mat3 } from "./math/mat3.js";

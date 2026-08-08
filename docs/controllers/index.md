@@ -30,6 +30,15 @@ for the full type and a runnable example. The interface itself is fixed by
 | **[MPC](/controllers/mpc)** | Convex (SOCP) guidance outer loop over a 3-DOF model, PID inner loop; runs as a service. | [ADR-007](/adr/007-convex-mpc-guidance), [ADR-009](/adr/009-coast-burn-guidance) |
 | **RL** | A neural-network policy, **imitation-learned** by behaviour cloning on a scripted-cascade teacher (not RL-trained — direct PPO/SAC never caught). | [ADR-013](/adr/013-rl-numpy-port-and-parity)–[ADR-016](/adr/016-ts-policy-runtime) |
 
+::: tip The catch is two-sided
+The tower isn't a passive target. An **active catch-assist** controller nudges
+the Mechazilla chopsticks laterally to meet a slightly-off booster within their
+reach envelope — the way the real tower's tracking arms do
+([ADR-022](/adr/022-active-catch-assist)). It cooperates with whichever booster
+controller is flying, so a near-miss the booster can't fully correct can still
+be caught.
+:::
+
 ## Override: take the stick mid-flight
 
 While an auto-controller flies, any manual key hands control to you:
