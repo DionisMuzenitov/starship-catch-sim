@@ -38,5 +38,11 @@ export const useControllerStore = create<ControllerState>((set) => ({
   setOverrideActive: (overrideActive) => set({ overrideActive }),
 }));
 
-/** Sentinel for controllers that are slotted in the UI but not yet built. */
+/**
+ * Sentinel for controllers that are slotted in the UI but not yet built —
+ * `ControllerSwitcher` renders these disabled with a "(soon)" suffix. Empty
+ * today, but kept (not deleted) on purpose: SLS-96 reuses this machinery to
+ * grey out invalid vehicle×controller combos (e.g. ship × RL) for the launch
+ * guard. Removing it now would only make SLS-96 rebuild it.
+ */
 export const PLACEHOLDER_KINDS: ControllerKind[] = [];

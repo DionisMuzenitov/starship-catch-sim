@@ -286,8 +286,7 @@ const RETROGRADE_ATTITUDE: Quat = (() => {
 
 const INITIAL_FUEL_FRACTION = 0.1;
 
-function makeInitialWorld(env: SimEnv): World {
-  void env; // env is per-scenario state, not per-world — reserved.
+function makeInitialWorld(): World {
   const initialMass = consumeFuel(
     full(SuperHeavyMass),
     (1 - INITIAL_FUEL_FRACTION) * tankCapacity(SuperHeavyMass),
@@ -376,7 +375,7 @@ function buildScenario(
   windFactory: () => WindField,
 ): Scenario {
   const env: SimEnv = { wind: windFactory(), gravity: G };
-  const initialWorld = makeInitialWorld(env);
+  const initialWorld = makeInitialWorld();
   return {
     id,
     name,
