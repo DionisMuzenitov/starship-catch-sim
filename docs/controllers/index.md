@@ -1,7 +1,7 @@
 # Controllers
 
 Every agent that flies the booster — you, a PID loop, the MPC service, or the
-trained RL policy — implements the same one-method interface and is dropped into
+imitation-learned neural policy — implements the same one-method interface and is dropped into
 the identical simulation loop. Switching between them in the app re-seeds the
 run with the new controller; nothing else changes.
 

@@ -33,6 +33,8 @@ Headline numbers at the **±20 m entry-corridor reference width** (1σ position;
 
 The policy peaks at 96 % in calm air, but its windy columns sit far below the old fixed-wind “87 / 87 / 90 %” bench — that gap is precisely the overfitting a fresh, held-out benchmark exposes (the old runs reused one frozen gust sequence). Widen the entry corridor beyond ±20 m and every controller degrades while MPC pulls ahead in wind; the full **catch-rate-vs-dispersion-width** curve — the real story — is in the [controller comparison report](eval/reports/v1-controller-comparison.md).
 
+**Why PID scores 0 % — the result, not a strawman.** A cascaded PID is a pure _tracking_ law with no energy or ignition management: it can hold attitude but never decides _when_ to burn, so its median terminal miss is **3.5–5.5 km** (see the [terminal-accuracy table](eval/reports/v1-controller-comparison.md#median-terminal-accuracy--fuel-successful-rl-runs-land-pid-never-does)). The booster catch is fundamentally an ignition-planning problem — exactly what the MPC plans and what the neural policy absorbed from its scripted teacher. The 0 % is the baseline's honest floor, and it frames why the other two are hard-won.
+
 ![Booster catch rate by controller generation at the ±20 m entry corridor — cascaded PID 0 %, convex MPC 49/37/39 %, imitation-learned neural policy 96/59/36 % (calm/standard/stormy), held-out acceptance seeds.](docs/media/progression.svg)
 
 _v2 acceptance at the ±20 m reference width (regenerate with `pnpm chart:progression` from the committed [gate records](eval/results/gate-records/MANIFEST.md))._
@@ -40,6 +42,12 @@ _v2 acceptance at the ±20 m reference width (regenerate with `pnpm chart:progre
 The shipped policy is a 578 KB, 17→256→256→4 tanh MLP. It runs a dependency-free TypeScript forward pass in the browser (no ONNX, no WASM — [ADR-016](docs/adr/016-ts-policy-runtime.md)), commanding thrust and lean targets at 25 Hz over a 250 Hz body-frame attitude-PD inner loop — the same guidance/control layering real boosters use. It is **imitation-learned** (behaviour cloning on a scripted-cascade teacher), _not_ RL-trained: direct PPO and SAC never produced a catching policy at laptop compute, and that honest diagnosis trail is part of the write-up. TypeScript↔Python parity is CI-tested to 1e-4 on every push.
 
 Reproduce with `pnpm campaign:v2` (the held-out acceptance sweep). Full protocol, the catch-rate-vs-width curve, Wilson CIs, provenance, and caveats: **[controller comparison report →](eval/reports/v1-controller-comparison.md)**.
+
+## What's modeled — and what's not
+
+Precisely: **6-DOF rigid-body dynamics** integrated at 250 Hz with **Mach-dependent table aero** (drag and grid-fin/flap authority interpolated over a coefficient table across the sub/transonic/supersonic regimes — not a constant Cd), **variable mass, CoM and inertia** as propellant burns, **inner-13 engine gimbal + grid-fin** control, **layered wind + Dryden turbulence**, and the **tower catch geometry** with an explicit capture envelope. TypeScript ↔ Python physics parity is CI-tested to 1e-4 on every push.
+
+**Not modeled (yet), stated plainly:** no CFD — aero is table-interpolated, not resolved; no offshore-divert / abort-to-water profile ([SLS-103](https://yanismuzenitov.atlassian.net/browse/SLS-103)); no ship (upper-stage) catch — the booster catch only, and its envelope is grounded while the ship's is speculative ([SLS-99](https://yanismuzenitov.atlassian.net/browse/SLS-99)); the MPC plan is **wind-blind and local-only** ([SLS-116](https://yanismuzenitov.atlassian.net/browse/SLS-116)); no structural, thermal, or propellant-slosh dynamics. These are boundaries by design, not gaps we hide.
 
 ## Quick start
 
@@ -133,6 +141,10 @@ The engineering-judgment trail lives in the [Architecture Decision Records](docs
 - **[ADR-015](docs/adr/015-attitude-inner-loop-and-bc-campaign.md) / [ADR-016](docs/adr/016-ts-policy-runtime.md)** — the two-rate control stack (25 Hz policy over a 250 Hz attitude loop) and shipping the neural policy as self-describing JSON weights with a ~30-line pure-TS runtime.
 
 Reference material: [reward & imitation-learning design](docs/rl-reward.md) · [dynamics notes](docs/dynamics.md) · [physical reference data](docs/reference/README.md) · [controller comparison report](eval/reports/v1-controller-comparison.md).
+
+## Built with AI — disclosure
+
+Built solo with heavy AI pair-programming (Claude Code). That's stated up front because it's visible in the commit log anyway — and because the interesting part isn't _that_ AI was used but _how_ it was kept honest. Every non-trivial decision is human-reviewed and recorded in the [ADR log](docs/adr/README.md) (two dozen decision records, **including the documented failures** — e.g. direct RL never converged at laptop compute, so the shipped policy is imitation-learned, [ADR-015](docs/adr/015-attitude-inner-loop-and-bc-campaign.md)). Results aren't asserted, they're **pinned**: every headline number traces to a committed [gate record](eval/results/gate-records/MANIFEST.md), and TypeScript ↔ Python physics parity is CI-tested on every push. If a claim looks wrong, the receipts are in the repo.
 
 ## License
 

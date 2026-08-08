@@ -1,8 +1,9 @@
 /**
- * Top-bar controller picker (Manual / PID / MPC / RL) plus a temp/hard
- * toggle that decides how manual takeover behaves during an auto-fly
- * run. MPC and RL are visible but disabled until SLS-25+ / SLS-28+
- * ship their controllers, so the dropdown reflects the M3/M4 roadmap.
+ * Top-bar controller picker (Manual / PID / MPC / Neural) plus a temp/hard
+ * toggle that decides how manual takeover behaves during an auto-fly run.
+ * The "Neural" option flies the imitation-learned policy (kind `"rl"`
+ * internally — the slot name; the shipped policy is NOT RL-trained, so the
+ * user-facing label is "Neural" to match the README).
  *
  * Switching `kind` re-mounts the Scene via the App-level key, so the
  * runner rebuilds with the new controller and the current flight resets.
@@ -20,7 +21,7 @@ const KIND_LABELS: { kind: ControllerKind; label: string }[] = [
   { kind: "manual", label: "Manual" },
   { kind: "pid", label: "PID" },
   { kind: "mpc", label: "MPC" },
-  { kind: "rl", label: "RL" },
+  { kind: "rl", label: "Neural" },
 ];
 
 const MODE_LABELS: { mode: OverrideMode; label: string; title: string }[] = [

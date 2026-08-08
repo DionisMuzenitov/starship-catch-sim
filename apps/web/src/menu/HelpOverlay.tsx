@@ -133,7 +133,7 @@ export function HelpOverlay() {
               (top-left): <span className="text-white/90">Manual</span> (you),{" "}
               <span className="text-white/90">PID</span>,{" "}
               <span className="text-white/90">MPC</span>, or{" "}
-              <span className="text-white/90">RL</span> (the trained
+              <span className="text-white/90">Neural</span> (the imitation-learned
               neural-network policy). While an auto-controller flies, tapping any
               manual key takes over: <span className="text-white/90">temp</span>{" "}
               hands control back after ~2 s;{" "}
