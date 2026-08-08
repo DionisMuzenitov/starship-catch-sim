@@ -105,8 +105,16 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
   (also a CI step) fails when the README results table, ADR prose, or eval
   reports quote a benchmark number that contradicts the committed gate
   records, or when the ADR index status drifts from an ADR's own status line.
+  It also fails on a small **prose denylist (SLS-114)** — known-wrong phrases
+  tied to settled decisions ("PPO-/SAC-trained" for the imitation-learned
+  policy; "uses ONNX" post-ADR-016) — the number-free contradiction class that
+  once shipped green (the docs site's "trained with PPO"). It is a floor, not
+  completeness: a keyword lint can't judge arbitrary prose, so omissions still
+  rely on the PR-template docs checkbox. Extend the list in
+  `tools/docs-check.ts` (`PROSE_DENYLIST`) as new settled decisions accrue.
   If you change a gate record, update the prose in the same PR (escape hatch
-  for deliberately historical text: a `docs-check:ignore <reason>` marker on
+  for deliberately historical text — works for both the number sweep and the
+  denylist: a `docs-check:ignore <reason>` marker on
   the claim's own line, or a standalone marker comment on the line above —
   inline markers deliberately do not exempt the following line). The Jira half runs locally: `pnpm loop:check`
   warns when the newest SLS-43 comment predates today — run it before ending
