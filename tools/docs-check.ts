@@ -9,7 +9,7 @@
  * mirroring the `gen:consts:check` idiom: docs that quote a benchmark number
  * must agree with the committed record.
  *
- * Three checks:
+ * Four checks:
  *  1. README "## Results" table cells == gate-record success rates (rounded %,
  *     columns matched by scenario calm/standard/stormy, rows by generation).
  *  2. ADR index (docs/adr/README.md) status column is consistent with each
@@ -23,6 +23,12 @@
  *     claim split across lines is still seen. Opt-out: a
  *     `docs-check:ignore <reason>` marker on the claim's own line, or a
  *     standalone marker comment on the line directly above.
+ *  4. Prose denylist (SLS-114): known-wrong phrases tied to settled decisions
+ *     ("PPO-/SAC-trained" for the imitation-learned policy; "uses ONNX" post-
+ *     ADR-016) fail loudly even when they quote no number — the class that
+ *     shipped green before (the docs site's "trained with PPO"). Same
+ *     `docs-check:ignore` opt-out. A floor, not completeness — a keyword lint
+ *     can't judge arbitrary prose; see PROSE_DENYLIST.
  *
  * The controller registry (labels, aliases, record files) is single-sourced
  * from `tools/eval/generations.ts`, shared with the progression chart — a new
@@ -284,6 +290,70 @@ export function sweepBenchClaims(
   return failures;
 }
 
+// ---------------------------------------------------------------------------
+// Check 4 — prose denylist (SLS-114)
+// ---------------------------------------------------------------------------
+
+/**
+ * Known-wrong phrases tied to SETTLED decisions. Check 3 only catches prose
+ * that quotes a contradicting *number*; a flatly-wrong sentence with no number
+ * (the docs site's "trained with PPO" — the exact inverse of the load-bearing
+ * "imitation-learned; PPO/SAC failed" claim — shipped green under checks 1–3)
+ * sails through. This denylist makes those *known* contradictions fail loudly.
+ *
+ * Each pattern is deliberately narrow: it matches only the AFFIRMATIVE wrong
+ * claim, never the negation or the historical/attempt prose the docs are full
+ * of ("not RL-trained", "no ONNX runtime", ADR-014's "trains a PPO policy"
+ * describing the *failed* attempt). Calibrated to zero matches on the current
+ * tree — see docs-check.test.ts. When a phrase is a deliberate historical or
+ * negative mention the pattern can't distinguish, exempt it with the SAME
+ * `docs-check:ignore <reason>` marker check 3 uses.
+ *
+ * This can never be complete (a keyword lint can't judge arbitrary prose) — it
+ * is a floor that nails the worst, most-repeated contradictions cheaply.
+ */
+export const PROSE_DENYLIST: { id: string; re: RegExp; why: string }[] = [
+  {
+    id: "policy-rl-provenance",
+    // "PPO-trained" / "SAC-trained" / "trained with|via|using|by PPO|SAC|
+    // reinforcement learning". Does NOT match "not RL-trained" (the docs'
+    // negation uses "RL-trained", not "PPO-/SAC-trained") nor "trains a PPO
+    // policy" (ADR-014 describing the failed attempt).
+    re: /\b(?:PPO|SAC)[-\s]trained\b|\btrained\s+(?:with|via|using|by)\s+(?:PPO|SAC|reinforcement learning)\b/gi,
+    why: 'the shipped neural policy is IMITATION-learned (behaviour cloning on a scripted-cascade teacher); direct PPO/SAC never produced a catching policy (ADR-015/016, README). Claiming it was PPO/SAC/RL-*trained* inverts the load-bearing result. If you mean a failed training attempt, phrase it that way; if it is a deliberate historical note, add a `docs-check:ignore <reason>` marker',
+  },
+  {
+    id: "onnx-runtime",
+    // Affirmative "uses|using|via|runs on ONNX" only. Does NOT match "no ONNX",
+    // "no ONNX runtime", "exported to ONNX", "load ONNX weights", or the
+    // "ONNX/onnxruntime-web plan" — all legitimate negations / historical ADR
+    // prose (ADR-001/003/016).
+    re: /\b(?:uses?|using|via|through|runs?\s+on)\s+ONNX\b/gi,
+    why: 'the in-browser policy runtime is a dependency-free TypeScript forward pass, NOT ONNX — ADR-016 superseded the ONNX/onnxruntime-web plan. If this is a historical reference, add a `docs-check:ignore <reason>` marker',
+  },
+];
+
+/** Scan one file's text for known-wrong denylisted phrases (Check 4). Honors
+ *  the same ignore-marker semantics as the bench-claim sweep. */
+export function sweepProseDenylist(file: string, text: string): Failure[] {
+  const failures: Failure[] = [];
+  const lines = text.split("\n");
+  const { shadow, lineOf } = unwrapWithLineMap(text);
+  for (const { id, re, why } of PROSE_DENYLIST) {
+    re.lastIndex = 0;
+    for (const m of shadow.matchAll(re)) {
+      const startLine = lineOf[m.index];
+      if (lines[startLine].includes(IGNORE_MARKER)) continue;
+      if (isStandaloneMarker(lines[startLine - 1])) continue;
+      failures.push({
+        file,
+        detail: `line ${startLine + 1}: known-wrong phrase "${m[0].trim()}" [${id}] — ${why}`,
+      });
+    }
+  }
+  return failures;
+}
+
 /** Markdown files the sweep covers: git-TRACKED files under README/docs/eval.
  *  Tracked-only keeps local and CI runs identical — it skips docs/node_modules
  *  (docs is a workspace member), gitignored generated files (docs build
@@ -310,7 +380,9 @@ export function runAllChecks(root: string): Failure[] {
     ...checkAdrIndex(root),
   ];
   for (const path of sweepTargets(root)) {
-    failures.push(...sweepBenchClaims(path, readFileSync(join(root, path), "utf8"), canon));
+    const text = readFileSync(join(root, path), "utf8");
+    failures.push(...sweepBenchClaims(path, text, canon));
+    failures.push(...sweepProseDenylist(path, text));
   }
   return failures;
 }
@@ -318,7 +390,7 @@ export function runAllChecks(root: string): Failure[] {
 function main(): void {
   const failures = runAllChecks(repoRoot);
   if (failures.length === 0) {
-    console.log("docs:check OK — README table, ADR index, and bench claims agree with the gate records");
+    console.log("docs:check OK — README table, ADR index, bench claims, and prose denylist agree with the gate records + settled decisions");
     return;
   }
   console.error(`docs:check FAILED — ${failures.length} doc-freshness problem(s):\n`);

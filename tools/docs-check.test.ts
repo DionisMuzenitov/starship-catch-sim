@@ -8,6 +8,7 @@ import {
   repoRoot,
   runAllChecks,
   sweepBenchClaims,
+  sweepProseDenylist,
   sweepTargets,
 } from "./docs-check";
 
@@ -129,6 +130,56 @@ describe("docs-check (SLS-107)", () => {
       "versus 50 % for a convex-MPC baseline", // number before controller, no verb
     ].join("\n\n");
     expect(sweepBenchClaims("x.md", neutral, CANON)).toEqual([]);
+  });
+
+  describe("prose denylist (SLS-114)", () => {
+    it("fires on the affirmative RL-provenance contradiction (the 'trained with PPO' class)", () => {
+      for (const bad of [
+        "The neural policy was trained with PPO on the vectorized plant.",
+        "A PPO-trained booster policy ships in the browser.",
+        "the SAC-trained clone",
+        "the student is trained via SAC",
+        "trained using reinforcement learning end to end",
+      ]) {
+        const f = sweepProseDenylist("x.md", bad);
+        expect(f, bad).toHaveLength(1);
+        expect(f[0].detail).toContain("policy-rl-provenance");
+      }
+    });
+
+    it("stays silent on the negation / historical-attempt prose the docs actually contain", () => {
+      const legit = [
+        "It is imitation-learned, not RL-trained.", // README/ADR-023 negation
+        "SLS-29 trains a PPO policy to catch the booster.", // ADR-014 (the attempt)
+        "direct PPO and SAC never produced a catching policy", // README diagnosis
+        "BC + PPO fine-tuning is the standard alternative", // ADR-015
+        "PPO saw a flat reward and no gradient", // rl-reward.md
+      ].join("\n\n");
+      expect(sweepProseDenylist("x.md", legit)).toEqual([]);
+    });
+
+    it("fires on an affirmative ONNX-runtime claim but not the negations/history", () => {
+      expect(sweepProseDenylist("x.md", "the policy uses ONNX at runtime")).toHaveLength(1);
+      expect(sweepProseDenylist("x.md", "inference runs on ONNX in the browser")).toHaveLength(1);
+      const legit = [
+        "a dependency-free TypeScript forward pass (no ONNX, no WASM)", // README
+        "Pure-TS policy runtime (JSON weights, no ONNX)", // ADR-016 title
+        "exported to ONNX for in-browser inference", // ADR-001 (historical)
+        'wherever this ADR says "load ONNX weights", read TS forward pass', // ADR-003 amendment
+      ].join("\n\n");
+      expect(sweepProseDenylist("x.md", legit)).toEqual([]);
+    });
+
+    it("honors the ignore marker (inline + standalone-above) like the bench sweep", () => {
+      expect(
+        sweepProseDenylist("x.md", "the old build was PPO-trained <!-- docs-check:ignore historical -->"),
+      ).toEqual([]);
+      expect(
+        sweepProseDenylist("x.md", "<!-- docs-check:ignore historical -->\nthe old build was PPO-trained"),
+      ).toEqual([]);
+      // Without a marker it fails — the marker is load-bearing.
+      expect(sweepProseDenylist("x.md", "the old build was PPO-trained")).toHaveLength(1);
+    });
   });
 
   it("sweep targets are git-tracked markdown only (no node_modules, no generated files)", () => {
