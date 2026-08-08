@@ -196,8 +196,10 @@ const STEER_GAIN_RAD_PER_M = 0.00022;
  *  10° cap left tail seeds entering the burn with > 2 km to divert. */
 const STEER_TILT_MAX_RAD = 0.26;
 
-/** Ignore impact errors below this — the terminal burn cleans up. */
-const STEER_DEADBAND_M = 25;
+/** Ignore impact errors below this — the terminal burn cleans up.
+ *  Env-tunable for the SLS-115 deadband intervention A/B (defaults to 25, so
+ *  shipped behaviour is unchanged when the var is unset). */
+const STEER_DEADBAND_M = Number(process.env.MPC_STEER_DEADBAND_M ?? 25);
 
 /**
  * Attitude control is gated on dynamic pressure during the coast: with
