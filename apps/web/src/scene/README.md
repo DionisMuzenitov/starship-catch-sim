@@ -28,8 +28,6 @@ origin above. Vehicles, towers, ground features all share this frame.
   level). Single setting for v1; altitude-aware fog can come later.
 - `PostFX.tsx` — `EffectComposer` with subtle `Bloom` + `SMAA`. No chromatic
   aberration. Canvas `antialias` is off because SMAA handles AA.
-- `BoosterPlaceholder.tsx` — 70 m × 4.5 m radius cylinder at origin, stands
-  in for the real booster geometry from a later ticket.
 - `DebugOverlay.tsx` — `DebugSampler` (inside `<Canvas>`, uses `useFrame` for
   rAF-driven EMA-smoothed FPS + camera position) and `DebugHud` (DOM sibling
   rendered absolute-positioned at top-left).
