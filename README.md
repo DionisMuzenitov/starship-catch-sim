@@ -100,6 +100,14 @@ with `VITE_MPC_URL=<url>` (set it empty, `VITE_MPC_URL=`, to force the
 PID-fallback demo mode). A browser-native MPC (WebAssembly) that removes
 the service dependency is tracked as ADR-008 / SLS-31.
 
+**Watch a recorded catch (no service needed).** So the static demo can _show_
+what MPC actually does, two real catches are bundled in
+[`apps/web/public/replays/`](apps/web/public/replays) — one **MPC** and one
+**neural** — recorded headlessly under bench-valid conditions
+(`tools/eval/gen-demo-replays.ts`). In the demo the MPC fallback banner has a
+**“▶ Watch a recorded MPC catch”** button; or use **Load replay** in the
+scenario picker to load either file.
+
 ## Milestones
 
 | Milestone | Description                                                                                | Status     |
