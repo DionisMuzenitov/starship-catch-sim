@@ -73,6 +73,28 @@ const IC_SALT = 0x9e3779b1; // golden-ratio constant
 const WIND_SALT = 0x85ebca77; // murmur mix constant — XOR-distant from IC_SALT
 
 /**
+ * Held-out acceptance-seed namespace (ADR-024, rule 1). The acceptance
+ * benchmark draws its seeds from this reserved high band; training /
+ * demonstration / dev pipelines MUST stay below it. Because splitmix32
+ * decorrelates distant seeds, a policy trained on seeds *below* the base can
+ * never have seen the exact realizations it is graded on — the eval is
+ * held-out **by construction**, so it measures generalization, not
+ * memorization. (The Python trainer already lives in a different PRNG family
+ * entirely — gym/numpy PCG64 seeded at 42 … 40000+; this makes the guarantee
+ * structural for any future TS-side training too.)
+ *
+ * The base sits at ~1.53e9 — far above every training seed base in `services/rl`
+ * and any natural `0..N` dev/CI range, and low enough that `base + N` stays
+ * under 2³¹ for any realistic N.
+ */
+export const ACCEPTANCE_SEED_BASE = 0x5afe_0000; // mnemonic: "SAFE"
+
+/** The first `n` held-out acceptance seeds — the frozen test set. */
+export function acceptanceSeeds(n: number): number[] {
+  return Array.from({ length: n }, (_, i) => ACCEPTANCE_SEED_BASE + i);
+}
+
+/**
  * A dispersed initial world for `seed` — deterministic in `seed`, distinct
  * across seeds. Perturbs position, velocity (magnitude + direction), attitude,
  * body rates, and residual propellant (recomputing the derived rigid-body mass
@@ -178,7 +200,9 @@ export function dispersedEnv(scenario: Scenario, seed: number): SimEnv {
     return { wind: constantWind(Vec3.ZERO), gravity };
   }
   const rng = makeRng(WIND_SALT ^ seed);
-  const drydenSeed = (WIND_SALT ^ (seed * 0x9e3779b1)) | 0;
+  // Math.imul keeps this a true 32-bit hash — a plain `*` loses integer
+  // precision above 2⁵³ once seeds come from the ~1.5e9 acceptance band.
+  const drydenSeed = (WIND_SALT ^ Math.imul(seed, 0x9e3779b1)) | 0;
 
   // Wind is always fully per-run realized (this is the frozen-gust fix, and it
   // applies at every point of the IC-width sweep — the sweep varies the START,

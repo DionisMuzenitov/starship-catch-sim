@@ -33,7 +33,9 @@ export {
   type MonteCarloAsyncConfig,
 } from "./eval/monteCarloAsync.js";
 export {
+  ACCEPTANCE_SEED_BASE,
   DISPERSION,
+  acceptanceSeeds,
   dispersedEnv,
   dispersedInitialWorld,
 } from "./eval/dispersion.js";
