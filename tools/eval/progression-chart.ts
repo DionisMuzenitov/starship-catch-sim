@@ -89,7 +89,7 @@ function buildSvg(
     `<text x="${M.left}" y="30" font-family="${FONT}" font-size="17" font-weight="600" fill="${INK.primary}">Booster catch rate by controller generation</text>`,
   );
   parts.push(
-    `<text x="${M.left}" y="49" font-family="${FONT}" font-size="12.5" fill="${INK.secondary}">30-seed Monte-Carlo per cell · standard catch envelope · TS physics core</text>`,
+    `<text x="${M.left}" y="49" font-family="${FONT}" font-size="12.5" fill="${INK.secondary}">v2 acceptance · ±20 m entry corridor · held-out seeds · 300 (PID/RL) / 100 (MPC) per cell</text>`,
   );
 
   // y gridlines + labels (0,25,50,75,100 %)
@@ -152,7 +152,7 @@ function buildSvg(
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" ` +
-    `aria-label="Booster catch rate by controller generation: PID 0% across all wind scenarios, MPC 53/50/50%, neural policy 87/87/90% (calm/standard/stormy).">` +
+    `aria-label="Booster catch rate by controller generation at the ±20 m entry corridor: PID 0% across all wind scenarios, MPC 49/37/39%, neural policy 96/59/36% (calm/standard/stormy), held-out acceptance seeds.">` +
     parts.join("") +
     `</svg>\n`
   );

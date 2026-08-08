@@ -1,0 +1,172 @@
+{
+ "controller": "mpc",
+ "methodology": "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept; held-out acceptance seeds (ADR-024)",
+ "gitCommit": "83f62f7",
+ "generatedAt": "2026-08-08T03-41-55-608Z",
+ "seedsPerCell": 100,
+ "acceptanceSeedBase": 1526595584,
+ "widthsM": [
+  20,
+  50,
+  100,
+  200,
+  400
+ ],
+ "scenarios": [
+  "booster-descent-calm",
+  "booster-descent-standard",
+  "booster-descent-stormy"
+ ],
+ "cells": [
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 100,
+   "catchRate": 0.49,
+   "medianFinalPosErrM": 8.043887226932,
+   "medianFuelKg": 231281.64249513537
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 100,
+   "catchRate": 0.37,
+   "medianFinalPosErrM": 30.958212422140733,
+   "medianFuelKg": 233632.75345570198
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 100,
+   "catchRate": 0.39,
+   "medianFinalPosErrM": 43.75048281811199,
+   "medianFuelKg": 224291.0492269519
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 100,
+   "catchRate": 0.59,
+   "medianFinalPosErrM": 5.050044601147597,
+   "medianFuelKg": 234345.40688422392
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 100,
+   "catchRate": 0.49,
+   "medianFinalPosErrM": 5.6505991643999405,
+   "medianFuelKg": 237379.76657429017
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 100,
+   "catchRate": 0.48,
+   "medianFinalPosErrM": 6.158146048636439,
+   "medianFuelKg": 241912.34250997676
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 100,
+   "catchRate": 0.38,
+   "medianFinalPosErrM": 7.16876510397566,
+   "medianFuelKg": 241617.9659143038
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 100,
+   "catchRate": 0.49,
+   "medianFinalPosErrM": 5.873390779130449,
+   "medianFuelKg": 236605.48570446146
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 100,
+   "catchRate": 0.42,
+   "medianFinalPosErrM": 6.67545953683333,
+   "medianFuelKg": 265614.5878142691
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 100,
+   "catchRate": 0.15,
+   "medianFinalPosErrM": 48.79617992142593,
+   "medianFuelKg": 226634.78457886502
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 100,
+   "catchRate": 0.24,
+   "medianFinalPosErrM": 46.16262278509566,
+   "medianFuelKg": 242241.48805816378
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 100,
+   "catchRate": 0.24,
+   "medianFinalPosErrM": 47.96439858977544,
+   "medianFuelKg": 245319.11761453393
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 100,
+   "catchRate": 0.12,
+   "medianFinalPosErrM": 118.6708543446895,
+   "medianFuelKg": 223313.48413558575
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 100,
+   "catchRate": 0.09,
+   "medianFinalPosErrM": 95.01405880458526,
+   "medianFuelKg": 219871.37508467297
+  },
+  {
+   "controller": "mpc",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 100,
+   "catchRate": 0.14,
+   "medianFinalPosErrM": 108.50722853300682,
+   "medianFuelKg": 225108.18110971234
+  }
+ ]
+}

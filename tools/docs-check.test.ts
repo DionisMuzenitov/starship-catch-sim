@@ -35,8 +35,9 @@ describe("docs-check (SLS-107)", () => {
 
   it("canonicalRates reads both gate-record shapes and matches the published headline", () => {
     const canon = canonicalRates(repoRoot);
-    expect(canon["Neural policy"]).toEqual([87, 87, 90]); // M6 record, bare-array shape
-    expect(canon["MPC"]).toEqual([53, 50, 50]); // M5 record, {cells} shape
+    // v2 acceptance baseline (SLS-93), ±20 m entry corridor, held-out seeds.
+    expect(canon["Neural policy"]).toEqual([96, 59, 36]); // v2-acceptance-rl.json
+    expect(canon["MPC"]).toEqual([49, 37, 39]); // v2-acceptance-mpc.json
     expect(canon["PID"]).toEqual([0, 0, 0]);
   });
 

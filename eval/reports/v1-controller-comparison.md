@@ -1,4 +1,63 @@
-# Controller comparison v1 — PID vs MPC vs RL (booster catch)
+# Controller comparison — PID vs MPC vs RL (booster catch)
+
+The **current headline** is the v2 acceptance benchmark below; the earlier
+fixed-wind M6 bench is retained beneath it as historical context.
+
+## v2 acceptance benchmark — held-out, domain-randomized (current)
+
+_Methodology (SLS-97 / SLS-110 / [ADR-024](../../docs/adr/024-acceptance-evaluation-harness.md)):
+TS physics core (250 Hz); a physically-grounded entry-corridor dispersion
+(position / velocity / flight-path angle / attitude / body-rate / propellant)
+with a **fresh per-run wind realization**; seeds drawn from a held-out band
+(`0x5AFE_0000`, disjoint from training). 300 seeds/cell (PID/RL), 100 (MPC).
+Catch per `evaluateCatchOutcome` against the standard envelope (10 m / 5 m·s⁻¹
+vert / 2 m·s⁻¹ horiz / 3° tilt / 5°·s⁻¹). Wilson 95 % CIs._
+
+**Headline — ±20 m entry-corridor reference width:**
+
+| controller  | calm     | standard | stormy   |
+| ----------- | -------- | -------- | -------- |
+| PID (M4)    | 0 %      | 0 %      | 0 %      |
+| MPC (M5)    | 49 %     | 37 %     | 39 %     |
+| **RL (M6)** | **96 %** | **59 %** | **36 %** |
+
+**No single controller wins — the full curve (catch rate % [95 % CI]) crosses over.**
+
+_RL (n = 300):_
+
+| σ (m) | calm       | standard   | stormy     |
+| ----- | ---------- | ---------- | ---------- |
+| ±20   | 96 [93–97] | 59 [53–64] | 36 [31–42] |
+| ±50   | 58 [52–63] | 36 [31–42] | 21 [17–26] |
+| ±100  | 30 [25–35] | 18 [14–22] | 11 [8–15]  |
+| ±200  | 17 [13–22] | 10 [7–14]  | 5 [3–8]    |
+| ±400  | 6 [4–10]   | 3 [1–5]    | 2 [1–5]    |
+
+_MPC (n = 100):_
+
+| σ (m) | calm       | standard   | stormy     |
+| ----- | ---------- | ---------- | ---------- |
+| ±20   | 49 [39–59] | 37 [28–47] | 39 [30–49] |
+| ±50   | 59 [49–68] | 49 [39–59] | 48 [38–58] |
+| ±100  | 38 [29–48] | 49 [39–59] | 42 [33–52] |
+| ±200  | 15 [9–23]  | 24 [17–33] | 24 [17–33] |
+| ±400  | 12 [7–20]  | 9 [5–16]   | 14 [9–22]  |
+
+PID is 0 % at every width. Reading the crossover: where the intervals do not
+overlap the winner is decisive — RL owns the calm, near-nominal corner (±20 m
+calm); MPC owns the windy middle (±50 m stormy, ±100 m standard) and holds up
+better as the corridor widens. Both fall toward single digits by ±400 m.
+
+**MPC dips at the low end** — lower at ±20 m than at ±50 m in all three
+scenarios (a near-nominal start is harder for it than a small finite error). The
+per-cell intervals overlap, but the dip is consistent across scenarios, so it
+looks systematic rather than noise — tracked as SLS-115.
+
+Reproduce: `pnpm campaign:v2`. Records: `eval/results/gate-records/v2-acceptance-*.json`.
+
+---
+
+## Historical: M6 fixed-wind bench (30 seeds/cell)
 
 _Generated 2026-07-09 (SLS-30). Protocol: TS physics core (250 Hz), the three
 `booster-descent-_` scenarios from 65 km, 30 seeded runs per cell with
@@ -6,7 +65,7 @@ jittered initial worlds (`jitterInitialWorld`), catch per
 `evaluateCatchOutcome` against the standard envelope (10 m / 5 m/s vert /
 2 m/s horiz / 3° tilt / 5°/s).\*
 
-## Catch success rate (30 seeds/cell)
+### Catch success rate (30 seeds/cell)
 
 | controller                               | calm     | standard | stormy   |
 | ---------------------------------------- | -------- | -------- | -------- |
@@ -14,8 +73,9 @@ jittered initial worlds (`jitterInitialWorld`), catch per
 | MPC (convex planner, M5 gate record¹)    | 53 %¹    | 50 %¹    | 50 %¹    |
 | **RL — imitation-learned neural policy** | **87 %** | **87 %** | **90 %** |
 
-¹ **The MPC row is not directly comparable to the RL row yet, and a re-bench is
-pending (SLS-93).** Its three cells are the M5 gate record's `booster-descent-calm`
+¹ **The MPC row is not directly comparable to the RL row, and was re-benched on
+genuine wind in the v2 acceptance section above (SLS-93, resolved).** Its three
+cells are the M5 gate record's `booster-descent-calm`
 scenario at windScale 0 / 1 / 2× — but calm has zero base wind, so the sweep is a
 near-no-op (the ×1 and ×2 cells are byte-identical; "53 vs 50" is one seed
 flipping on solver nondeterminism). They are **not** the calm / standard / stormy

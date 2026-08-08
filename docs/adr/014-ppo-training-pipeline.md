@@ -98,6 +98,7 @@ DR/wind/curriculum unit tests, not training.
 
 ## Red-team vs the 80 % gate
 
+<!-- docs-check:ignore historical M6 design-time MPC baseline (50-53%); the current MPC numbers are the v2 acceptance benchmark in the README Results -->
 The plant is controllable through this envelope (MPC+PID closes catches from
 full descent at 50-53 %; the RL policy actuates the same plant at 25 Hz with
 richer per-step authority). Potential-based shaping (policy-invariant) plus
