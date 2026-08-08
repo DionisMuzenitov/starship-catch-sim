@@ -53,9 +53,9 @@ export function FirstRunTutorial() {
       <ul className="mb-4 space-y-1.5 text-xs leading-relaxed text-white/75">
         <li>
           <span className="text-emerald-300/90">Watch a catch:</span> pick{" "}
-          <span className="text-white/95">RL</span> in the{" "}
+          <span className="text-white/95">Neural</span> in the{" "}
           <span className="text-white/95">controller</span> dropdown (top-left)
-          to let the trained policy fly it.
+          to let the imitation-learned policy fly it.
         </li>
         <li>
           <span className="text-emerald-300/90">Fly it yourself:</span> keep{" "}

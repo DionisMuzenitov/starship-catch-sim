@@ -43,7 +43,16 @@ _MPC (n = 100):_
 | ±200  | 15 [9–23]  | 24 [17–33] | 24 [17–33] |
 | ±400  | 12 [7–20]  | 9 [5–16]   | 14 [9–22]  |
 
-PID is 0 % at every width. Reading the crossover: where the intervals do not
+PID is 0 % at every width — and that 0 % is the result, not a strawman. A
+cascaded PID is a pure _tracking_ law with no energy or ignition management, so
+it holds attitude but never solves _when_ to burn; its median terminal miss is
+3.5–5.5 km (the [terminal-accuracy table](#median-terminal-accuracy--fuel-successful-rl-runs-land-pid-never-does)
+below), never within four orders of magnitude of the 10 m envelope. The booster
+catch is fundamentally an ignition-planning problem — which is exactly the axis
+MPC plans on and the teacher the neural policy cloned already solved. The
+baseline is honest about where a tracking loop tops out.
+
+Reading the crossover: where the intervals do not
 overlap the winner is decisive — RL owns the calm, near-nominal corner (±20 m
 calm); MPC owns the windy middle (±50 m stormy, ±100 m standard) and holds up
 better as the corridor widens. Both fall toward single digits by ±400 m.
@@ -111,6 +120,16 @@ plot. Regenerate with `pnpm bench:rl`.
   (success-filtered, coast-subsampled). Direct RL (PPO ×3 configurations,
   SAC + demo seeding) failed to produce any catching policy at laptop
   compute; the diagnosis trail is on SLS-51.
+- **The teacher is _privileged_, and that's the point.** The scripted cascade
+  plans from the **true** world state (exact mass, altitude, velocity); the
+  shipped student flies from the **noisy observation vector** only. So the
+  teacher is an upper bound on the law, not a deployable controller — "a
+  privileged teacher distilled into an observation-only student" is the
+  intended strength, stated first rather than discovered. The teacher's own
+  catch rate under _this_ held-out acceptance dispersion is not yet measured
+  comparably (the harness is TS-side; the teacher is the Python `cascade.py`) —
+  tracked as a follow-up so the row, when it lands, is **measured, not
+  estimated**.
 - **Architecture**: 17 → 256 → 256 → 4 tanh MLP (578 KB) commanding
   `[thr_centre, thr_inner, lean_x, lean_z]` at 25 Hz over a 250 Hz
   body-frame attitude PD (ADR-015/016) — the same guidance/control layering

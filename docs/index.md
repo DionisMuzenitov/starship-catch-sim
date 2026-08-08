@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Starship Catch Simulator
   text: Catch the Super Heavy booster, in your browser.
-  tagline: An open-source 6-DOF flight sim of the Mechazilla catch — with PID, MPC, and a trained RL policy you can watch fly, and the physics + derivations behind them.
+  tagline: An open-source 6-DOF flight sim of the Mechazilla catch — with PID, MPC, and an imitation-learned neural policy you can watch fly, and the physics + derivations behind them.
   actions:
     - theme: brand
       text: ▶ Play the demo
