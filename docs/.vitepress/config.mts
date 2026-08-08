@@ -90,7 +90,10 @@ export default defineConfig({
       },
       {
         text: "Physics",
-        items: [{ text: "6-DOF rigid-body dynamics", link: "/dynamics" }],
+        items: [
+          { text: "6-DOF rigid-body dynamics", link: "/dynamics" },
+          { text: "Catch provenance (real vs sim)", link: "/catch-provenance" },
+        ],
       },
       {
         text: "Controllers",
