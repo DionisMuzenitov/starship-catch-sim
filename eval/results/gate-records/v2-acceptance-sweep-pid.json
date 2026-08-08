@@ -1,0 +1,172 @@
+{
+ "controller": "pid",
+ "methodology": "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept; held-out acceptance seeds (ADR-024)",
+ "gitCommit": "83f62f7",
+ "generatedAt": "2026-08-07T20-28-13-367Z",
+ "seedsPerCell": 300,
+ "acceptanceSeedBase": 1526595584,
+ "widthsM": [
+  20,
+  50,
+  100,
+  200,
+  400
+ ],
+ "scenarios": [
+  "booster-descent-calm",
+  "booster-descent-standard",
+  "booster-descent-stormy"
+ ],
+ "cells": [
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2091.083682433882,
+   "medianFuelKg": 212271.44239387545
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2815.550646210546,
+   "medianFuelKg": 215831.23690322918
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 3417.899203522916,
+   "medianFuelKg": 227799.04828277463
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2168.872340809397,
+   "medianFuelKg": 213589.35119328694
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2472.3625418817182,
+   "medianFuelKg": 212472.5063984736
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 3012.755909887959,
+   "medianFuelKg": 208903.9372158387
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2555.2569770731197,
+   "medianFuelKg": 211544.34836049983
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2495.883808465187,
+   "medianFuelKg": 207531.23727934668
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2813.5860369531893,
+   "medianFuelKg": 200390.71761061577
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2474.649639459198,
+   "medianFuelKg": 190827.35422580416
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2501.7624536575763,
+   "medianFuelKg": 189504.30863255207
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2543.4944232534212,
+   "medianFuelKg": 187592.37315581756
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2266.3880685503063,
+   "medianFuelKg": 189579.67078042752
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2317.1666491003193,
+   "medianFuelKg": 193873.74534869543
+  },
+  {
+   "controller": "pid",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0,
+   "medianFinalPosErrM": 2508.171596659005,
+   "medianFuelKg": 191938.99362143886
+  }
+ ]
+}

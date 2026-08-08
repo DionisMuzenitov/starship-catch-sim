@@ -31,23 +31,28 @@ export interface Generation {
 
 // One entry per controller generation, oldest -> newest. Append a row when a
 // new milestone gate lands its gate-record.
+// Numbers are the v2 acceptance baseline (SLS-93/97): the held-out,
+// domain-randomized benchmark at the ±20 m entry-corridor reference width.
+// The earlier fixed-wind milestone-gate records (m5/m6-*) are retained in
+// gate-records for provenance and the v0.5/v0.6 releases, but are no longer the
+// canonical headline — see the MANIFEST.
 export const GENERATIONS: Generation[] = [
   {
     label: "PID",
     milestone: "M4",
-    file: "m6-rl-bench-pid-30seed.json",
+    file: "v2-acceptance-pid.json",
     aliases: ["Cascaded PID"],
   },
   {
     label: "MPC",
     milestone: "M5",
-    file: "m5-mpc-bench-mpc-30seed.json",
+    file: "v2-acceptance-mpc.json",
     aliases: ["Convex MPC"],
   },
   {
     label: "Neural policy",
     milestone: "M6",
-    file: "m6-rl-bench-rl-30seed.json",
+    file: "v2-acceptance-rl.json",
     aliases: ["neural policy", "the policy", "RL"],
   },
 ];

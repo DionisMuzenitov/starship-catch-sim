@@ -13,31 +13,33 @@
 
 ## Pitch
 
-A real-time, 6-DOF simulation of SpaceX's Starship booster catch manoeuvre — and a test bench for the guidance that flies it. The headline result: an **imitation-learned neural policy that catches the booster 87–90 % of the time, versus 50 % for a convex-MPC baseline**, running a pure-TypeScript forward pass entirely in your browser. The simulator models rigid-body dynamics, Mach-dependent aero, grid-fin and engine-gimbal control, and the tower ("Mechazilla") catch mechanism, so you can fly it by hand, pit PID / MPC / neural controllers against each other, and benchmark them over seeded Monte-Carlo dispersions.
+A real-time, 6-DOF simulation of SpaceX's Starship booster catch manoeuvre — and a test bench for the guidance that flies it. The honest headline, from a _held-out, domain-randomized_ acceptance benchmark: **no single controller wins.** An imitation-learned neural policy catches the booster **96 %** of the time when it arrives near-nominal in calm air, but wind and entry dispersion pull it down — and a convex-MPC re-planner, far more weather-robust, overtakes it once conditions get messy. The simulator models rigid-body dynamics, Mach-dependent aero, grid-fin and engine-gimbal control, and the tower ("Mechazilla") catch mechanism, so you can fly it by hand, pit PID / MPC / neural controllers against each other, and benchmark them over seeded Monte-Carlo dispersions.
 
 ### Who this is for
 
-This is a **portfolio project** — a from-scratch 6-DOF flight simulator and controls test-bench built to demonstrate end-to-end engineering judgment: real vehicle physics, three generations of guidance (PID → convex MPC → an imitation-learned neural policy that catches 87–90 % of the time in the browser), and the decision trail behind every non-trivial choice (the [ADR index](docs/adr/)). It's built to be evaluated by engineers and hiring managers for depth and follow-through, and to be enjoyable for the RL/GNC-curious and the SpaceX community.
+This is a **portfolio project** — a from-scratch 6-DOF flight simulator and controls test-bench built to demonstrate end-to-end engineering judgment: real vehicle physics, three generations of guidance (PID → convex MPC → an imitation-learned neural policy), all held to a _held-out, domain-randomized_ acceptance benchmark, and the decision trail behind every non-trivial choice (the [ADR index](docs/adr/)). It's built to be evaluated by engineers and hiring managers for depth and follow-through, and to be enjoyable for the RL/GNC-curious and the SpaceX community.
 
 ## Results
 
-Three controller generations, benchmarked on the TypeScript physics core (250 Hz) across the three `booster-descent-*` wind scenarios — 30 seeded Monte-Carlo runs per cell against the standard catch envelope (10 m / 5 m·s⁻¹ vertical / 2 m·s⁻¹ horizontal / 3° tilt / 5°·s⁻¹):
+**No single controller wins** — that is the honest finding. On a _held-out, domain-randomized_ acceptance benchmark (per-run wind + full-state entry dispersion, seeds drawn from a reserved band the training never sees — [SLS-97](https://yanismuzenitov.atlassian.net/browse/SLS-97) / [ADR-024](docs/adr/024-acceptance-evaluation-harness.md)), the three controller generations **cross over**: the learned policy owns the calm, near-nominal corner, while the convex-MPC re-planner is far more robust to wind and dispersion and overtakes it once either appears.
+
+Headline numbers at the **±20 m entry-corridor reference width** (1σ position; 300 seeds PID/RL, 100 MPC, catch judged against the standard envelope — 10 m / 5 m·s⁻¹ vert / 2 m·s⁻¹ horiz / 3° tilt / 5°·s⁻¹; Wilson 95 % CIs in the report):
 
 | Controller             | Calm     | Standard | Stormy   |
 | ---------------------- | -------- | -------- | -------- |
 | Cascaded PID (M4)      | 0 %      | 0 %      | 0 %      |
-| Convex MPC (M5)†       | 53 %     | 50 %     | 50 %     |
-| **Neural policy (M6)** | **87 %** | **87 %** | **90 %** |
+| Convex MPC (M5)        | 49 %     | 37 %     | 39 %     |
+| **Neural policy (M6)** | **96 %** | **59 %** | **36 %** |
 
-† The MPC row's three cells are the M5 gate record's zero-wind sweep (calm at windScale 0/1/2×), **not** the calm/standard/stormy scenarios the other rows use, so the two are not directly comparable yet; a real-wind re-bench is pending ([SLS-93](https://yanismuzenitov.atlassian.net/browse/SLS-93)). See the [comparison report](eval/reports/v1-controller-comparison.md) and [gate-record `MANIFEST`](eval/results/gate-records/MANIFEST.md) for the full caveat.
+The policy peaks at 96 % in calm air, but its windy columns sit far below the old fixed-wind “87 / 87 / 90 %” bench — that gap is precisely the overfitting a fresh, held-out benchmark exposes (the old runs reused one frozen gust sequence). Widen the entry corridor beyond ±20 m and every controller degrades while MPC pulls ahead in wind; the full **catch-rate-vs-dispersion-width** curve — the real story — is in the [controller comparison report](eval/reports/v1-controller-comparison.md).
 
-![Booster catch rate by controller generation — cascaded PID catches 0 % across all wind scenarios, convex MPC 53/50/50 %, and the imitation-learned neural policy 87/87/90 % (calm/standard/stormy), 30-seed Monte-Carlo per cell.](docs/media/progression.svg)
+![Booster catch rate by controller generation at the ±20 m entry corridor — cascaded PID 0 %, convex MPC 49/37/39 %, imitation-learned neural policy 96/59/36 % (calm/standard/stormy), held-out acceptance seeds.](docs/media/progression.svg)
 
-_Progression across controller generations (regenerate with `pnpm chart:progression` from the committed [gate records](eval/results/gate-records/MANIFEST.md))._
+_v2 acceptance at the ±20 m reference width (regenerate with `pnpm chart:progression` from the committed [gate records](eval/results/gate-records/MANIFEST.md))._
 
 The shipped policy is a 578 KB, 17→256→256→4 tanh MLP. It runs a dependency-free TypeScript forward pass in the browser (no ONNX, no WASM — [ADR-016](docs/adr/016-ts-policy-runtime.md)), commanding thrust and lean targets at 25 Hz over a 250 Hz body-frame attitude-PD inner loop — the same guidance/control layering real boosters use. It is **imitation-learned** (behaviour cloning on a scripted-cascade teacher), _not_ RL-trained: direct PPO and SAC never produced a catching policy at laptop compute, and that honest diagnosis trail is part of the write-up. TypeScript↔Python parity is CI-tested to 1e-4 on every push.
 
-Reproduce the benchmark with `pnpm bench:rl` (30 seeds). Full protocol, per-scenario accuracy/fuel, provenance, and caveats (e.g. the stormy profile was never trained on): **[controller comparison report →](eval/reports/v1-controller-comparison.md)**.
+Reproduce with `pnpm campaign:v2` (the held-out acceptance sweep). Full protocol, the catch-rate-vs-width curve, Wilson CIs, provenance, and caveats: **[controller comparison report →](eval/reports/v1-controller-comparison.md)**.
 
 ## Quick start
 
@@ -104,9 +106,10 @@ the service dependency is tracked as ADR-008 / SLS-31.
 ¹ MPC infrastructure is shipped and verified; the catch-capability exit
 gate (coast-phase ignition planning) met on 2026-07-05 (≥50 % catch, SLS-47).
 
-² Gate met on 2026-07-09 (SLS-30): the in-browser neural policy catches
-**87 / 87 / 90 %** (calm/standard/stormy, 30 seeds, `pnpm bench:rl`) versus
-MPC's 53 / 50 / 50 % — see [Results](#results).
+² Gate met on 2026-07-09 (SLS-30): the in-browser neural policy cleared the M6
+catch-rate gate on the then-current fixed-wind bench. The **current** figures,
+re-measured on the held-out domain-randomized v2 acceptance benchmark, are in
+[Results](#results).
 
 ³ The static [live demo](https://dionismuzenitov.github.io/starship-catch-sim/)
 is deployed (SLS-49, pulled forward from M7) and the

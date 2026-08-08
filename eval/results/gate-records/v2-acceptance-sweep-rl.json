@@ -1,0 +1,172 @@
+{
+ "controller": "rl",
+ "methodology": "v2 dispersion-sensitivity sweep (SLS-110); per-run wind, IC width swept; held-out acceptance seeds (ADR-024)",
+ "gitCommit": "83f62f7",
+ "generatedAt": "2026-08-07T21-46-19-485Z",
+ "seedsPerCell": 300,
+ "acceptanceSeedBase": 1526595584,
+ "widthsM": [
+  20,
+  50,
+  100,
+  200,
+  400
+ ],
+ "scenarios": [
+  "booster-descent-calm",
+  "booster-descent-standard",
+  "booster-descent-stormy"
+ ],
+ "cells": [
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0.9566666666666667,
+   "medianFinalPosErrM": 5.097824959002997,
+   "medianFuelKg": 230114.24381106533
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0.5866666666666667,
+   "medianFinalPosErrM": 4.998318162436188,
+   "medianFuelKg": 233509.5603611694
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 20,
+   "scale": 0.04,
+   "seeds": 300,
+   "catchRate": 0.36333333333333334,
+   "medianFinalPosErrM": 50.18612169742045,
+   "medianFuelKg": 247019.1508336228
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0.58,
+   "medianFinalPosErrM": 5.221678531578016,
+   "medianFuelKg": 235559.2807088769
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0.36,
+   "medianFinalPosErrM": 5.259996311177561,
+   "medianFuelKg": 239139.34092481955
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 50,
+   "scale": 0.1,
+   "seeds": 300,
+   "catchRate": 0.21333333333333335,
+   "medianFinalPosErrM": 91.7044871884376,
+   "medianFuelKg": 267447.1597884938
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0.3,
+   "medianFinalPosErrM": 91.59257806824813,
+   "medianFuelKg": 267387.1145197626
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0.17666666666666667,
+   "medianFinalPosErrM": 55.624028851842155,
+   "medianFuelKg": 267598.697205963
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 100,
+   "scale": 0.2,
+   "seeds": 300,
+   "catchRate": 0.10666666666666667,
+   "medianFinalPosErrM": 93.73755965290295,
+   "medianFuelKg": 282957.89825468964
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0.17,
+   "medianFinalPosErrM": 307.65855125957546,
+   "medianFuelKg": 293919.25566210836
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0.09666666666666666,
+   "medianFinalPosErrM": 437.8920310756731,
+   "medianFuelKg": 297885.71933922713
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 200,
+   "scale": 0.4,
+   "seeds": 300,
+   "catchRate": 0.05333333333333334,
+   "medianFinalPosErrM": 707.965729073115,
+   "medianFuelKg": 307841.3077704053
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-calm",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0.06333333333333334,
+   "medianFinalPosErrM": 326.5331706404604,
+   "medianFuelKg": 320728.6290909119
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-standard",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0.02666666666666667,
+   "medianFinalPosErrM": 675.4566580256808,
+   "medianFuelKg": 321342.86656341865
+  },
+  {
+   "controller": "rl",
+   "scenarioId": "booster-descent-stormy",
+   "widthM": 400,
+   "scale": 0.8,
+   "seeds": 300,
+   "catchRate": 0.023333333333333334,
+   "medianFinalPosErrM": 737.7359582722514,
+   "medianFuelKg": 321891.18735111284
+  }
+ ]
+}

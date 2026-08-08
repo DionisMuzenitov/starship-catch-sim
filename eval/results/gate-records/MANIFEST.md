@@ -20,6 +20,21 @@ jittered initial worlds (`jitterInitialWorld`), catch judged by
 | `m6-rl-bench-rl-30seed.json`   | M6 (neural policy) | 2026-07-09 · **87 / 87 / 90 %** | `13f18d2` (PR #52) | `pnpm bench:rl --seeds 30`  |
 | `m6-rl-bench-pid-30seed.json`  | M6 (PID baseline)  | — (0 %)                         | `13f18d2`          | same run                    |
 | `m6-rl-bench-success.svg`      | M6                 | plot                            | `13f18d2`          | `tools/eval/rl-bench.ts`    |
+| `v2-acceptance-rl.json`        | **v2 acceptance (RL)**  | 2026-08-08 · **96 / 59 / 36 %** | `83f62f7` (SLS-93/97) | `pnpm campaign:v2`      |
+| `v2-acceptance-mpc.json`       | **v2 acceptance (MPC)** | 2026-08-08 · **49 / 37 / 39 %** | `83f62f7`          | `pnpm campaign:v2`          |
+| `v2-acceptance-pid.json`       | v2 acceptance (PID)     | — (0 %)                         | `83f62f7`          | `pnpm campaign:v2`          |
+| `v2-acceptance-sweep-*.json`   | v2 full width sweep     | catch-rate-vs-width curve       | `83f62f7`          | `pnpm campaign:v2`          |
+
+**The `v2-acceptance-*` records are the current canonical headline** (the README
+Results table + the progression chart read them via `tools/eval/generations.ts`).
+They come from the **v2 methodology (SLS-110/97)**: held-out acceptance seeds
+(reserved band `0x5AFE_0000`, disjoint from training), a physically-grounded
+entry-corridor dispersion (position/velocity/FPA/attitude/rate/propellant) with a
+**fresh per-run wind realization**, **300** seeds/cell (PID/RL) and **100** (MPC),
+at the **±20 m entry-corridor reference width**. The full catch-rate-vs-width
+curve is the `-sweep-` files + the [comparison report](../../reports/v1-controller-comparison.md).
+The `m5-*` / `m6-*` records are **retained as the historical milestone-gate
+evidence** (attached to `v0.5.0` / `v0.6.0`), no longer the headline.
 
 Notes:
 
@@ -30,8 +45,10 @@ Notes:
   scenarios (M6) or the wind 0 / 1 / 2× sweep (M5).
 - These files are also attached to the `v0.5.0` / `v0.6.0` GitHub Releases.
 
-> **⚠ M5 MPC record — read before quoting "53 / 50 / 50 %" (SLS-93).** Three
-> caveats, being repaired:
+> **⚠ M5 MPC record — historical only; do not quote "53 / 50 / 50 %" as MPC's
+> catch rate (SLS-93, resolved).** The v2 acceptance re-bench (above) benched MPC
+> on genuine per-run wind at 100 seeds — **49 / 37 / 39 %** at the ±20 m corridor
+> — superseding this record as the headline. The three original caveats it fixes:
 >
 > 1. **The three cells are not calm / standard / stormy.** They are the
 >    `booster-descent-calm` scenario at windScale 0 / 1 / 2× — but calm's base

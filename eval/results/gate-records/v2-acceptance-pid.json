@@ -1,0 +1,30 @@
+{
+  "record": "v2 acceptance (held-out, domain-randomized) \u2014 PID, reference width \u00b120 m 1\u03c3 position",
+  "methodology": "SLS-97/110; per-run wind + full-state entry dispersion; held-out seed band 0x5AFE0000; Wilson 95% CIs in the report",
+  "seedsPerCell": 300,
+  "referenceWidthM": 20,
+  "gitCommit": "83f62f7",
+  "cells": [
+    {
+      "scenarioId": "booster-descent-calm",
+      "windScale": 0,
+      "summary": {
+        "successRate": 0
+      }
+    },
+    {
+      "scenarioId": "booster-descent-standard",
+      "windScale": 1,
+      "summary": {
+        "successRate": 0
+      }
+    },
+    {
+      "scenarioId": "booster-descent-stormy",
+      "windScale": 2,
+      "summary": {
+        "successRate": 0
+      }
+    }
+  ]
+}
