@@ -27,7 +27,7 @@ const scaleFor = (w: number) => w / POS_HORIZ_M;
 
 const seedsArg = Number(process.argv[process.argv.indexOf("--seeds") + 1]);
 const N = Number.isInteger(seedsArg) && seedsArg > 0 ? seedsArg : 30;
-const WIDTHS = [20, 50];
+const WIDTHS = (process.env.DIAG_WIDTHS ?? "20,50").split(",").map(Number);
 
 async function solve(req: MPCSolveRequest): Promise<unknown> {
   const r = await fetch(`${URL}/solve`, {
