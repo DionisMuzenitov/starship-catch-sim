@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Starship Catch Simulator">
+  <!-- Solid badge so the mark stays legible on both light and dark browser tabs. -->
+  <rect width="32" height="32" rx="7" fill="#0b2a52"/>
+  <!-- Super Heavy booster: nose + body, descending between the arms. -->
+  <path d="M16 4.6 L17.9 8.2 H14.1 Z" fill="#eef3fb"/>
+  <rect x="14.4" y="7.6" width="3.2" height="17.8" rx="1.6" fill="#eef3fb"/>
+  <!-- Mechazilla chopstick arms cradling the booster just below the nose. -->
+  <path d="M5.5 13.5 L14 17.2" stroke="#7db0f0" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  <path d="M26.5 13.5 L18 17.2" stroke="#7db0f0" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+</svg>
