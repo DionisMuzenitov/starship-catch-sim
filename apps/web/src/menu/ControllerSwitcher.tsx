@@ -9,13 +9,17 @@
  * runner rebuilds with the new controller and the current flight resets.
  */
 
+import { useEffect } from "react";
+
 import { MPC_SERVICE_DISABLED } from "../sim/mpcService";
 import {
+  controllerUnavailableReason,
   PLACEHOLDER_KINDS,
   useControllerStore,
   type ControllerKind,
   type OverrideMode,
 } from "../state/controllerStore";
+import { useScenarioStore } from "../state/scenarioStore";
 
 const KIND_LABELS: { kind: ControllerKind; label: string }[] = [
   { kind: "manual", label: "Manual" },
@@ -43,7 +47,15 @@ export function ControllerSwitcher() {
   const overrideMode = useControllerStore((s) => s.overrideMode);
   const setOverrideMode = useControllerStore((s) => s.setOverrideMode);
   const overrideActive = useControllerStore((s) => s.overrideActive);
+  const scenarioId = useScenarioStore((s) => s.currentScenarioId);
   const isManual = kind === "manual";
+
+  // Coerce to Manual if the active controller is invalid for the current
+  // scenario (e.g. switching to Ship Descent while Neural/MPC is selected —
+  // those would silently free-fall). Belt to the disabled-option braces below.
+  useEffect(() => {
+    if (controllerUnavailableReason(scenarioId, kind) !== null) setKind("manual");
+  }, [scenarioId, kind, setKind]);
 
   return (
     <div
@@ -57,23 +69,30 @@ export function ControllerSwitcher() {
         onChange={(e) => setKind(e.target.value as ControllerKind)}
         data-testid="controller-switcher-select"
       >
-        {KIND_LABELS.map((k) => (
-          <option
-            key={k.kind}
-            value={k.kind}
-            disabled={PLACEHOLDER_KINDS.includes(k.kind)}
-            className="bg-neutral-900"
-          >
-            {k.label}
-            {PLACEHOLDER_KINDS.includes(k.kind) ? " (soon)" : ""}
-            {/* On the public demo MPC has no guidance service; it stays
-                selectable (flies PID + shows a banner) but is marked so the
-                degradation is legible in the picker itself (SLS-92). */}
-            {k.kind === "mpc" && MPC_SERVICE_DISABLED
-              ? " (needs local service)"
-              : ""}
-          </option>
-        ))}
+        {KIND_LABELS.map((k) => {
+          // Invalid for this scenario (ship × Neural/MPC — SLS-96) or a not-
+          // yet-built slot: greyed out and labelled so the reason is legible.
+          const unavailable = controllerUnavailableReason(scenarioId, k.kind);
+          const placeholder = PLACEHOLDER_KINDS.includes(k.kind);
+          return (
+            <option
+              key={k.kind}
+              value={k.kind}
+              disabled={placeholder || unavailable !== null}
+              className="bg-neutral-900"
+            >
+              {k.label}
+              {placeholder ? " (soon)" : ""}
+              {unavailable !== null ? ` (${unavailable})` : ""}
+              {/* On the public demo MPC has no guidance service; it stays
+                  selectable (flies PID + shows a banner) but is marked so the
+                  degradation is legible in the picker itself (SLS-92). */}
+              {k.kind === "mpc" && MPC_SERVICE_DISABLED && unavailable === null
+                ? " (needs local service)"
+                : ""}
+            </option>
+          );
+        })}
       </select>
       {!isManual && (
         <>

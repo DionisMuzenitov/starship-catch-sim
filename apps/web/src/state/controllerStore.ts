@@ -41,8 +41,30 @@ export const useControllerStore = create<ControllerState>((set) => ({
 /**
  * Sentinel for controllers that are slotted in the UI but not yet built —
  * `ControllerSwitcher` renders these disabled with a "(soon)" suffix. Empty
- * today, but kept (not deleted) on purpose: SLS-96 reuses this machinery to
- * grey out invalid vehicle×controller combos (e.g. ship × RL) for the launch
- * guard. Removing it now would only make SLS-96 rebuild it.
+ * today, but kept (not deleted) on purpose: the same disabled-option machinery
+ * also greys out invalid vehicle×controller combos below (SLS-96).
  */
 export const PLACEHOLDER_KINDS: ControllerKind[] = [];
+
+/** Ship (upper-stage) scenarios, by id convention (`ship-descent-*`). */
+export function isShipScenario(scenarioId: string): boolean {
+  return scenarioId.startsWith("ship-");
+}
+
+/**
+ * Why a controller is unavailable for a scenario, or `null` if it's fine
+ * (SLS-96). Ship scenarios expose only Manual + PID: the neural policy hard-
+ * zeros the ship engine group (it would silently free-fall from 100 km — the
+ * most viewer-visible half-built path), and the MPC guidance + catch target
+ * are booster-tuned. Keeping these out of the picker stops the app from
+ * demoing a broken combo.
+ */
+export function controllerUnavailableReason(
+  scenarioId: string,
+  kind: ControllerKind,
+): string | null {
+  if (isShipScenario(scenarioId) && (kind === "rl" || kind === "mpc")) {
+    return "booster-only";
+  }
+  return null;
+}

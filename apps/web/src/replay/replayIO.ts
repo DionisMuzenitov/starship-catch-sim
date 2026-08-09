@@ -30,6 +30,16 @@ export async function readReplayFile(file: File): Promise<Replay> {
   return parseReplay(text);
 }
 
+/** Fetch + parse a replay bundled under `/public` (SLS-96 demo catches). The
+ *  path is relative to the Vite base so it resolves on the Pages deploy too. */
+export async function loadBundledReplay(relPath: string): Promise<Replay> {
+  const resp = await fetch(`${import.meta.env.BASE_URL}${relPath}`);
+  if (!resp.ok) {
+    throw new Error(`replay fetch failed (${resp.status}) for ${relPath}`);
+  }
+  return parseReplay(await resp.text());
+}
+
 function defaultFilename(replay: Replay): string {
   const safeTs = replay.header.createdAt.replace(/[:.]/g, "-");
   const outcome = replay.header.outcome?.kind ?? "no-outcome";
