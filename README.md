@@ -1,6 +1,12 @@
 # Starship Catch Simulator
 
-<!-- hero catch GIF goes here — SLS-64 -->
+<!-- Placeholder hero clip (SLS-64): a live in-browser catch — the imitation-learned
+     neural policy flying Booster Descent (calm), cinematic camera, HUD on. To be
+     replaced by SLS-33's polished cinematic. Regenerate: record a catch, then
+     `ffmpeg -ss <t> -t 10.5 -i rec.mov -vf "fps=12,scale=720:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5" -loop 0 docs/media/catch.gif` -->
+<p align="center">
+  <img src="docs/media/catch.gif" width="720" alt="The imitation-learned neural policy catches the Super Heavy booster in the tower's chopstick arms — a live in-browser run on Booster Descent (calm)." />
+</p>
 
 [![CI](https://github.com/DionisMuzenitov/starship-catch-sim/actions/workflows/ci.yml/badge.svg)](https://github.com/DionisMuzenitov/starship-catch-sim/actions/workflows/ci.yml)
 [![Deploy](https://github.com/DionisMuzenitov/starship-catch-sim/actions/workflows/deploy.yml/badge.svg)](https://github.com/DionisMuzenitov/starship-catch-sim/actions/workflows/deploy.yml)
