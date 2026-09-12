@@ -190,3 +190,4 @@ and write findings into the Confluence KB or `docs/reference/` — sourced, date
 
 - Node 20 is keg-only on this machine — prepend `/opt/homebrew/opt/node@20/bin` to `PATH` for `pnpm`/`node`.
 - When pulling a Jira issue list, request a narrow `fields` set (`["summary", "status", "issuetype", "priority"]`) — the full payload exceeds the tool result limit.
+- **Continuity backup (SLS-68), quarterly + after milestone-heavy runs:** `bash tools/backup/backup.sh && git -C ~/sls-backups/continuity push` — captures the code bundle, agent memory, and the Atlassian export (SLS-43 log + KB) that a dead laptop or a lost free-tier Atlassian site would otherwise erase. Runbook + restore steps: `tools/backup/README.md`.
