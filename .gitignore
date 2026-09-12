@@ -68,3 +68,11 @@ services/rl/eval/results/
 # RL teacher demo datasets (SLS-51) — local only
 # (covered by demos*/ below)
 services/rl/demos*/
+
+# Obsidian (SLS-120) — docs/kb doubles as an Obsidian vault.
+# Per-user workspace state is noise; app.json is NOT: it pins markdown-style
+# relative links so Obsidian never writes [[wikilinks]], which VitePress can't
+# resolve. Keeping it committed is what stops an editor setting from silently
+# breaking the docs build.
+docs/kb/.obsidian/*
+!docs/kb/.obsidian/app.json
