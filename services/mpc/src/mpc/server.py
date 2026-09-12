@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from .coast import CoastBurnResult, solve_coast_burn
-from .problem import SolveInput, SolveResult, VehicleParams, solve_pdg
+from .problem import SLOT_CENTRE, SolveInput, SolveResult, VehicleParams, solve_pdg
 from .scvx import SCvxResult, solve_scvx
 
 app = FastAPI(title="SLS MPC guidance", version="0.1.0")
@@ -59,6 +59,10 @@ class SolveRequest(BaseModel):
     tFHintS: float | None = None
     # Remaining-coast hint for coast+burn re-plans (SLS-47).
     coastHintS: float | None = None
+    # Aim point (SLS-102): glide-slope apex + terminal box centre. Omit to
+    # get the Mechazilla catch slot, which is what every caller before
+    # SLS-102 got implicitly — so old clients are unaffected.
+    targetPosition: Vec3Model | None = None
     # Optional exogenous drag acceleration profile, one entry per horizon
     # interval (N=60). Missing/short profiles are zero-padded.
     dragAccel: list[Vec3Model] | None = None
@@ -121,6 +125,11 @@ def solve(req: SolveRequest) -> SolveResponse:
         t_f_hint_s=req.tFHintS,
         drag_accel=_drag_matrix(req.dragAccel, N),
         coast_hint_s=req.coastHintS,
+        target_position=(
+            req.targetPosition.to_np()
+            if req.targetPosition is not None
+            else SLOT_CENTRE.copy()
+        ),
     )
     res: SolveResult | SCvxResult
     iterations: int | None = None

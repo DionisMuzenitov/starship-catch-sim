@@ -39,9 +39,12 @@ Constraints from our plant (see Confluence KB + `packages/physics`):
   The tower body occupies x ∈ [−6, 6], z ∈ [−6, 6] up to y = 146 — the
   structure rises 55 m ABOVE the catch height, so "descend vertically onto
   the target" is not tower-safe on the −x side.
-- The scenario's nominal `targetPosition` is (0, 91, 0) — the tower
+- ~~The scenario's nominal `targetPosition` is (0, 91, 0) — the tower
   centreline, not the physical slot. MPC targets the slot centre; the
-  catch detector fires on capture-volume entry either way.
+  catch detector fires on capture-volume entry either way.~~
+  **Superseded — see the 2026-09-12 amendment below.** The scenario target
+  was moved to the capture-volume centre in SLS-48; it is now (8.5, 91, 0),
+  the same point MPC aims at.
 
 ## Decision
 
@@ -125,6 +128,39 @@ client replay).
   Cd(M) during burns, but supersonic retropropulsion largely cancels
   aerodynamic drag (see `docs/reference/dynamics.md`). Conservative for
   guidance; revisit with the SLS-27 benchmarks.
+
+## Amendment — 2026-09-12 (SLS-102): the aim point is a request parameter
+
+The original formulation baked the catch slot into the problem as a
+constant. `SolveRequest` carried state, vehicle params, mode and hints but
+no target, so no divert of any kind was expressible — the blocker for the
+offshore-default / abort-to-water work (SLS-103).
+
+**Change.** The aim point is now `SolveInput.target_position`, a
+`cp.Parameter` stamped per solve, driving the **glide-slope cone apex** and
+the **terminal box centre**. It defaults to `SLOT_CENTRE`, so callers that
+omit it are bit-for-bit unchanged (verified: 19 solves across
+linear / SCvx / coast+burn, byte-identical JSON before and after). The
+problem is still built once and stays DPP — the parameter only ever appears
+affinely beside variables, never multiplied by another parameter.
+
+**Deliberately NOT parameterized: the tower keep-out plane.** It encodes
+where the physical tower is, so it stays anchored at `TOWER_SLOT_Y = 91`.
+The consequence SLS-103 inherits: the plane requires `x ≥ 8.0` over the
+final quarter of the horizon, so **a target on the far side of the tower is
+infeasible today**. Parameterizing the target is necessary for a divert but
+not sufficient — SLS-103 must also relax or make the keep-out directional
+once the vehicle has committed away from the tower. Targets on the tower
+side, and offsets of the slot itself (tracking arms, ADR-022), work now.
+
+**Correction to Context above.** That section claimed the scenario's nominal
+`targetPosition` was (0, 91, 0), the tower centreline, with MPC separately
+aiming at the slot. That stopped being true in **SLS-48**, which moved
+`CATCH_POINT_WORLD` to `chopstickCaptureVolume(DEFAULT_TOWER_STATE).center`
+= (8.5, 91, 0); the ADR was never amended. Both sides now name the same
+point, and since SLS-102 the client sends it explicitly rather than the two
+agreeing by coincidence. Found while verifying that threading the client's
+target through the wire could not shift the benchmark.
 
 ## Sources
 

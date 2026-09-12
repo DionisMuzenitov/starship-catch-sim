@@ -56,6 +56,13 @@ export type MPCSolveRequest = {
    *  ignition epoch inside a narrow window instead of re-opening it. */
   coastHintS?: number;
   /**
+   * Aim point for the solver: glide-slope cone apex + terminal box centre
+   * (SLS-102). Omitted ⇒ the service falls back to its hardcoded catch slot.
+   * We always send it, so the scenario's target is the single source of
+   * truth instead of being duplicated on both sides of the wire.
+   */
+  targetPosition?: { x: number; y: number; z: number };
+  /**
    * "scvx" iterates drag relinearization (SLS-27); "coast+burn" adds the
    * ballistic-coast ignition search (SLS-47) — the default, since
    * burn-only plans are infeasible from high altitude (thrust floor) and
@@ -1085,6 +1092,11 @@ export class MPCController implements Controller {
         ispS: this.ispS,
       },
       mode: requestMode,
+      // The controller already knew the target (it uses it for the PID
+      // fallback); before SLS-102 the service had no way to receive it and
+      // silently planned to its own hardcoded slot. For the default
+      // scenarios the two agree exactly, so plans are unchanged.
+      targetPosition: { ...this.targetPosition },
     };
     if (coastHintS !== undefined) req.coastHintS = coastHintS;
     if (requestMode !== "coast+burn" && plan !== null) {

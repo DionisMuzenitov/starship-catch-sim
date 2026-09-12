@@ -11,6 +11,7 @@ import {
   shouldFloat,
   type MPCSolveRequest,
   type MPCSolveResponse,
+  type MPCTransport,
 } from "./mpcController.js";
 
 function makeController(transport: (req: MPCSolveRequest) => Promise<MPCSolveResponse>) {
@@ -549,5 +550,47 @@ describe("SLS-47 terminal robustness laws", () => {
       expect(shouldFloat(1.5e6, FLOOR, -3, 400, false)).toBe(false);
       expect(shouldFloat(1.5e6, FLOOR, -3, 400, true)).toBe(false);
     });
+  });
+});
+
+describe("MPCController targetPosition on the wire (SLS-102)", () => {
+  it("sends the scenario's catch target with every solve request", () => {
+    const transport = vi.fn<MPCTransport>(async () => cannedResponse());
+    const { ctl, scenario } = makeController(transport);
+
+    ctl.step(scenario.initialWorld, 1 / 250);
+
+    expect(transport).toHaveBeenCalledTimes(1);
+    const req = transport.mock.calls[0]![0];
+    const target = scenario.targetCatch.targetPosition;
+    // Before SLS-102 the service had no target field and planned to its own
+    // hardcoded slot; the client's target was known but unused. If this
+    // regresses, a retargeted scenario silently aims at the default slot.
+    expect(req.targetPosition).toEqual({
+      x: target.x,
+      y: target.y,
+      z: target.z,
+    });
+  });
+
+  it("sends a non-default target when the scenario supplies one", () => {
+    const transport = vi.fn<MPCTransport>(async () => cannedResponse());
+    const scenario = boosterDescentScenario();
+    const moved = Vec3.of(
+      scenario.targetCatch.targetPosition.x + 75,
+      scenario.targetCatch.targetPosition.y,
+      scenario.targetCatch.targetPosition.z - 120,
+    );
+    const ctl = new MPCController({
+      vehicle: scenario.vehicle,
+      targetPosition: moved,
+      transport,
+      replanIntervalS: 1,
+    });
+
+    ctl.step(scenario.initialWorld, 1 / 250);
+
+    const req = transport.mock.calls[0]![0];
+    expect(req.targetPosition).toEqual({ x: moved.x, y: moved.y, z: moved.z });
   });
 });

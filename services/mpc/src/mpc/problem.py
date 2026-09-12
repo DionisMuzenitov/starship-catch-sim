@@ -20,6 +20,22 @@ Deliberate v1 simplifications (all noted in ADR-007):
   tower top while keeping the terminal slot feasible). Full obstacle
   avoidance is nonconvex and out of scope for v1 (SLS-27 benchmarks own
   validating this approximation against the sim's collision detector).
+
+Target parameterization (SLS-102)
+---------------------------------
+The aim point is a `cp.Parameter` (`SolveInput.target_position`), defaulting
+to `SLOT_CENTRE`. It drives the glide-slope cone apex and the terminal box.
+
+**The tower keep-out plane deliberately does NOT follow it.** The plane
+encodes where the physical tower is, so it stays anchored at `TOWER_SLOT_Y`.
+The practical consequence, which the offshore-divert ticket (SLS-103) must
+handle: the plane requires `x ≥ 8.0` over the final quarter of the horizon,
+so **a target on the far side of the tower (x < 8 at slot altitude) is
+infeasible today** — the terminal node cannot satisfy it. Parameterizing the
+target is necessary for a divert but not sufficient; SLS-103 additionally
+needs the keep-out relaxed or made directional once the vehicle has committed
+away from the tower. Targets on the tower side, and lateral/vertical offsets
+of the slot itself (a tracking-arm aim point, SLS-82/ADR-022), work now.
 """
 
 from __future__ import annotations
@@ -38,7 +54,22 @@ N = 60
 """Trajectory nodes (N intervals, N+1 states)."""
 
 G = 9.80665
-SLOT_CENTRE = np.array([8.5, 91.0, 0.0])
+
+# --- Tower geometry (fixed site structure) -------------------------------
+# These describe where the TOWER is, and never move. Keep them distinct from
+# the aim point below: since SLS-102 the target is a per-request parameter,
+# and a divert must not drag the tower's own exclusion zone along with it.
+TOWER_SLOT_Y = 91.0
+"""Chopstick carriage height — the tower's catch-slot altitude."""
+TOWER_TOP_Y = 146.0
+
+SLOT_CENTRE = np.array([8.5, TOWER_SLOT_Y, 0.0])
+"""DEFAULT aim point: the Mechazilla catch slot, matching the simulator's
+`chopstickCaptureVolume(DEFAULT_TOWER_STATE).center` (hinge at x=7.5 with
+gripper pads at +4.5/−2.5 ⇒ x∈[5,12] ⇒ centre 8.5; z∈[−5,5] ⇒ centre 0).
+Requests may override it via `SolveInput.target_position` (SLS-102); when
+they don't, every number below is bit-for-bit what it was before."""
+
 GLIDE_HALF_ANGLE_RAD = np.deg2rad(8.0)
 POINTING_HALF_ANGLE_RAD = np.deg2rad(15.0)
 TERMINAL_POS_TOL_M = 10.0
@@ -48,8 +79,11 @@ TERMINAL_VH_TOL_MPS = 2.0
 # applied to the last quarter of nodes. At the slot (y=91) the bound is
 # 8.0 < 8.5 (terminal feasible); at tower top (y=146) it is 11.0 which
 # clears the 6 m face + 4.5 m booster radius.
+#
+# Anchored to TOWER_SLOT_Y, NOT to the request target — see the SLS-102 note
+# in the module docstring for what that means for offshore diverts.
 KEEPOUT_X0 = 8.0
-KEEPOUT_SLOPE = (11.0 - KEEPOUT_X0) / (146.0 - 91.0)
+KEEPOUT_SLOPE = (11.0 - KEEPOUT_X0) / (TOWER_TOP_Y - TOWER_SLOT_Y)
 KEEPOUT_FROM_NODE = N // 2
 
 # Terminal-slack penalty: an infeasible MPC step is worse than a slightly
@@ -83,6 +117,11 @@ class SolveInput:
     # Remaining-coast hint (SLS-47): re-plans search only a narrow window
     # around the client's committed ignition epoch so it cannot churn.
     coast_hint_s: float | None = None
+    # Aim point (SLS-102): glide-slope cone apex + terminal box centre.
+    # Defaults to the catch slot, so every pre-SLS-102 caller is unchanged.
+    target_position: np.ndarray = field(
+        default_factory=lambda: SLOT_CENTRE.copy()
+    )
 
 
 @dataclass
@@ -135,6 +174,10 @@ class _ParametricPDG:
         # dt·(g + a_drag,k) and ½dt²·(g + a_drag,k), pre-multiplied.
         self.p_dt_acc_ext = cp.Parameter((n, 3), name="dt_acc_ext")
         self.p_dt2h_acc_ext = cp.Parameter((n, 3), name="dt2h_acc_ext")
+        # Aim point (SLS-102). Stays DPP: it only ever appears affinely
+        # alongside variables (inside a norm argument, or on the affine side
+        # of an inequality) — never multiplied by another parameter.
+        self.p_target = cp.Parameter(3, name="target")
 
         cons: list[cp.Constraint] = [
             self.r[0] == self.p_r0,
@@ -164,15 +207,17 @@ class _ParametricPDG:
         tan_gs = float(np.tan(GLIDE_HALF_ANGLE_RAD))
         for k in range(KEEPOUT_FROM_NODE, n + 1):
             cons += [
-                cp.norm(self.r[k, [0, 2]] - SLOT_CENTRE[[0, 2]])
-                <= tan_gs * (self.r[k, 1] - SLOT_CENTRE[1]) + TERMINAL_POS_TOL_M,
+                cp.norm(self.r[k, [0, 2]] - self.p_target[[0, 2]])
+                <= tan_gs * (self.r[k, 1] - self.p_target[1]) + TERMINAL_POS_TOL_M,
+                # Tower keep-out stays pinned to TOWER_SLOT_Y — the tower does
+                # not move when the aim point does.
                 self.r[k, 0]
-                >= KEEPOUT_X0 + KEEPOUT_SLOPE * (self.r[k, 1] - SLOT_CENTRE[1]),
+                >= KEEPOUT_X0 + KEEPOUT_SLOPE * (self.r[k, 1] - TOWER_SLOT_Y),
             ]
 
         # Soft terminal box (slack-penalized; infeasible > slightly violated).
         cons += [
-            cp.norm(self.r[n] - SLOT_CENTRE) <= TERMINAL_POS_TOL_M + self.s_pos,
+            cp.norm(self.r[n] - self.p_target) <= TERMINAL_POS_TOL_M + self.s_pos,
             cp.abs(self.v[n, 1]) <= TERMINAL_VY_TOL_MPS + self.s_vel,
             cp.norm(self.v[n, [0, 2]]) <= TERMINAL_VH_TOL_MPS + self.s_vel,
             self.v[n, 1] <= 0,
@@ -225,6 +270,7 @@ class _ParametricPDG:
         self.p_sigma_hi.value = veh.max_thrust_n / m_ref
         self.p_dt_acc_ext.value = dt * acc_ext
         self.p_dt2h_acc_ext.value = 0.5 * dt * dt * acc_ext
+        self.p_target.value = np.asarray(inp.target_position, dtype=float)
 
         t0 = time.perf_counter()
         try:
@@ -263,7 +309,7 @@ _PDG = _ParametricPDG()
 
 def _t_f_bounds(inp: SolveInput) -> tuple[float, float]:
     """Coarse physical bracket for the time of flight."""
-    fall_h = max(inp.position[1] - SLOT_CENTRE[1], 1.0)
+    fall_h = max(inp.position[1] - inp.target_position[1], 1.0)
     vy_down = max(-inp.velocity[1], 1.0)
     # Lower: can't get there faster than a constant-current-speed fall.
     lo = max(fall_h / max(vy_down, 50.0), 2.0)

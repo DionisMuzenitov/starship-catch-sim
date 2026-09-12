@@ -77,11 +77,15 @@ def propagate_ballistic(
     mass_kg: float,
     vehicle: VehicleParams,
     max_s: float = MAX_COAST_S,
+    target_y: float = float(SLOT_CENTRE[1]),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Ballistic coast table: (times, positions, velocities) at COAST_DT_S.
 
     Stops at `max_s` or when altitude drops below the minimum ignition
     height. Mass is constant (engines off).
+
+    `target_y` is the aim-point altitude the ignition floor is measured from
+    (SLS-102); it defaults to the catch slot.
     """
     g_vec = np.array([0.0, -G, 0.0])
     times = [0.0]
@@ -90,7 +94,7 @@ def propagate_ballistic(
     r = position.astype(float).copy()
     v = velocity.astype(float).copy()
     t = 0.0
-    floor_y = SLOT_CENTRE[1] + MIN_IGNITION_ALTITUDE_M
+    floor_y = target_y + MIN_IGNITION_ALTITUDE_M
     while t < max_s and r[1] > floor_y:
         a = g_vec + drag_accel_at(
             v, r[1], mass_kg, vehicle.ref_area_m2, vehicle.cd_subsonic
@@ -113,6 +117,7 @@ def _burn_input(
         mass_kg=inp.mass_kg,  # engines off during coast
         vehicle=inp.vehicle,
         t_f_hint_s=t_f_hint,
+        target_position=inp.target_position,  # SLS-102
     )
 
 
@@ -124,7 +129,11 @@ def solve_coast_burn(inp: SolveInput) -> CoastBurnResult:
     """Outer search over coast duration, then SCvx-polish the winner."""
     t0 = time.perf_counter()
     times, rs, vs = propagate_ballistic(
-        inp.position, inp.velocity, inp.mass_kg, inp.vehicle
+        inp.position,
+        inp.velocity,
+        inp.mass_kg,
+        inp.vehicle,
+        target_y=float(inp.target_position[1]),
     )
     n_table = len(times)
 
