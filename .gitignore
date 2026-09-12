@@ -76,3 +76,11 @@ services/rl/demos*/
 # breaking the docs build.
 docs/kb/.obsidian/*
 !docs/kb/.obsidian/app.json
+
+# Obsidian scratch inside the vault. `docs/kb` is the canonical KB since the
+# Confluence loss (SLS-118), and it is also a live editing surface — "Untitled"
+# canvases and empty notes accumulate there just from clicking around. Ignoring
+# them keeps a stray `git add -A` from committing editor noise into the KB.
+# A canvas worth keeping: `git add -f` it, or give it a real name.
+docs/kb/Untitled*.canvas
+docs/kb/**/Untitled*.canvas

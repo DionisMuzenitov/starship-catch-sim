@@ -114,3 +114,15 @@ def test_malformed_target_position_is_rejected() -> None:
         "/solve", json={**_BASE_PAYLOAD, "targetPosition": {"x": 8.5, "y": 91.0}}
     )
     assert resp.status_code == 422
+
+
+def test_response_echoes_the_honored_target() -> None:
+    """A client must be able to tell 'honoured' from 'silently ignored'."""
+    omitted = client.post("/solve", json=_BASE_PAYLOAD).json()
+    assert omitted["honoredTargetPosition"] == {"x": 8.5, "y": 91.0, "z": 0.0}
+
+    moved = {"x": 68.5, "y": 91.0, "z": 140.0}
+    retargeted = client.post(
+        "/solve", json={**_BASE_PAYLOAD, "targetPosition": moved}
+    ).json()
+    assert retargeted["honoredTargetPosition"] == moved

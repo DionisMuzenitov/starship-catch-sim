@@ -594,3 +594,69 @@ describe("MPCController targetPosition on the wire (SLS-102)", () => {
     expect(req.targetPosition).toEqual({ x: moved.x, y: moved.y, z: moved.z });
   });
 });
+
+describe("MPCController target-echo gate (SLS-102)", () => {
+  const offTargetEcho = { x: 8.5, y: 91, z: 0 };
+
+  it("rejects a plan the service built against a different target", async () => {
+    // A service that ignores `targetPosition` answers `optimal` with node 0
+    // matching the vehicle, so neither the status check nor the divergence
+    // guard catches it. Only the echo does.
+    const scenario = boosterDescentScenario();
+    const moved = Vec3.of(
+      scenario.targetCatch.targetPosition.x + 500,
+      scenario.targetCatch.targetPosition.y,
+      scenario.targetCatch.targetPosition.z,
+    );
+    const transport = vi.fn<MPCTransport>(async () => ({
+      ...cannedResponse(),
+      honoredTargetPosition: offTargetEcho,
+    }));
+    const ctl = new MPCController({
+      vehicle: scenario.vehicle,
+      targetPosition: moved,
+      transport,
+      replanIntervalS: 1,
+    });
+
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    ctl.step(scenario.initialWorld, 1 / 250);
+
+    expect(ctl.getPlan()).toBeNull();
+    expect(ctl.isUsingFallback()).toBe(true);
+    expect(ctl.serviceEchoesTarget()).toBe(true);
+  });
+
+  it("accepts a plan whose echo matches what we asked for", async () => {
+    const transport = vi.fn<MPCTransport>(async () => ({
+      ...cannedResponse(),
+      honoredTargetPosition: offTargetEcho,
+    }));
+    const { ctl, scenario } = makeController(transport);
+
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    ctl.step(scenario.initialWorld, 1 / 250);
+
+    expect(ctl.isUsingFallback()).toBe(false);
+    expect(ctl.serviceEchoesTarget()).toBe(true);
+  });
+
+  it("tolerates a pre-SLS-102 service but reports the missing echo", async () => {
+    const transport = vi.fn<MPCTransport>(async () => cannedResponse());
+    const { ctl, scenario } = makeController(transport);
+    expect(ctl.serviceEchoesTarget()).toBeNull();
+
+    ctl.step(scenario.initialWorld, 1 / 250);
+    await Promise.resolve();
+    await Promise.resolve();
+    ctl.step(scenario.initialWorld, 1 / 250);
+
+    // Still flies — but SLS-103 can see it must not command a divert here.
+    expect(ctl.isUsingFallback()).toBe(false);
+    expect(ctl.serviceEchoesTarget()).toBe(false);
+  });
+});
