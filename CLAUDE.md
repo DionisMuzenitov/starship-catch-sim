@@ -16,12 +16,10 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
 
 - **SLS-43 "[PM] Command Center"**: description = current status snapshot;
   comments = append-only decisions log. Skim it at the start of every session.
-- ~~Confluence space **SLS**~~ — **GONE as of 2026-09-12** (the product is no
-  longer available on the Atlassian site; see below). The knowledge base
-  survives only as the 2026-08-19 export,
-  `~/sls-backups/continuity/atlassian/confluence-kb.json` (14 pages), also
-  off-site in the private `sls-continuity` repo and on the flash drive.
-  Canonical ADRs live in `docs/adr/` and were never affected.
+- **`docs/kb/`** — the knowledge base (vehicle reference, narrative). Formerly
+  the Confluence SLS space, which is **gone as of 2026-09-12** (free trial
+  ended); the 14 pages were recovered from backup and migrated into the repo
+  (SLS-68 → SLS-118). Canonical ADRs live in `docs/adr/` and were never affected.
 - Risks live in SLS-43 (R1 physics-port drift, R6 asset licence contamination,
   etc.).
 
@@ -37,9 +35,8 @@ When using the Atlassian MCP tools, pass `cloudId: "yanismuzenitov.atlassian.net
 
 Before writing or changing any code for a ticket, you MUST:
 
-1. **INVESTIGATE.** Read the Jira ticket in full. Read the linked KB pages (now
-   in the 2026-08-19 `confluence-kb.json` export — Confluence itself is gone)
-   and any `docs/reference/` + `docs/adr/` files it touches. If the
+1. **INVESTIGATE.** Read the Jira ticket in full. Read the linked KB pages
+   (`docs/kb/`) and any `docs/reference/` + `docs/adr/` files it touches. If the
    ticket concerns real Starship / Super Heavy behaviour (physics, engines,
    aero, control, geometry), search the web for current authoritative sources
    and ground your understanding in them. Do not rely on memory for vehicle
@@ -172,14 +169,13 @@ Use `/implement-ticket SLS-XX` to start a ticket session with this protocol.
 Reference knowledge for this project lives in two places — check them before grounding
 any physical numbers or modelling decisions:
 
-- **Starship Reference Knowledge Base** — narrative / media reference for how the
-  real Starship, Raptor engine, catch sequence, reentry, and attitude control work.
-  **⚠️ This lived in Confluence, which is GONE from the Atlassian site as of
-  2026-09-12.** It now exists only as the 2026-08-19 export (14 pages) at
-  `~/sls-backups/continuity/atlassian/confluence-kb.json` — read it from there
-  (each entry has `title` + `body.storage.value` XHTML). Migrating those pages
-  into this repo as markdown is tracked separately; once that lands, this bullet
-  should point at the in-repo path instead.
+- **`docs/kb/`** — the Starship Reference Knowledge Base: narrative reference for
+  how the real Starship, Raptor engine, catch sequence, reentry, and attitude
+  control work. Start at `docs/kb/README.md`. These 14 pages lived in Confluence
+  until the free trial ended (SLS-68); they were recovered from the 2026-08-19
+  backup and converted to markdown (SLS-118), so **`docs/kb/` is now canonical** —
+  do not go looking for a wiki. Regenerate only from a refreshed export via
+  `node tools/kb/convert-kb.mjs`.
 - **`docs/reference/`**: machine-consumed reference data the simulator actually reads
   (thrust curves, ISA atmosphere tables, geometry). See `docs/reference/README.md`.
 - **`docs/catch-provenance.md`**: what's flight-proven vs. speculative in the catch
