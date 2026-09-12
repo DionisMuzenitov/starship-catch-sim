@@ -27,6 +27,25 @@ bash tools/backup/backup.sh
 
 Just the Atlassian export on its own: `node tools/backup/export-atlassian.mjs`.
 
+## ⚠️ Confluence export is currently failing (401) — owner re-auth needed
+
+As of **2026-09-12**, the API token in `~/.config/sls-atlassian.env` still
+authenticates **Jira** (200) but **every Confluence endpoint returns 401** (both
+`/wiki/rest/api/*` v1 and `/wiki/api/v2/*`); the Rovo OAuth connector is
+separately expired. Most likely an expired/rescoped Atlassian API token.
+
+**Impact is contained:** the export is fail-soft — Jira still backs up and
+commits, the error is recorded in `atlassian/manifest.json`
+(`confluencePages: null` + `confluenceError`), and the **last good
+`confluence-kb.json` is left untouched**. The 14 KB pages captured on
+2026-08-19 are intact in the continuity repo.
+
+**To restore KB backups:** mint a fresh Atlassian API token at
+<https://id.atlassian.com/manage-profile/security/api-tokens> (grant it
+Confluence access — if using a *scoped* token, include the Confluence read
+scopes), update `JIRA_API_TOKEN` in `~/.config/sls-atlassian.env`, then re-run
+`bash tools/backup/backup.sh` and confirm `confluencePages: 14` in the manifest.
+
 ## Off-site push — owner, one-time
 
 The continuity repo is version-controlled locally but not yet off-site. Push it
