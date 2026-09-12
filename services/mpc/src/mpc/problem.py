@@ -15,15 +15,43 @@ Deliberate v1 simplifications (all noted in ADR-007):
   caller supplies it; the SOCP treats it as known.
 - Free final time is handled OUTSIDE the SOCP: a coarse sweep on the first
   solve, then local refinement around the previous t_f on re-plans.
-- Tower keep-out: one tilted half-space applied to the final quarter of
-  the horizon (guards the tower body band y ∈ [91, 146] with ≥ 11 m at
-  tower top while keeping the terminal slot feasible). Full obstacle
-  avoidance is nonconvex and out of scope for v1 (SLS-27 benchmarks own
-  validating this approximation against the sim's collision detector).
+- Tower keep-out: one tilted half-space applied to the final HALF of the
+  horizon (`KEEPOUT_FROM_NODE = N // 2`; earlier revisions of this comment
+  said "final quarter" — the code has always said `N // 2`). It guards the
+  tower body band y ∈ [91, 146] with ≥ 11 m at tower top while keeping the
+  terminal slot feasible. Full obstacle avoidance is nonconvex and out of
+  scope for v1 (SLS-27 benchmarks own validating this approximation
+  against the sim's collision detector).
+
+Target parameterization (SLS-102)
+---------------------------------
+The aim point is a `cp.Parameter` (`SolveInput.target_position`), defaulting
+to `SLOT_CENTRE`. It drives the glide-slope cone apex and the terminal box.
+
+**The tower keep-out plane deliberately does NOT follow it.** The plane
+encodes where the physical tower is, so it stays anchored at `TOWER_SLOT_Y`.
+
+The practical consequence, which the offshore-divert ticket (SLS-103) must
+handle: over the final HALF of the horizon (nodes `N//2 … N`) every node
+obeys
+
+    x ≥ KEEPOUT_X0 + KEEPOUT_SLOPE·(y − TOWER_SLOT_Y)
+      = 8.0 + 0.0545·(y − 91)
+
+so the corridor is much wider than its terminal value — `x ≥ 8.0` is only
+what the constraint collapses to AT the slot; 600 m up the same plane
+demands x ≳ 36 m. **A target on the far side of the tower is infeasible
+today**, and even a near-side divert has to clear a tilted wall, not a
+vertical one. Parameterizing the target is necessary for a divert but not
+sufficient; SLS-103 additionally needs the keep-out relaxed or made
+directional once the vehicle has committed away from the tower. Targets on
+the tower side, and lateral/vertical offsets of the slot itself (a
+tracking-arm aim point, SLS-82/ADR-022), work now.
 """
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -38,18 +66,38 @@ N = 60
 """Trajectory nodes (N intervals, N+1 states)."""
 
 G = 9.80665
-SLOT_CENTRE = np.array([8.5, 91.0, 0.0])
+
+# --- Tower geometry (fixed site structure) -------------------------------
+# These describe where the TOWER is, and never move. Keep them distinct from
+# the aim point below: since SLS-102 the target is a per-request parameter,
+# and a divert must not drag the tower's own exclusion zone along with it.
+TOWER_SLOT_Y = 91.0
+"""Chopstick carriage height — the tower's catch-slot altitude."""
+TOWER_TOP_Y = 146.0
+
+SLOT_CENTRE = np.array([8.5, TOWER_SLOT_Y, 0.0])
+"""DEFAULT aim point: the Mechazilla catch slot, matching the simulator's
+`chopstickCaptureVolume(DEFAULT_TOWER_STATE).center` (hinge at x=7.5 with
+gripper pads at +4.5/−2.5 ⇒ x∈[5,12] ⇒ centre 8.5; z∈[−5,5] ⇒ centre 0).
+Requests may override it via `SolveInput.target_position` (SLS-102); when
+they don't, every number below is bit-for-bit what it was before."""
+
 GLIDE_HALF_ANGLE_RAD = np.deg2rad(8.0)
 POINTING_HALF_ANGLE_RAD = np.deg2rad(15.0)
 TERMINAL_POS_TOL_M = 10.0
 TERMINAL_VY_TOL_MPS = 5.0
 TERMINAL_VH_TOL_MPS = 2.0
 # Tower keep-out tilted plane: x >= KEEPOUT_X0 + KEEPOUT_SLOPE * (y - 91),
-# applied to the last quarter of nodes. At the slot (y=91) the bound is
-# 8.0 < 8.5 (terminal feasible); at tower top (y=146) it is 11.0 which
-# clears the 6 m face + 4.5 m booster radius.
+# applied to the last HALF of the nodes (KEEPOUT_FROM_NODE = N // 2). At the
+# slot (y=91) the bound is 8.0 < 8.5 (terminal feasible); at tower top
+# (y=146) it is 11.0 which clears the 6 m face + 4.5 m booster radius. Note
+# the bound keeps rising with y above the tower, so mid-horizon nodes face a
+# far wider exclusion than the terminal 8.0 m.
+#
+# Anchored to TOWER_SLOT_Y, NOT to the request target — see the SLS-102 note
+# in the module docstring for what that means for offshore diverts.
 KEEPOUT_X0 = 8.0
-KEEPOUT_SLOPE = (11.0 - KEEPOUT_X0) / (146.0 - 91.0)
+KEEPOUT_SLOPE = (11.0 - KEEPOUT_X0) / (TOWER_TOP_Y - TOWER_SLOT_Y)
 KEEPOUT_FROM_NODE = N // 2
 
 # Terminal-slack penalty: an infeasible MPC step is worse than a slightly
@@ -83,6 +131,11 @@ class SolveInput:
     # Remaining-coast hint (SLS-47): re-plans search only a narrow window
     # around the client's committed ignition epoch so it cannot churn.
     coast_hint_s: float | None = None
+    # Aim point (SLS-102): glide-slope cone apex + terminal box centre.
+    # Defaults to the catch slot, so every pre-SLS-102 caller is unchanged.
+    target_position: np.ndarray = field(
+        default_factory=lambda: SLOT_CENTRE.copy()
+    )
 
 
 @dataclass
@@ -107,6 +160,9 @@ class SolveResult:
 class _ParametricPDG:
     def __init__(self) -> None:
         n = N
+        # Guards the shared parameter stamps + solve (see stamp_and_solve).
+        # Per-instance, so the SCvx trust-region subclass gets its own.
+        self._solve_lock = threading.Lock()
         # Variables.
         self.r = cp.Variable((n + 1, 3), name="r")
         self.v = cp.Variable((n + 1, 3), name="v")
@@ -135,6 +191,10 @@ class _ParametricPDG:
         # dt·(g + a_drag,k) and ½dt²·(g + a_drag,k), pre-multiplied.
         self.p_dt_acc_ext = cp.Parameter((n, 3), name="dt_acc_ext")
         self.p_dt2h_acc_ext = cp.Parameter((n, 3), name="dt2h_acc_ext")
+        # Aim point (SLS-102). Stays DPP: it only ever appears affinely
+        # alongside variables (inside a norm argument, or on the affine side
+        # of an inequality) — never multiplied by another parameter.
+        self.p_target = cp.Parameter(3, name="target")
 
         cons: list[cp.Constraint] = [
             self.r[0] == self.p_r0,
@@ -160,19 +220,21 @@ class _ParametricPDG:
             ]
 
         # Glide-slope cone (apex at slot centre) + tower keep-out plane on
-        # the final quarter of the horizon.
+        # the final half of the horizon (KEEPOUT_FROM_NODE = N // 2).
         tan_gs = float(np.tan(GLIDE_HALF_ANGLE_RAD))
         for k in range(KEEPOUT_FROM_NODE, n + 1):
             cons += [
-                cp.norm(self.r[k, [0, 2]] - SLOT_CENTRE[[0, 2]])
-                <= tan_gs * (self.r[k, 1] - SLOT_CENTRE[1]) + TERMINAL_POS_TOL_M,
+                cp.norm(self.r[k, [0, 2]] - self.p_target[[0, 2]])
+                <= tan_gs * (self.r[k, 1] - self.p_target[1]) + TERMINAL_POS_TOL_M,
+                # Tower keep-out stays pinned to TOWER_SLOT_Y — the tower does
+                # not move when the aim point does.
                 self.r[k, 0]
-                >= KEEPOUT_X0 + KEEPOUT_SLOPE * (self.r[k, 1] - SLOT_CENTRE[1]),
+                >= KEEPOUT_X0 + KEEPOUT_SLOPE * (self.r[k, 1] - TOWER_SLOT_Y),
             ]
 
         # Soft terminal box (slack-penalized; infeasible > slightly violated).
         cons += [
-            cp.norm(self.r[n] - SLOT_CENTRE) <= TERMINAL_POS_TOL_M + self.s_pos,
+            cp.norm(self.r[n] - self.p_target) <= TERMINAL_POS_TOL_M + self.s_pos,
             cp.abs(self.v[n, 1]) <= TERMINAL_VY_TOL_MPS + self.s_vel,
             cp.norm(self.v[n, [0, 2]]) <= TERMINAL_VH_TOL_MPS + self.s_vel,
             self.v[n, 1] <= 0,
@@ -196,6 +258,22 @@ class _ParametricPDG:
         self.problem = cp.Problem(objective, cons)
 
     def stamp_and_solve(self, inp: SolveInput, t_f: float) -> SolveResult:
+        # The CVXPY problem is a process-global mutable object and FastAPI
+        # runs the sync /solve endpoint in a threadpool, so concurrent
+        # requests would otherwise interleave their parameter stamping.
+        #
+        # This mattered before SLS-102 (a crossed stamp yields a plan from
+        # someone else's initial condition), but the client's divergence
+        # abort rejected those: node 0 didn't match the vehicle. Now that the
+        # aim point is part of the same shared state, two requests with
+        # similar states but different targets — a divert alongside a nominal
+        # approach, or simply two browser tabs — could produce a plan whose
+        # node 0 DOES match while its terminal aims at the other request's
+        # target, which the client would track confidently. Serialize.
+        with self._solve_lock:
+            return self._stamp_and_solve_locked(inp, t_f)
+
+    def _stamp_and_solve_locked(self, inp: SolveInput, t_f: float) -> SolveResult:
         n = N
         dt = t_f / n
         m0 = inp.mass_kg
@@ -225,6 +303,7 @@ class _ParametricPDG:
         self.p_sigma_hi.value = veh.max_thrust_n / m_ref
         self.p_dt_acc_ext.value = dt * acc_ext
         self.p_dt2h_acc_ext.value = 0.5 * dt * dt * acc_ext
+        self.p_target.value = np.asarray(inp.target_position, dtype=float)
 
         t0 = time.perf_counter()
         try:
@@ -263,7 +342,7 @@ _PDG = _ParametricPDG()
 
 def _t_f_bounds(inp: SolveInput) -> tuple[float, float]:
     """Coarse physical bracket for the time of flight."""
-    fall_h = max(inp.position[1] - SLOT_CENTRE[1], 1.0)
+    fall_h = max(inp.position[1] - inp.target_position[1], 1.0)
     vy_down = max(-inp.velocity[1], 1.0)
     # Lower: can't get there faster than a constant-current-speed fall.
     lo = max(fall_h / max(vy_down, 50.0), 2.0)

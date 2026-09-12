@@ -56,6 +56,13 @@ export type MPCSolveRequest = {
    *  ignition epoch inside a narrow window instead of re-opening it. */
   coastHintS?: number;
   /**
+   * Aim point for the solver: glide-slope cone apex + terminal box centre
+   * (SLS-102). Omitted ⇒ the service falls back to its hardcoded catch slot.
+   * We always send it, so the scenario's target is the single source of
+   * truth instead of being duplicated on both sides of the wire.
+   */
+  targetPosition?: { x: number; y: number; z: number };
+  /**
    * "scvx" iterates drag relinearization (SLS-27); "coast+burn" adds the
    * ballistic-coast ignition search (SLS-47) — the default, since
    * burn-only plans are infeasible from high altitude (thrust floor) and
@@ -79,6 +86,12 @@ export type MPCSolveResponse = {
   ignitionTimeS?: number | null;
   coastPositions?: { x: number; y: number; z: number }[] | null;
   coastVelocities?: { x: number; y: number; z: number }[] | null;
+  /**
+   * The aim point the service actually planned against (SLS-102). Absent on
+   * a service older than SLS-102 — which silently ignores `targetPosition`
+   * and plans to its own hardcoded slot. See `TARGET_ECHO_TOL_M`.
+   */
+  honoredTargetPosition?: { x: number; y: number; z: number } | null;
 };
 
 export type MPCTransport = (req: MPCSolveRequest) => Promise<MPCSolveResponse>;
@@ -139,6 +152,22 @@ const DEFAULT_SERVICE_URL = "http://localhost:8100";
  * appears in the terminal window.
  */
 const MAX_USABLE_TERMINAL_SLACK = 5;
+
+/**
+ * How far the service's echoed aim point may sit from the one we asked for
+ * before the plan is rejected (SLS-102). Well inside the 10 m terminal box,
+ * so an honest echo always passes; it only fires on a genuinely different
+ * target.
+ *
+ * Why reject rather than shrug: a service that ignores `targetPosition`
+ * still answers `optimal` with a plan whose node 0 matches the vehicle, so
+ * the divergence guard passes and the client tracks it happily. Today both
+ * sides name (8.5, 91, 0) and this can never fire; it matters for SLS-103,
+ * where silently flying the default plan means flying onto the tower you
+ * meant to abort away from. A missing echo (pre-SLS-102 service) is
+ * tolerated only when we asked for the default target anyway.
+ */
+const TARGET_ECHO_TOL_M = 0.5;
 
 /** Re-plan cadence while coasting (SLS-47) — the trajectory is passive,
  *  so 1 Hz would waste solver time; the coast+burn search costs ~1 s. */
@@ -559,6 +588,8 @@ export class MPCController implements Controller {
   };
   private readonly vehicle: Vehicle;
   private readonly targetPosition: Vec3;
+  /** Null until the first response; false ⇒ pre-SLS-102 service (no echo). */
+  private targetEchoSeen: boolean | null = null;
   private inFlight = false;
   private observer: MPCPlanObserver | null = null;
   private fallbackObserver: MPCFallbackObserver | null = null;
@@ -666,6 +697,42 @@ export class MPCController implements Controller {
 
   getPlan(): MPCPlan | null {
     return this.plan;
+  }
+
+  /**
+   * Whether the service confirms the aim point it planned against (SLS-102).
+   * `null` until the first response lands; `false` means a pre-SLS-102
+   * service that ignores `targetPosition` entirely.
+   *
+   * Harmless today — every request names the scenario's own catch slot,
+   * which is exactly what such a service would plan to anyway. **SLS-103
+   * must refuse to command a divert while this is `false`**, since an
+   * ignored divert comes back as a confident `optimal` plan aimed at the
+   * tower.
+   */
+  serviceEchoesTarget(): boolean | null {
+    return this.targetEchoSeen;
+  }
+
+  /**
+   * Reject plans the service built against a different aim point than the
+   * one we asked for. See `TARGET_ECHO_TOL_M`.
+   */
+  private targetWasHonoured(resp: MPCSolveResponse): boolean {
+    const echo = resp.honoredTargetPosition;
+    if (echo === undefined || echo === null) {
+      // Legacy service: no echo to check. Accept — refusing would break
+      // against an older deployment for no benefit while the only target we
+      // ever send is the default slot.
+      this.targetEchoSeen = false;
+      return true;
+    }
+    this.targetEchoSeen = true;
+    const t = this.targetPosition;
+    const dx = echo.x - t.x;
+    const dy = echo.y - t.y;
+    const dz = echo.z - t.z;
+    return Math.hypot(dx, dy, dz) <= TARGET_ECHO_TOL_M;
   }
 
   reset(): void {
@@ -1085,6 +1152,11 @@ export class MPCController implements Controller {
         ispS: this.ispS,
       },
       mode: requestMode,
+      // The controller already knew the target (it uses it for the PID
+      // fallback); before SLS-102 the service had no way to receive it and
+      // silently planned to its own hardcoded slot. For the default
+      // scenarios the two agree exactly, so plans are unchanged.
+      targetPosition: { ...this.targetPosition },
     };
     if (coastHintS !== undefined) req.coastHintS = coastHintS;
     if (requestMode !== "coast+burn" && plan !== null) {
@@ -1102,7 +1174,8 @@ export class MPCController implements Controller {
         if (
           resp.status !== "optimal" ||
           resp.terminalSlack > MAX_USABLE_TERMINAL_SLACK ||
-          resp.predictedPositions.length < 2
+          resp.predictedPositions.length < 2 ||
+          !this.targetWasHonoured(resp)
         ) {
           return; // keep the previous plan / fallback
         }

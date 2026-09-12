@@ -39,9 +39,12 @@ Constraints from our plant (see Confluence KB + `packages/physics`):
   The tower body occupies x ∈ [−6, 6], z ∈ [−6, 6] up to y = 146 — the
   structure rises 55 m ABOVE the catch height, so "descend vertically onto
   the target" is not tower-safe on the −x side.
-- The scenario's nominal `targetPosition` is (0, 91, 0) — the tower
+- ~~The scenario's nominal `targetPosition` is (0, 91, 0) — the tower
   centreline, not the physical slot. MPC targets the slot centre; the
-  catch detector fires on capture-volume entry either way.
+  catch detector fires on capture-volume entry either way.~~
+  **Superseded — see the 2026-09-12 amendment below.** The scenario target
+  was moved to the capture-volume centre in SLS-48; it is now (8.5, 91, 0),
+  the same point MPC aims at.
 
 ## Decision
 
@@ -62,12 +65,13 @@ Formulation (per re-plan, following Açıkmese & Blackmore 2013):
   6-point geometric sweep on cold solves, a 3-point (×0.92/1.0/1.08)
   refinement around the previous t_f on warm re-plans, falling back to
   the cold sweep when the hinted candidates are unusable.
-- **Glide slope:** ‖r_xz − r_f,xz‖ ≤ tan(15°) · (r_y − 91) + 10 m — a
-  15°-from-vertical cone apexed at the slot centre r_f = (8.5, 91, 0),
-  applied to the final quarter of the horizon (constraining the early,
-  far-out trajectory to a cone only hurts feasibility).
+- **Glide slope:** ‖r_xz − r_f,xz‖ ≤ tan(θ_gs) · (r_y − 91) + 10 m — a
+  cone apexed at the slot centre r_f = (8.5, 91, 0), applied to the final
+  half of the horizon (constraining the early, far-out trajectory to a cone
+  only hurts feasibility). θ_gs was 15° as decided here; **SLS-47 narrowed
+  it to 8°** — see the amendment below.
 - **Tower keep-out:** tilted convex plane x ≥ 8 + (3/55)·(r_y − 91) on
-  the same final-quarter nodes — ≥ 11 m at tower top (146 m), clearing
+  the same final-half nodes — ≥ 11 m at tower top (146 m), clearing
   the 6 m face + 4.5 m booster radius, while keeping the terminal slot
   (x = 8.5) feasible. An earlier "x ≥ 12 below 250 m" sketch was
   superseded in implementation: it makes the terminal node infeasible.
@@ -125,6 +129,60 @@ client replay).
   Cd(M) during burns, but supersonic retropropulsion largely cancels
   aerodynamic drag (see `docs/reference/dynamics.md`). Conservative for
   guidance; revisit with the SLS-27 benchmarks.
+
+## Amendment — 2026-09-12 (SLS-102): the aim point is a request parameter
+
+The original formulation baked the catch slot into the problem as a
+constant. `SolveRequest` carried state, vehicle params, mode and hints but
+no target, so no divert of any kind was expressible — the blocker for the
+offshore-default / abort-to-water work (SLS-103).
+
+**Change.** The aim point is now `SolveInput.target_position`, a
+`cp.Parameter` stamped per solve, driving the **glide-slope cone apex** and
+the **terminal box centre**. It defaults to `SLOT_CENTRE`, so callers that
+omit it are bit-for-bit unchanged (verified: 19 solves across
+linear / SCvx / coast+burn, byte-identical JSON before and after). The
+problem is still built once and stays DPP — the parameter only ever appears
+affinely beside variables, never multiplied by another parameter.
+
+**Deliberately NOT parameterized: the tower keep-out plane.** It encodes
+where the physical tower is, so it stays anchored at `TOWER_SLOT_Y = 91`.
+The consequence SLS-103 inherits: over the final **half** of the horizon
+(`KEEPOUT_FROM_NODE = N // 2`) every node obeys
+
+    x ≥ 8.0 + 0.0545·(r_y − 91)
+
+`x ≥ 8.0` is only what that collapses to AT slot altitude; 600 m up the same
+plane demands x ≳ 36 m. So **a target on the far side of the tower is
+infeasible today**, and even a near-side divert must clear a tilted wall
+rather than a vertical one. Parameterizing the target is necessary for a
+divert but not sufficient — SLS-103 must also relax or make the keep-out
+directional once the vehicle has committed away from the tower. Targets on
+the tower side, and offsets of the slot itself (tracking arms, ADR-022),
+work now.
+
+### Corrections to the text above (drift found while verifying this change)
+
+Both were true when written and were never amended as the code moved. Both
+are the number-free contradiction class that `pnpm docs:check` cannot catch
+(see SLS-107 / SLS-114), which is why they survived this long.
+
+1. **Scenario target.** Context claimed the scenario's nominal
+   `targetPosition` was (0, 91, 0), the tower centreline, with MPC
+   separately aiming at the slot. **SLS-48** moved `CATCH_POINT_WORLD` to
+   `chopstickCaptureVolume(DEFAULT_TOWER_STATE).center` = (8.5, 91, 0).
+   Both sides now name the same point — and since SLS-102 the client sends
+   it explicitly, rather than the two agreeing by coincidence.
+2. **Glide-slope half-angle.** Decision said 15°, matching the pointing
+   cone. **SLS-47** narrowed the glide cone to **8°**
+   (`GLIDE_HALF_ANGLE_RAD = np.deg2rad(8.0)`) as part of the realistic
+   descent architecture; the pointing cone stayed at 15°. The two are
+   independent constraints that happened to share a value at SLS-26, which
+   is likely why the divergence went unnoticed.
+
+Also corrected throughout: the keep-out and glide-slope constraints apply to
+the final **half** of the horizon, not the final quarter — `N // 2` is what
+the code has always said.
 
 ## Sources
 

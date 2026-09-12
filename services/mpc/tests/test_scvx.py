@@ -132,3 +132,39 @@ def test_scvx_propagates_infeasible_status() -> None:
     )
     res = solve_scvx(inp)
     assert res.status != "optimal" or res.terminal_slack > 10.0
+
+
+# ---------------------------------------------------------------------------
+# Target parameterization (SLS-102)
+# ---------------------------------------------------------------------------
+
+
+def test_scvx_honours_offset_target() -> None:
+    """Regression: SCvx rebuilds a fresh SolveInput on every relinearization
+    iteration. If `target_position` is not forwarded there, iteration 1 aims
+    at the offset target and every later iteration silently snaps back to the
+    default slot — i.e. a commanded divert would converge onto the tower it
+    was diverting away from. The failure is invisible in the status field, so
+    it needs its own test.
+    """
+    offset = SLOT_CENTRE + np.array([40.0, 0.0, 120.0])
+    inp = _final_descent_input()
+    inp.target_position = offset
+    res = solve_scvx(inp)
+    assert res.status == "optimal"
+    # More than one iteration must have run, or the test would pass even with
+    # the forwarding bug present.
+    assert res.iterations >= 2
+    r_f = res.positions[-1]
+    assert np.linalg.norm(r_f - offset) <= 10.0 + res.terminal_slack + 1e-3
+    assert np.linalg.norm(r_f - SLOT_CENTRE) > 10.0
+
+
+def test_scvx_default_target_matches_implicit() -> None:
+    implicit = solve_scvx(_final_descent_input())
+    explicit_inp = _final_descent_input()
+    explicit_inp.target_position = SLOT_CENTRE.copy()
+    explicit = solve_scvx(explicit_inp)
+    assert implicit.status == explicit.status == "optimal"
+    assert np.array_equal(implicit.positions, explicit.positions)
+    assert implicit.fuel_kg == explicit.fuel_kg

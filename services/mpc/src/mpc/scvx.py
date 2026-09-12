@@ -181,6 +181,11 @@ def solve_scvx(inp: SolveInput, options: SCvxOptions | None = None) -> SCvxResul
             mass_kg=inp.mass_kg,
             vehicle=inp.vehicle,
             drag_accel=drag_next,
+            # Must be forwarded (SLS-102): omitting it would silently snap
+            # every iteration after the first back to the default slot, so a
+            # diverted plan would converge onto the tower. Covered by
+            # test_scvx.py::test_scvx_honours_offset_target.
+            target_position=inp.target_position,
         )
         _TR_PDG.p_r_ref.value = best.positions
         _TR_PDG.p_trust_radius.value = radius

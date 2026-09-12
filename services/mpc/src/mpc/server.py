@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from .coast import CoastBurnResult, solve_coast_burn
-from .problem import SolveInput, SolveResult, VehicleParams, solve_pdg
+from .problem import SLOT_CENTRE, SolveInput, SolveResult, VehicleParams, solve_pdg
 from .scvx import SCvxResult, solve_scvx
 
 app = FastAPI(title="SLS MPC guidance", version="0.1.0")
@@ -59,6 +59,10 @@ class SolveRequest(BaseModel):
     tFHintS: float | None = None
     # Remaining-coast hint for coast+burn re-plans (SLS-47).
     coastHintS: float | None = None
+    # Aim point (SLS-102): glide-slope apex + terminal box centre. Omit to
+    # get the Mechazilla catch slot, which is what every caller before
+    # SLS-102 got implicitly — so old clients are unaffected.
+    targetPosition: Vec3Model | None = None
     # Optional exogenous drag acceleration profile, one entry per horizon
     # interval (N=60). Missing/short profiles are zero-padded.
     dragAccel: list[Vec3Model] | None = None
@@ -71,6 +75,16 @@ class SolveRequest(BaseModel):
 
 class SolveResponse(BaseModel):
     status: str
+    # The aim point this plan was actually built against (SLS-102). Echoed
+    # so a client can tell "the service honoured my target" from "the service
+    # silently ignored it". Pydantic ignores unknown request fields, so a
+    # pre-SLS-102 deployment accepts `targetPosition` and plans to its own
+    # hardcoded slot — node 0 still matches the vehicle and the status is
+    # still `optimal`, so the client's divergence guard cannot catch it. For
+    # a nominal catch that is harmless (same point); for an SLS-103 divert it
+    # would mean flying a plan onto the tower you meant to abort away from.
+    # Absent field ⇒ the service predates this echo ⇒ do not trust a divert.
+    honoredTargetPosition: Vec3Model
     tFS: float
     solveTimeMs: float
     fuelKg: float
@@ -108,6 +122,11 @@ def health() -> dict[str, str]:
 def solve(req: SolveRequest) -> SolveResponse:
     from .problem import N
 
+    target = (
+        req.targetPosition.to_np()
+        if req.targetPosition is not None
+        else SLOT_CENTRE.copy()
+    )
     inp = SolveInput(
         position=req.position.to_np(),
         velocity=req.velocity.to_np(),
@@ -121,6 +140,7 @@ def solve(req: SolveRequest) -> SolveResponse:
         t_f_hint_s=req.tFHintS,
         drag_accel=_drag_matrix(req.dragAccel, N),
         coast_hint_s=req.coastHintS,
+        target_position=target,
     )
     res: SolveResult | SCvxResult
     iterations: int | None = None
@@ -149,6 +169,7 @@ def solve(req: SolveRequest) -> SolveResponse:
         res = solve_pdg(inp)
     return SolveResponse(
         status=res.status,
+        honoredTargetPosition=Vec3Model.from_np(target),
         tFS=res.t_f_s,
         solveTimeMs=solve_ms_total if solve_ms_total is not None else res.solve_time_ms,
         fuelKg=res.fuel_kg,
