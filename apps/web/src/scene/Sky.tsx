@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 
+import { mulberry32 } from "@starship-catch-sim/physics";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   BackSide,
@@ -43,12 +44,25 @@ void main() {
 }
 `;
 
+/**
+ * Fixed star-field seed (SLS-108).
+ *
+ * These positions were `Math.random()` until the visual-regression goldens
+ * needed a frame that renders identically twice. 1500 stars re-scattering on
+ * every page load changed thousands of pixels per reload, which no diff
+ * tolerance can distinguish from a real regression. The field is decorative
+ * — nothing reads it back — so a fixed seed costs nothing and the sky simply
+ * looks the same every visit.
+ */
+const STAR_SEED = 0x5_7A45;
+
 function buildStarPositions(): Float32Array {
   const arr = new Float32Array(STAR_COUNT * 3);
+  const rng = mulberry32(STAR_SEED);
   for (let i = 0; i < STAR_COUNT; i += 1) {
     // Uniform on a sphere, biased to upper hemisphere
-    const u = Math.random();
-    const v = Math.random() * 0.5 + 0.5; // upper hemisphere
+    const u = rng();
+    const v = rng() * 0.5 + 0.5; // upper hemisphere
     const theta = 2 * Math.PI * u;
     const phi = Math.acos(2 * v - 1);
     const x = STAR_RADIUS * Math.sin(phi) * Math.cos(theta);

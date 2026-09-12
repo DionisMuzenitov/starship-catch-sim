@@ -1,0 +1,64 @@
+# Regenerate the SLS-108 visual-regression goldens.
+#
+# Manual only. Goldens are WebGL frames, so they are only comparable against
+# frames from the same renderer — CI's Ubuntu/SwiftShader stack. A developer
+# machine's GPU produces a visibly different image, which is why
+# `visual-golden.spec.ts` skips itself off-linux and only the `-linux.png`
+# set is committed.
+#
+# Use it when a golden SHOULD change — a deliberate model, material, layout
+# or HUD change. Run this, download the `visual-goldens` artifact, drop the
+# PNGs into `apps/web/e2e/__screenshots__/`, and commit them in the SAME PR as
+# the change that moved them, with the reason in the commit message. A golden
+# updated on its own, with no explanation, is indistinguishable from a
+# regression someone silenced.
+name: Visual goldens (regenerate)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  goldens:
+    name: Capture goldens (chromium / linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium (with system deps)
+        run: pnpm playwright:install
+
+      - name: Build web app
+        # Must match the e2e job's build, or the goldens describe a different
+        # app than the one CI compares them against.
+        env:
+          VITE_MPC_URL: ""
+        run: pnpm --filter @starship-catch-sim/web build
+
+      - name: Capture goldens
+        run: >-
+          pnpm --filter @starship-catch-sim/web exec playwright test
+          e2e/visual-golden.spec.ts --update-snapshots
+
+      - name: Upload goldens
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-goldens
+          path: apps/web/e2e/__screenshots__/
+          retention-days: 14

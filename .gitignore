@@ -84,3 +84,8 @@ docs/kb/.obsidian/*
 # A canvas worth keeping: `git add -f` it, or give it a real name.
 docs/kb/Untitled*.canvas
 docs/kb/**/Untitled*.canvas
+
+# Playwright run output (SLS-108). The GOLDENS in
+# apps/web/e2e/__screenshots__/ are committed; these are per-run scratch.
+apps/web/test-results/
+apps/web/playwright-report/

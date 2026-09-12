@@ -15,10 +15,37 @@ export default defineConfig({
     trace: "on-first-retry",
   },
 
+  // Golden-frame diffs (SLS-108). Snapshots are keyed by platform because a
+  // WebGL frame is not portable: CI renders through SwiftShader on Ubuntu,
+  // a dev machine through the real GPU. Only the `linux` goldens are
+  // committed; `visual-golden.spec.ts` skips itself off-linux rather than
+  // pretend a macOS frame can be compared against them.
+  snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
+
+  expect: {
+    toHaveScreenshot: {
+      // The tower arms settle on a first-order lag driven by REAL dt, so the
+      // frame is never bit-identical — it converges, it does not land. Allow
+      // a small fraction of pixels to differ, but keep the per-pixel
+      // threshold tight so a genuine geometry/material change still trips it.
+      maxDiffPixelRatio: 0.004,
+      threshold: 0.15,
+      animations: "disabled",
+      caret: "hide",
+    },
+  },
+
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // Pin everything that scales the framebuffer. `devices` supplies a
+        // dpr the golden must not drift from, and the quality tier picks its
+        // render scale off devicePixelRatio.
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+      },
     },
   ],
 

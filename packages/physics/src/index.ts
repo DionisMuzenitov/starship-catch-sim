@@ -64,6 +64,7 @@ export {
   constantWind,
   drydenTurbulence,
   layeredWind,
+  mulberry32,
 } from "./wind.js";
 export type { DrydenOpts, WindField, WindLayer } from "./wind.js";
 export { neutralControl } from "./control.js";

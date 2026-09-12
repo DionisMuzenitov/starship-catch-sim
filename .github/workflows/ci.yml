@@ -188,5 +188,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
-          path: apps/web/playwright-report/
+          # SLS-108: include the golden dirs, not just the HTML report. A
+          # visual diff is only actionable if you can see the actual frame,
+          # and this is also how the `linux` goldens are bootstrapped — CI is
+          # the only place that renders them (a dev machine's GPU output is
+          # not comparable, see visual-golden.spec.ts).
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+            apps/web/e2e/__screenshots__/
           retention-days: 7
