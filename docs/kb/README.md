@@ -15,6 +15,23 @@ modelling choices.
 Related in-repo references: [physical reference data](../reference/README.md) ·
 [catch provenance](../catch-provenance.md) · [architecture decisions](../adr/README.md).
 
+## Editing these notes (Obsidian)
+
+This directory doubles as an **Obsidian vault** (SLS-120) — an Obsidian vault is
+just a folder of markdown files, so no conversion or import is needed:
+
+1. Obsidian → **Open folder as vault** → select `docs/kb`.
+2. Edit normally. Changes are plain files; commit them like any other change.
+
+Syncing is git — Obsidian Sync/Publish (both paid) are deliberately not used.
+
+> **⚠️ Keep links markdown-style**
+>
+> VitePress cannot resolve Obsidian's `[[wikilinks]]`, so writing them would
+> break the docs build. `.obsidian/app.json` is committed precisely to pin
+> `useMarkdownLinks: true` + relative paths — don't change those settings.
+> Everything else under `.obsidian/` is gitignored as per-user state.
+
 ## Start here
 
 - [Starship landing simulator Home](starship-landing-simulator-home.md)

@@ -176,6 +176,10 @@ any physical numbers or modelling decisions:
   backup and converted to markdown (SLS-118), so **`docs/kb/` is now canonical** —
   do not go looking for a wiki. Regenerate only from a refreshed export via
   `node tools/kb/convert-kb.mjs`.
+  The directory doubles as an **Obsidian vault** (SLS-120: *Open folder as vault*
+  → `docs/kb`). **Write markdown links, never `[[wikilinks]]`** — VitePress can't
+  resolve them and the docs build would fail; `.obsidian/app.json` is committed to
+  pin that setting.
 - **`docs/reference/`**: machine-consumed reference data the simulator actually reads
   (thrust curves, ISA atmosphere tables, geometry). See `docs/reference/README.md`.
 - **`docs/catch-provenance.md`**: what's flight-proven vs. speculative in the catch
