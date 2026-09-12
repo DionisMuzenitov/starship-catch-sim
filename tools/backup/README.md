@@ -27,24 +27,44 @@ bash tools/backup/backup.sh
 
 Just the Atlassian export on its own: `node tools/backup/export-atlassian.mjs`.
 
-## ⚠️ Confluence export is currently failing (401) — owner re-auth needed
+## ⚠️ Confluence export needs OAuth — Basic auth no longer works (2026-09-12)
 
-As of **2026-09-12**, the API token in `~/.config/sls-atlassian.env` still
-authenticates **Jira** (200) but **every Confluence endpoint returns 401** (both
-`/wiki/rest/api/*` v1 and `/wiki/api/v2/*`); the Rovo OAuth connector is
-separately expired. Most likely an expired/rescoped Atlassian API token.
+**Diagnosis (verified, not a guess).** The API token in
+`~/.config/sls-atlassian.env` still authenticates **Jira** over Basic auth
+(`/rest/api/3/myself` → 200), but **every Confluence endpoint returns 401** —
+`/wiki/rest/api/*` (v1), `/wiki/api/v2/*`, even `/wiki/rest/api/user/current`.
+The response header is the tell:
+
+```
+HTTP/2 401
+www-authenticate: OAuth realm="https%3A%2F%2Fyanismuzenitov.atlassian.net"
+```
+
+Confluence Cloud is demanding **OAuth** on this site and refusing Basic auth.
+**Minting a new API token does not fix this** — confirmed empirically on
+2026-09-12 with a freshly-issued token, which authenticated Jira and still 401'd
+on every Confluence route. Do not burn time on tokens.
 
 **Impact is contained:** the export is fail-soft — Jira still backs up and
 commits, the error is recorded in `atlassian/manifest.json`
 (`confluencePages: null` + `confluenceError`), and the **last good
 `confluence-kb.json` is left untouched**. The 14 KB pages captured on
-2026-08-19 are intact in the continuity repo.
+2026-08-19 are intact in the continuity repo *and* pushed off-site.
 
-**To restore KB backups:** mint a fresh Atlassian API token at
-<https://id.atlassian.com/manage-profile/security/api-tokens> (grant it
-Confluence access — if using a *scoped* token, include the Confluence read
-scopes), update `JIRA_API_TOKEN` in `~/.config/sls-atlassian.env`, then re-run
-`bash tools/backup/backup.sh` and confirm `confluencePages: 14` in the manifest.
+**Ways to refresh the KB backup (pick one):**
+
+1. **Via the OAuth MCP connector (easiest).** Re-authorize the Atlassian
+   connector in Claude Code (`/mcp`), then have the agent read the SLS space
+   and write `atlassian/confluence-kb.json`. This is OAuth, so it is unaffected
+   by the Basic-auth block.
+2. **Confluence UI space export.** Space settings → *Export space* → XML/HTML;
+   drop the archive into the continuity repo. Fully owner-driven, no API.
+3. **Proper OAuth 2.0 (3LO) for the script.** Register an Atlassian app, add
+   Confluence read scopes, and extend `export-atlassian.mjs` with a 3LO flow.
+   Most work; only worth it if this needs to run unattended (e.g. from cron).
+
+Until one of those lands, **Jira backups stay current and the KB stays pinned
+at 2026-08-19** — which is safe, just not fresh.
 
 ## Off-site push — owner, one-time
 

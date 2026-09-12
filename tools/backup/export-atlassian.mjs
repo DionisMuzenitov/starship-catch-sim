@@ -157,9 +157,15 @@ async function main() {
     confluenceError = err.message ?? String(err);
     console.error(
       `\n!! Confluence export FAILED — ${confluenceError.slice(0, 200)}\n` +
-        `   The Jira export above still succeeded and was written.\n` +
-        `   Re-auth (new API token / re-authorize the connector), then re-run.\n` +
-        `   Any previous confluence-kb.json in the destination is left untouched.\n`,
+        `   The Jira export above still succeeded and was written, and any\n` +
+        `   previous confluence-kb.json in the destination is left untouched.\n` +
+        (/401/.test(confluenceError)
+          ? `\n   A 401 here is most likely NOT an expired token: Confluence Cloud\n` +
+            `   answers Basic auth with 'www-authenticate: OAuth' on this site and\n` +
+            `   refuses it, while Jira still accepts the same token. Minting a new\n` +
+            `   API token will not help (verified 2026-09-12). Use one of the OAuth\n` +
+            `   paths in tools/backup/README.md instead.\n`
+          : ""),
     );
   }
 
