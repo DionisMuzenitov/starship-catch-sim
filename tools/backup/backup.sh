@@ -39,6 +39,12 @@ GI
 fi
 
 echo "== 1/4 code repo -> git bundle =="
+# The bundle is a FULL snapshot every run, so versioning it in git is pure waste
+# (18 MB of un-deltifiable binary per backup — it grew .git to 80 MB in 5 runs).
+# It is .gitignore'd in the continuity repo on purpose: the code already lives in
+# GitHub, so the bundle's unique value is the OFFLINE copy (flash drive), where
+# it sits as a plain file. The small, text-y things (Atlassian JSON, agent
+# memory) stay versioned — they delta-compress well and their history is useful.
 git -C "$repo" bundle create "$dest/repo.bundle" --all
 git -C "$repo" rev-parse HEAD > "$dest/repo-HEAD.txt"
 

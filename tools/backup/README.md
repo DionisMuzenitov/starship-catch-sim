@@ -51,17 +51,54 @@ commits, the error is recorded in `atlassian/manifest.json`
 `confluence-kb.json` is left untouched**. The 14 KB pages captured on
 2026-08-19 are intact in the continuity repo *and* pushed off-site.
 
-**Ways to refresh the KB backup (pick one):**
+**Update — OAuth path checked too; it is a _product/grant_ problem, not a
+credential one.** The Atlassian OAuth connector was re-authorized on
+2026-09-12 and still cannot reach Confluence: `getConfluenceSpaces` returns
+**404** on `/ex/confluence/<cloudId>/wiki/api/v2/spaces`, and the grant reports
 
-1. **Via the OAuth MCP connector (easiest).** Re-authorize the Atlassian
-   connector in Claude Code (`/mcp`), then have the agent read the SLS space
-   and write `atlassian/confluence-kb.json`. This is OAuth, so it is unaffected
-   by the Basic-auth block.
-2. **Confluence UI space export.** Space settings → *Export space* → XML/HTML;
-   drop the archive into the continuity repo. Fully owner-driven, no API.
-3. **Proper OAuth 2.0 (3LO) for the script.** Register an Atlassian app, add
-   Confluence read scopes, and extend `export-atlassian.mjs` with a 3LO flow.
-   Most work; only worth it if this needs to run unattended (e.g. from cron).
+```json
+{ "url": "https://yanismuzenitov.atlassian.net",
+  "scopes": ["read:jira-work", "write:jira-work"] }
+```
+
+— i.e. **only Jira scopes; no Confluence scope is offered at all**. So *both*
+independent auth paths (Basic and OAuth) are unauthorized for Confluence while
+Jira works on both. That points at the product/site level — Confluence either
+isn't provisioned for this account any more, or was deactivated on the site —
+rather than at any token.
+
+### CONFIRMED 2026-09-12: Confluence is gone from the site
+
+The owner opened <https://yanismuzenitov.atlassian.net/wiki/spaces/SLS> while
+logged in and got:
+
+> `(null)` — Encountered a "null - null" error while loading this page.
+> **Go to Jira home**
+
+A "Go to **Jira** home" fallback (rather than Confluence home) is the tell: the
+site has Jira only. That reconciles every observation — Basic auth 401, OAuth
+404, and a grant offering `read:jira-work` / `write:jira-work` and no Confluence
+scope. **The Confluence product is not available on this site.**
+
+**Consequence: the `confluence-kb.json` captured on 2026-08-19 is the ONLY
+surviving copy of the knowledge base** — 14 pages, ~80 KB of storage-format
+XHTML. This is exactly the loss scenario this ticket was filed to prevent, and
+the backup caught it with weeks to spare. It is currently held in three
+independent places:
+
+1. `~/sls-backups/continuity/atlassian/confluence-kb.json` (local, git-tracked)
+2. the private `DionisMuzenitov/sls-continuity` GitHub repo (off-site)
+3. `sls-continuity-*.tar.gz` on the flash drive (physical)
+
+**Do not delete any of those three** until the content has been migrated into
+this repo as markdown (tracked separately) — after which git becomes the durable
+home and the JSON is just provenance.
+
+**If Confluence is ever restored**, re-create the pages from that JSON, then
+re-grant the connector with Confluence scopes
+(`read:confluence-content.all` / `read:confluence-space.summary`) so
+`export-atlassian.mjs` can resume backing it up. Until then the exporter's
+Confluence step will keep failing soft, which is correct and harmless.
 
 Until one of those lands, **Jira backups stay current and the KB stays pinned
 at 2026-08-19** — which is safe, just not fresh.
