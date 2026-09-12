@@ -51,7 +51,11 @@ mkdir -p "$dest/claude-local"
 [ -f "$repo/.claude/settings.local.json" ] && cp "$repo/.claude/settings.local.json" "$dest/claude-local/" || echo "  (no settings.local.json)"
 
 echo "== 4/4 Atlassian export (Jira + Confluence) =="
-rm -rf "$dest/atlassian"; mkdir -p "$dest/atlassian"
+# Refresh the per-issue Jira dir (so deleted issues don't linger), but do NOT
+# wipe the destination wholesale: the Confluence export is best-effort, and a
+# failed run must not destroy the last good confluence-kb.json.
+mkdir -p "$dest/atlassian"
+rm -rf "$dest/atlassian/jira"
 node "$here/export-atlassian.mjs" --out "$dest/atlassian"
 
 cat > "$dest/README.md" <<EOF

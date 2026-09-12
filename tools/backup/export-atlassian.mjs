@@ -53,7 +53,10 @@ async function api(url, auth, path) {
     headers: { authorization: auth, accept: "application/json" },
   });
   if (!resp.ok) {
-    throw new Error(`HTTP ${resp.status} on ${path} — ${await resp.text()}`);
+    // Atlassian answers an unauthenticated REST call with a full HTML login
+    // page; keep only a short prefix so errors stay readable in logs/manifests.
+    const body = (await resp.text()).replace(/\s+/g, " ").trim().slice(0, 160);
+    throw new Error(`HTTP ${resp.status} on ${path.split("?")[0]} — ${body}`);
   }
   return resp.json();
 }
@@ -87,7 +90,8 @@ async function jiraIssue(url, auth, key) {
   if (c && c.total > (c.comments?.length ?? 0)) {
     const all = [];
     let startAt = 0;
-    do {
+    let more = true;
+    while (more) {
       const page = await api(
         url,
         auth,
@@ -95,8 +99,8 @@ async function jiraIssue(url, auth, key) {
       );
       all.push(...(page.comments ?? []));
       startAt += page.maxResults ?? 100;
-      if (startAt >= (page.total ?? all.length)) break;
-    } while (true);
+      more = startAt < (page.total ?? all.length);
+    }
     issue.fields.comment.comments = all;
   }
   return issue;
@@ -139,9 +143,25 @@ async function main() {
   writeFileSync(join(outDir, "jira-all.json"), JSON.stringify(issues, null, 2));
   console.log(`  ${keys.length} issues, ${commentTotal} comments`);
 
-  const pages = await confluencePages(url, auth);
-  writeFileSync(join(outDir, "confluence-kb.json"), JSON.stringify(pages, null, 2));
-  console.log(`Confluence: ${pages.length} pages`);
+  // Confluence is exported best-effort: a KB auth failure must NOT throw away
+  // an otherwise-good Jira backup. (Seen live 2026-09: the API token kept
+  // working for Jira while every Confluence endpoint began returning 401 — so
+  // the run that needs to succeed most is exactly the one that would abort.)
+  let pages = null;
+  let confluenceError = null;
+  try {
+    pages = await confluencePages(url, auth);
+    writeFileSync(join(outDir, "confluence-kb.json"), JSON.stringify(pages, null, 2));
+    console.log(`Confluence: ${pages.length} pages`);
+  } catch (err) {
+    confluenceError = err.message ?? String(err);
+    console.error(
+      `\n!! Confluence export FAILED — ${confluenceError.slice(0, 200)}\n` +
+        `   The Jira export above still succeeded and was written.\n` +
+        `   Re-auth (new API token / re-authorize the connector), then re-run.\n` +
+        `   Any previous confluence-kb.json in the destination is left untouched.\n`,
+    );
+  }
 
   const manifest = {
     exportedAt: new Date().toISOString(),
@@ -150,7 +170,8 @@ async function main() {
     space: SPACE,
     jiraIssues: keys.length,
     jiraComments: commentTotal,
-    confluencePages: pages.length,
+    confluencePages: pages ? pages.length : null,
+    confluenceError,
   };
   writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   console.log(`\nDone. Manifest:\n${JSON.stringify(manifest, null, 2)}`);
