@@ -84,3 +84,12 @@ docs/kb/.obsidian/*
 # A canvas worth keeping: `git add -f` it, or give it a real name.
 docs/kb/Untitled*.canvas
 docs/kb/**/Untitled*.canvas
+
+# Visual goldens (SLS-108). Only the `-linux` set — captured on CI, the only
+# renderer they are ever compared against — belongs in git. A local run with
+# SLS_VISUAL_LOCAL=1 writes `-darwin`/`-win32` goldens straight into this
+# tracked directory, and a routine `git add -A` would commit a GPU-rendered
+# frame no CI job will ever compare. (`test-results/` and
+# `playwright-report/` are already covered by the unanchored rules above.)
+apps/web/e2e/__screenshots__/*-darwin.png
+apps/web/e2e/__screenshots__/*-win32.png

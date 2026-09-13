@@ -70,8 +70,15 @@ export function layeredWind(layers: readonly WindLayer[]): WindField {
 // drydenTurbulence
 // ---------------------------------------------------------------------------
 
-/** Deterministic non-cryptographic PRNG, returns uniform `[0, 1)`. */
-function mulberry32(seed: number): () => number {
+/**
+ * Deterministic non-cryptographic PRNG, returns uniform `[0, 1)`.
+ *
+ * Exported (SLS-108) so the renderer can seed decorative randomness — the
+ * star field — from the same generator instead of `Math.random()`. A second
+ * PRNG implementation would be one more thing to keep in numpy↔TS parity
+ * (SLS-28) for no benefit.
+ */
+export function mulberry32(seed: number): () => number {
   let t = seed | 0;
   return () => {
     t = (t + 0x6d2b79f5) | 0;
