@@ -51,14 +51,7 @@ export function Scene() {
   return (
     <div className="relative h-full w-full">
       <Canvas
-        gl={{
-          // TEMP SLS-121 EXPERIMENT: `?logdepth=0` disables the logarithmic
-          // depth buffer so CI can compare renders with and without it.
-          logarithmicDepthBuffer:
-            typeof window === "undefined" ||
-            new URLSearchParams(window.location.search).get("logdepth") !== "0",
-          antialias: false,
-        }}
+        gl={{ logarithmicDepthBuffer: true, antialias: false }}
         camera={{
           position: [220, 820, 220],
           fov: 50,
