@@ -23,15 +23,8 @@ export default defineConfig({
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
 
   projects: [
-    // TEMP SLS-121 discriminator project.
-    {
-      name: "x-control",
-      testMatch: /zz-tmp-sls121/,
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 },
-    },
     {
       name: "chromium",
-      testIgnore: /zz-tmp-sls121/,
       use: {
         ...devices["Desktop Chrome"],
         // Pin everything that scales the framebuffer. `devices` supplies a
