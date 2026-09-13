@@ -35,6 +35,30 @@ test("SLS121 scene diagnostic", async ({ page }) => {
   });
   await page.waitForTimeout(1200);
 
+  // Per-FRAME draw calls: brackets exactly one rendered frame, so the number
+  // is independent of how fast the host renders. This is the discriminator —
+  // same per-frame calls means the geometry is submitted and the problem is
+  // rasterisation/shading, not culling.
+  const perFrame = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const caps: any[] = (window as any).__captured || [];
+        const gl = caps.find((o) => o?.isWebGLRenderer);
+        if (!gl) return resolve(null);
+        requestAnimationFrame(() => {
+          gl.info.autoReset = false;
+          gl.info.reset();
+          requestAnimationFrame(() =>
+            resolve({
+              calls: gl.info.render.calls,
+              tris: gl.info.render.triangles,
+            }),
+          );
+        });
+      }),
+  );
+  console.log("SLS121_FRAME " + JSON.stringify(perFrame));
+
   const diag = await page.evaluate(() => {
     const caps: any[] = (window as any).__captured || [];
     const scene = caps.find((o) => o?.isScene);
