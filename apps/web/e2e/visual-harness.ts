@@ -130,12 +130,16 @@ export async function gotoStableScene(page: Page, url = "/"): Promise<void> {
  *
  * The PNG is also written into `test-results/` so a CI failure artifact
  * always carries the actual frame, not just a diff percentage.
+ *
+ * The `animations` option is left at its default deliberately: measured
+ * serially it changes nothing here (237,736 vs 237,737 bytes — there are no
+ * CSS animations in the app), and the scene's only motion is a WebGL render
+ * loop Playwright cannot freeze anyway. See the serial-execution note in
+ * `visual-golden.spec.ts` for what DOES destroy the frame.
  */
 export async function captureGolden(page: Page, name: string): Promise<void> {
   const buffer = await page.screenshot({
     path: `test-results/actual-${name}`,
-    animations: "disabled",
-    caret: "hide",
   });
   expect(buffer).toMatchSnapshot(name, {
     maxDiffPixelRatio: 0.004,

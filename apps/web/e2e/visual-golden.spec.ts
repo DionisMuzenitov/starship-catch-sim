@@ -61,6 +61,22 @@ test.describe("visual goldens (SLS-108)", () => {
     "goldens are captured on linux (CI); set SLS_VISUAL_LOCAL=1 to run here",
   );
 
+  /**
+   * Run these one at a time.
+   *
+   * Two WebGL contexts rendering concurrently starve each other on a software
+   * rasteriser, and the loser does not error — it returns a frame with the
+   * sky, ground, tower and OLM all missing, keeping only the vehicle and the
+   * star points. It looks like a plausible screenshot, so goldened blind it
+   * would have locked in an empty scene forever and passed every run after.
+   *
+   * Measured on the replay frame: 237 KB rendered with one worker, 52 KB with
+   * two. CI already sets `workers: 1` (playwright.config.ts); this keeps a
+   * local run honest too. Use `--workers=1` when running the whole e2e suite
+   * alongside these.
+   */
+  test.describe.configure({ mode: "serial" });
+
   test("default scene, paused at t=0", async ({ page }) => {
     await gotoStableScene(page);
     await captureGolden(page, "default-scene-t0.png");

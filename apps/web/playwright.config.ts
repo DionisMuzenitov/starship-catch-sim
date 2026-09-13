@@ -22,19 +22,6 @@ export default defineConfig({
   // pretend a macOS frame can be compared against them.
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
 
-  expect: {
-    toHaveScreenshot: {
-      // The tower arms settle on a first-order lag driven by REAL dt, so the
-      // frame is never bit-identical — it converges, it does not land. Allow
-      // a small fraction of pixels to differ, but keep the per-pixel
-      // threshold tight so a genuine geometry/material change still trips it.
-      maxDiffPixelRatio: 0.004,
-      threshold: 0.15,
-      animations: "disabled",
-      caret: "hide",
-    },
-  },
-
   projects: [
     {
       name: "chromium",
