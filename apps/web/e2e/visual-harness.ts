@@ -111,3 +111,34 @@ export async function gotoStableScene(page: Page, url = "/"): Promise<void> {
   await page.goto(url);
   await waitForStableScene(page);
 }
+
+/**
+ * Capture one frame and compare it to the committed golden.
+ *
+ * Deliberately NOT `expect(page).toHaveScreenshot()`. That helper first
+ * screenshots the page repeatedly until two consecutive captures come back
+ * byte-identical, and only then compares. This scene never satisfies that:
+ * the chopstick arms track their target on a first-order lag, which
+ * converges geometrically but never actually arrives, so consecutive frames
+ * differ forever by a sub-pixel amount. In CI it burned the full 5 s budget
+ * and failed with "generating new stable screenshot expectation" — before
+ * ever writing an image to compare.
+ *
+ * Taking exactly one screenshot and comparing it with a pixel tolerance
+ * matches what we actually want to assert: not "the renderer is frozen", but
+ * "this frame looks like the frame we approved".
+ *
+ * The PNG is also written into `test-results/` so a CI failure artifact
+ * always carries the actual frame, not just a diff percentage.
+ */
+export async function captureGolden(page: Page, name: string): Promise<void> {
+  const buffer = await page.screenshot({
+    path: `test-results/actual-${name}`,
+    animations: "disabled",
+    caret: "hide",
+  });
+  expect(buffer).toMatchSnapshot(name, {
+    maxDiffPixelRatio: 0.004,
+    threshold: 0.15,
+  });
+}

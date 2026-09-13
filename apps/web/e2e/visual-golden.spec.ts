@@ -28,7 +28,11 @@
  */
 import { expect, test } from "@playwright/test";
 
-import { gotoStableScene, seedDeterministicState } from "./visual-harness";
+import {
+  captureGolden,
+  gotoStableScene,
+  seedDeterministicState,
+} from "./visual-harness";
 
 const REPLAY = "public/replays/neural-catch-calm.json";
 
@@ -59,7 +63,7 @@ test.describe("visual goldens (SLS-108)", () => {
 
   test("default scene, paused at t=0", async ({ page }) => {
     await gotoStableScene(page);
-    await expect(page).toHaveScreenshot("default-scene-t0.png");
+    await captureGolden(page, "default-scene-t0.png");
   });
 
   test("terminal catch frame from a committed replay", async ({ page }) => {
@@ -134,6 +138,6 @@ test.describe("visual goldens (SLS-108)", () => {
     // Let the scrubbed frame render and the arms settle.
     await page.waitForTimeout(3_000);
 
-    await expect(page).toHaveScreenshot("replay-terminal-frame.png");
+    await captureGolden(page, "replay-terminal-frame.png");
   });
 });
