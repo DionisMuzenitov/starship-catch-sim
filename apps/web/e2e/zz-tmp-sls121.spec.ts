@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 import { gotoStableScene } from "./visual-harness";
 
@@ -58,6 +60,25 @@ test("SLS121 scene diagnostic", async ({ page }) => {
       }),
   );
   console.log("SLS121_FRAME " + JSON.stringify(perFrame));
+
+  // Is the RENDER wrong, or is the CAPTURE stale? Read the drawing buffer
+  // from inside a rAF immediately after a render — that is the pixels WebGL
+  // actually produced — and write it out next to Playwright's screenshot.
+  // If they differ, the renderer is fine and the compositing path is not.
+  const dataUrl = (await page.evaluate(
+    () =>
+      new Promise<string>((resolve) => {
+        const c = document.querySelector("canvas") as HTMLCanvasElement;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => resolve(c.toDataURL("image/png"))),
+        );
+      }),
+  )) as string;
+  writeFileSync(
+    "test-results/sls121-todataurl.png",
+    Buffer.from(dataUrl.split(",")[1]!, "base64"),
+  );
+  await page.screenshot({ path: "test-results/sls121-playwright.png" });
 
   const diag = await page.evaluate(() => {
     const caps: any[] = (window as any).__captured || [];
