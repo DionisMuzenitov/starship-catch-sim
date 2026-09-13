@@ -24,10 +24,16 @@ import { useRef, type ElementRef } from "react";
 import { type Camera, MOUSE, Vector3 } from "three";
 
 import { useCameraStore, type CameraMode } from "../../state/cameraStore";
+import { useReplayStore } from "../../state/replayStore";
 import { useSimStore } from "../../state/simStore";
 
 import { isOrbitMode, MODE_POLICY } from "./cameraPolicy";
-import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
+import {
+  DEFAULT_ENV,
+  GROUND_FLOOR_M,
+  isPivotJump,
+  modeTargetFor,
+} from "./modes";
 
 type Controls = ElementRef<typeof OrbitControls>;
 type World = ReturnType<typeof useSimStore.getState>["world"];
@@ -62,6 +68,21 @@ export function OrbitCameraRig() {
       const target = modeTargetFor(mode, world, DEFAULT_ENV);
       if (target) {
         const prev = prevTargetRef.current;
+        // A replay entry or scrub MOVES the world rather than simulating it,
+        // so the pivot teleports (65 km → the catch). Translating the camera
+        // by that delta keeps a 65 km-scale standoff and leaves the tower a
+        // distant speck; reframe instead. Gated on replay mode so live
+        // flight — including a x8 ship descent at 1500 m/s — is never
+        // reframed mid-drag (SLS-121).
+        if (
+          useReplayStore.getState().mode === "replay" &&
+          isPivotJump(target.lookAt, prev)
+        ) {
+          seedOrbit(controls, camera, mode, world, prev);
+          controls.update();
+          if (camera.position.y < GROUND_FLOOR_M) camera.position.y = GROUND_FLOOR_M;
+          return;
+        }
         camera.position.x += target.lookAt.x - prev.x;
         camera.position.y += target.lookAt.y - prev.y;
         camera.position.z += target.lookAt.z - prev.z;

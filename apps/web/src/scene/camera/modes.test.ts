@@ -7,7 +7,12 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { __forTests, cinematicView } from "./cinematicRigs";
-import { DEFAULT_ENV, modeTargetFor, SITE_GROUND_Y_M } from "./modes";
+import {
+  DEFAULT_ENV,
+  isPivotJump,
+  modeTargetFor,
+  SITE_GROUND_Y_M,
+} from "./modes";
 
 const baseWorld: World = boosterDescentScenario().initialWorld;
 
@@ -152,5 +157,40 @@ describe("modeTargetFor", () => {
     expect(
       modeTargetFor("free", worldAtAltitude(800), DEFAULT_ENV),
     ).toBeNull();
+  });
+});
+
+describe("isPivotJump (SLS-121)", () => {
+  const at = (x: number, y: number, z: number) => ({ x, y, z });
+
+  it("treats no motion as continuous", () => {
+    expect(isPivotJump(at(0, 0, 0), at(0, 0, 0))).toBe(false);
+  });
+
+  it("treats ordinary replay playback motion as continuous", () => {
+    // Terminal-window playback is tens of m/s, so frame-to-frame motion is
+    // metres, nowhere near the threshold.
+    expect(isPivotJump(at(0, 40, 0), at(0, 0, 0))).toBe(false);
+  });
+
+  it("flags the replay-entry teleport", () => {
+    expect(isPivotJump(at(8.5, 91, 0), at(0, 65_000, 12_260))).toBe(true);
+  });
+
+  it("measures distance in 3D, not per-axis", () => {
+    expect(isPivotJump(at(700, 700, 0), at(0, 0, 0))).toBe(false);
+    expect(isPivotJump(at(700, 700, 700), at(0, 0, 0))).toBe(true);
+  });
+
+  it("is symmetric in direction", () => {
+    expect(isPivotJump(at(0, 0, 0), at(0, 5_000, 0))).toBe(true);
+    expect(isPivotJump(at(0, 5_000, 0), at(0, 0, 0))).toBe(true);
+  });
+
+  it("is only consulted in replay mode, so fast live flight is unaffected", () => {
+    // Documents the gate rather than the maths: a x8 ship descent covers
+    // ~2.4 km in one clamped frame and WOULD exceed the threshold — it is
+    // never evaluated, because OrbitCameraRig checks replay mode first.
+    expect(isPivotJump(at(2_400, 0, 0), at(0, 0, 0))).toBe(true);
   });
 });

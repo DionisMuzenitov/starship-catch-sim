@@ -150,3 +150,29 @@ export function modeTargetFor(
       return null;
   }
 }
+
+/**
+ * How far a follow pivot may move in ONE frame before it is a teleport.
+ *
+ * Only consulted while a REPLAY owns the view (see `OrbitCameraRig`), which
+ * is what makes a distance threshold safe: live flight is never tested, so
+ * fast scenarios cannot trip it. `ship-descent-*` starts at 1500 m/s
+ * horizontal and at x8 covers ~2.4 km in one clamped frame — that must never
+ * reframe the camera mid-drag, and now cannot.
+ *
+ * Within a replay the vehicle is in its terminal window at a few tens of m/s,
+ * so 1 km is far above any frame-to-frame playback motion and far below the
+ * entry jump (65 km) or a window-spanning scrub (several km).
+ */
+export const JUMP_THRESHOLD_M = 1_000;
+
+/** True when a replay pivot moved further in one frame than playback explains. */
+export function isPivotJump(
+  lookAt: { x: number; y: number; z: number },
+  prev: { x: number; y: number; z: number },
+): boolean {
+  const dx = lookAt.x - prev.x;
+  const dy = lookAt.y - prev.y;
+  const dz = lookAt.z - prev.z;
+  return dx * dx + dy * dy + dz * dz > JUMP_THRESHOLD_M * JUMP_THRESHOLD_M;
+}

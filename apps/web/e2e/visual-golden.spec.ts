@@ -25,6 +25,12 @@
  *    index is the same state, on any host, forever. It also costs no new
  *    product surface: `neural-catch-calm.json` is already committed and
  *    already served.
+ *
+ *    This frame was skipped on linux until SLS-121: it rendered the scenario
+ *    start instead of the catch, which looked like CI failing to draw the
+ *    scene and was actually the live runner clobbering the replay's world
+ *    every frame. With that fixed the frame renders everywhere, and this is
+ *    now the golden that covers the geometry the historical regressions broke.
  */
 import { expect, test } from "@playwright/test";
 
@@ -78,33 +84,7 @@ test.describe("visual goldens (SLS-108)", () => {
     await captureGolden(page, "default-scene-t0.png");
   });
 
-  /**
-   * Not run in CI — see SLS-121.
-   *
-   * CI's Ubuntu SwiftShader (Subzero backend) renders this frame WITHOUT the
-   * sky, ground, tower or OLM: only the vehicle and the star points survive.
-   * No console error, no lost context, no shader failure — it simply draws
-   * less. macOS SwiftShader (LLVM backend) draws the full scene from the
-   * identical build, so it is a renderer-backend difference, not a bug in the
-   * app or this harness.
-   *
-   * Goldening CI's frame anyway was the tempting option and is rejected: it
-   * would commit a picture that is missing the exact geometry this test
-   * exists to watch, and every future run would agree with it. A test that
-   * cannot fail for the reason it was written is worse than no test, because
-   * the row in the table says it is covered.
-   *
-   * It DOES render correctly on a dev machine, so it stays runnable there:
-   *     SLS_VISUAL_LOCAL=1 pnpm --filter @starship-catch-sim/web exec \
-   *       playwright test e2e/visual-golden.spec.ts --workers=1
-   */
   test("terminal catch frame from a committed replay", async ({ page }) => {
-    // Scoped to THIS test: a describe-level skip would also disable the
-    // default-scene golden above, which CI renders correctly.
-    test.skip(
-      process.platform === "linux",
-      "SLS-121: CI's SwiftShader omits the site geometry in this frame",
-    );
     test.setTimeout(120_000);
 
     // Use the full harness, not a bare canvas check: this is the frame with
