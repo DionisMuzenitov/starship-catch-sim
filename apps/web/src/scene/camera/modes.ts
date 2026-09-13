@@ -150,3 +150,34 @@ export function modeTargetFor(
       return null;
   }
 }
+
+/**
+ * How far a follow pivot may move in ONE frame before it should be treated as
+ * a teleport rather than flight (SLS-121).
+ *
+ * Sizing: the runner clamps a step to 0.2 s of real time, so at ×8 with a
+ * booster doing ~250 m/s the largest genuine single-frame motion is ~400 m.
+ * 1 km clears that while staying far below any real jump — the smallest
+ * interesting one, scrubbing across a trimmed replay window, is several km.
+ */
+export const JUMP_THRESHOLD_M = 1_000;
+
+/**
+ * True when a follow pivot moved further in one frame than flight explains.
+ *
+ * Chase mode follows by translating the camera by the pivot's per-frame
+ * delta, which assumes the world only ever moves continuously. Loading or
+ * scrubbing a replay breaks that: the world jumps from the scenario start
+ * (65 km up, 11.7 km downrange) to the terminal frame in a single step.
+ * Translating by that delta keeps the camera's 65 km-scale standoff, leaving
+ * the tower a distant speck; re-seeding reframes it properly.
+ */
+export function isPivotJump(
+  lookAt: { x: number; y: number; z: number },
+  prev: { x: number; y: number; z: number },
+): boolean {
+  const dx = lookAt.x - prev.x;
+  const dy = lookAt.y - prev.y;
+  const dz = lookAt.z - prev.z;
+  return dx * dx + dy * dy + dz * dz > JUMP_THRESHOLD_M * JUMP_THRESHOLD_M;
+}

@@ -193,7 +193,19 @@ export function useSimRunner(): UseSimRunner {
       bodyCapsule: scenario.collisionBody,
       recorder,
       callbacks: {
-        onRender: (world) => setWorld(world),
+        // While a replay owns the view, the live runner must not publish
+        // worlds at all (SLS-121). Pausing it is NOT sufficient: `frame()`
+        // calls `onRender` on every animation frame regardless of paused
+        // state — only `advance()` early-returns — so a paused runner kept
+        // overwriting `simStore.world` with its stale t=0 world ~60×/s and
+        // clobbered ReplayDriver's writes. The visible result was a viewport
+        // frozen at the scenario start (65 km) while the HUD showed the
+        // replay's values, because the two readers sampled the store at
+        // different points in the frame.
+        onRender: (world) => {
+          if (useReplayStore.getState().mode === "replay") return;
+          setWorld(world);
+        },
         onMeta: (meta) => {
           setPaused(meta.paused);
           setScale(meta.scale);
@@ -230,8 +242,10 @@ export function useSimRunner(): UseSimRunner {
         ? installPointerBindings(inputState, canvas)
         : () => undefined;
 
-    // Force-pause the runner whenever replay mode is active so the live
-    // simulation can't fight the replay driver's writes to simStore.world.
+    // Force-pause the runner whenever replay mode is active, so it stops
+    // advancing while a replay is on screen. Note this is NOT what stops it
+    // fighting the replay driver for `simStore.world` — the `onRender` guard
+    // above does that; pausing alone left the world-push running (SLS-121).
     // Exiting replay mode re-mounts the scene (via scenarioStore.epoch) so
     // we don't have to manually restore the paused state here.
     const unsubReplay = useReplayStore.subscribe((s) => {

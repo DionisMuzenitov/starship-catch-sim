@@ -27,7 +27,12 @@ import { useCameraStore, type CameraMode } from "../../state/cameraStore";
 import { useSimStore } from "../../state/simStore";
 
 import { isOrbitMode, MODE_POLICY } from "./cameraPolicy";
-import { DEFAULT_ENV, GROUND_FLOOR_M, modeTargetFor } from "./modes";
+import {
+  DEFAULT_ENV,
+  GROUND_FLOOR_M,
+  isPivotJump,
+  modeTargetFor,
+} from "./modes";
 
 type Controls = ElementRef<typeof OrbitControls>;
 type World = ReturnType<typeof useSimStore.getState>["world"];
@@ -62,11 +67,16 @@ export function OrbitCameraRig() {
       const target = modeTargetFor(mode, world, DEFAULT_ENV);
       if (target) {
         const prev = prevTargetRef.current;
-        camera.position.x += target.lookAt.x - prev.x;
-        camera.position.y += target.lookAt.y - prev.y;
-        camera.position.z += target.lookAt.z - prev.z;
-        controls.target.set(target.lookAt.x, target.lookAt.y, target.lookAt.z);
-        prev.set(target.lookAt.x, target.lookAt.y, target.lookAt.z);
+        if (isPivotJump(target.lookAt, prev)) {
+          // The world teleported — re-frame instead of translating (SLS-121).
+          seedOrbit(controls, camera, mode, world, prev);
+        } else {
+          camera.position.x += target.lookAt.x - prev.x;
+          camera.position.y += target.lookAt.y - prev.y;
+          camera.position.z += target.lookAt.z - prev.z;
+          controls.target.set(target.lookAt.x, target.lookAt.y, target.lookAt.z);
+          prev.set(target.lookAt.x, target.lookAt.y, target.lookAt.z);
+        }
       }
     }
 

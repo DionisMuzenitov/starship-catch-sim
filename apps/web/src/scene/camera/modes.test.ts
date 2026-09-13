@@ -7,7 +7,12 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { __forTests, cinematicView } from "./cinematicRigs";
-import { DEFAULT_ENV, modeTargetFor, SITE_GROUND_Y_M } from "./modes";
+import {
+  DEFAULT_ENV,
+  isPivotJump,
+  modeTargetFor,
+  SITE_GROUND_Y_M,
+} from "./modes";
 
 const baseWorld: World = boosterDescentScenario().initialWorld;
 
@@ -152,5 +157,38 @@ describe("modeTargetFor", () => {
     expect(
       modeTargetFor("free", worldAtAltitude(800), DEFAULT_ENV),
     ).toBeNull();
+  });
+});
+
+describe("isPivotJump (SLS-121)", () => {
+  const at = (x: number, y: number, z: number) => ({ x, y, z });
+
+  it("treats no motion as continuous", () => {
+    expect(isPivotJump(at(0, 0, 0), at(0, 0, 0))).toBe(false);
+  });
+
+  it("treats the fastest genuine single-frame flight as continuous", () => {
+    // Runner clamps a step to 0.2 s real; at ×8 a 250 m/s booster covers
+    // ~400 m. The follower must not reframe for ordinary fast flight.
+    expect(isPivotJump(at(0, 400, 0), at(0, 0, 0))).toBe(false);
+  });
+
+  it("flags the replay-entry teleport", () => {
+    // Scenario start (65 km up, 11.7 km downrange) → terminal frame. This is
+    // the jump that used to be absorbed as one huge camera translation,
+    // leaving the tower a distant speck.
+    expect(isPivotJump(at(8.5, 91, 0), at(0, 65_000, 12_260))).toBe(true);
+  });
+
+  it("measures distance in 3D, not per-axis", () => {
+    // 700 m on each of two axes is ~990 m — still under the threshold.
+    expect(isPivotJump(at(700, 700, 0), at(0, 0, 0))).toBe(false);
+    // …but adding the third axis crosses it.
+    expect(isPivotJump(at(700, 700, 700), at(0, 0, 0))).toBe(true);
+  });
+
+  it("is symmetric in direction", () => {
+    expect(isPivotJump(at(0, 0, 0), at(0, 5_000, 0))).toBe(true);
+    expect(isPivotJump(at(0, 5_000, 0), at(0, 0, 0))).toBe(true);
   });
 });
