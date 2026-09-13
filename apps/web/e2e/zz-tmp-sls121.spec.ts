@@ -30,5 +30,7 @@ for (const [label, url] of [
       return { depthBits: g.getParameter(g.DEPTH_BITS), samples: g.getParameter(g.SAMPLES), fragDepth: true };
     });
     console.log(`SLS121_GL ${label} ` + JSON.stringify(gl));
+    // TEMP: fail so CI uploads the failure artifact containing the frames.
+    expect(`SLS121-${label}`, "deliberate failure to collect artifacts").toBe("collect");
   });
 }
