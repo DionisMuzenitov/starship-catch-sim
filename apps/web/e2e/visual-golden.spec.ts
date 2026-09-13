@@ -82,7 +82,33 @@ test.describe("visual goldens (SLS-108)", () => {
     await captureGolden(page, "default-scene-t0.png");
   });
 
+  /**
+   * Not run in CI — see SLS-121.
+   *
+   * CI's Ubuntu SwiftShader (Subzero backend) renders this frame WITHOUT the
+   * sky, ground, tower or OLM: only the vehicle and the star points survive.
+   * No console error, no lost context, no shader failure — it simply draws
+   * less. macOS SwiftShader (LLVM backend) draws the full scene from the
+   * identical build, so it is a renderer-backend difference, not a bug in the
+   * app or this harness.
+   *
+   * Goldening CI's frame anyway was the tempting option and is rejected: it
+   * would commit a picture that is missing the exact geometry this test
+   * exists to watch, and every future run would agree with it. A test that
+   * cannot fail for the reason it was written is worse than no test, because
+   * the row in the table says it is covered.
+   *
+   * It DOES render correctly on a dev machine, so it stays runnable there:
+   *     SLS_VISUAL_LOCAL=1 pnpm --filter @starship-catch-sim/web exec \
+   *       playwright test e2e/visual-golden.spec.ts --workers=1
+   */
   test("terminal catch frame from a committed replay", async ({ page }) => {
+    // Scoped to THIS test: a describe-level skip would also disable the
+    // default-scene golden above, which CI renders correctly.
+    test.skip(
+      process.platform === "linux",
+      "SLS-121: CI's SwiftShader omits the site geometry in this frame",
+    );
     test.setTimeout(120_000);
 
     await seedDeterministicState(page);
