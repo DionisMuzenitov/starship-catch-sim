@@ -8,6 +8,13 @@
 import { Bloom, EffectComposer, SMAA } from "@react-three/postprocessing";
 
 export function PostFX() {
+  // TEMP SLS-121 EXPERIMENT: `?nopostfx=1` bypasses the composer.
+  if (
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("nopostfx") === "1"
+  ) {
+    return null;
+  }
   return (
     <EffectComposer multisampling={0}>
       <Bloom intensity={0.25} luminanceThreshold={0.85} mipmapBlur />
