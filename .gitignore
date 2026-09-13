@@ -85,7 +85,11 @@ docs/kb/.obsidian/*
 docs/kb/Untitled*.canvas
 docs/kb/**/Untitled*.canvas
 
-# Playwright run output (SLS-108). The GOLDENS in
-# apps/web/e2e/__screenshots__/ are committed; these are per-run scratch.
-apps/web/test-results/
-apps/web/playwright-report/
+# Visual goldens (SLS-108). Only the `-linux` set — captured on CI, the only
+# renderer they are ever compared against — belongs in git. A local run with
+# SLS_VISUAL_LOCAL=1 writes `-darwin`/`-win32` goldens straight into this
+# tracked directory, and a routine `git add -A` would commit a GPU-rendered
+# frame no CI job will ever compare. (`test-results/` and
+# `playwright-report/` are already covered by the unanchored rules above.)
+apps/web/e2e/__screenshots__/*-darwin.png
+apps/web/e2e/__screenshots__/*-win32.png

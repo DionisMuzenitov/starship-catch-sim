@@ -28,11 +28,7 @@
  */
 import { expect, test } from "@playwright/test";
 
-import {
-  captureGolden,
-  gotoStableScene,
-  seedDeterministicState,
-} from "./visual-harness";
+import { captureGolden, gotoStableScene } from "./visual-harness";
 
 const REPLAY = "public/replays/neural-catch-calm.json";
 
@@ -111,9 +107,12 @@ test.describe("visual goldens (SLS-108)", () => {
     );
     test.setTimeout(120_000);
 
-    await seedDeterministicState(page);
-    await page.goto("/");
-    await expect(page.locator("canvas")).toBeVisible({ timeout: 20_000 });
+    // Use the full harness, not a bare canvas check: this is the frame with
+    // the tower, arms and booster actually in view, so it is the one where
+    // goldening a procedural Suspense fallback would do real damage. It needs
+    // the GLB-arrival guard more than the default scene does, and the first
+    // version of this test skipped it.
+    await gotoStableScene(page);
 
     await page
       .getByTestId("scenario-load-replay-input")
@@ -124,12 +123,19 @@ test.describe("visual goldens (SLS-108)", () => {
     const player = page.getByTestId("replay-player");
     await expect(player).toBeVisible({ timeout: 30_000 });
 
-    // Replays autoplay (`replayStore.playing: true`). Pause FIRST — otherwise
-    // playback keeps advancing past whatever index we scrub to and the
-    // captured frame depends on wall-clock timing, which is the whole thing
-    // we are trying to avoid.
-    await page.getByTestId("replay-play-toggle").click();
-    await expect(page.getByTestId("replay-play-toggle")).toHaveText(/play/i);
+    // Replays autoplay (`replayStore.playing: true`), so playback must be
+    // stopped before scrubbing — otherwise it advances past whatever index we
+    // park on and the captured frame depends on wall-clock timing, which is
+    // the whole thing we are avoiding.
+    //
+    // Do NOT just click the toggle. The window is only ~26 s and
+    // `ReplayDriver` sets `playing = false` on its own once playback reaches
+    // the end; if the ~2.2 MB Draco decode stalled the main thread (this test
+    // budgets 30 s for the player to appear), the run is already finished and
+    // a click would START playback. Assert the current state, then act on it.
+    const toggle = page.getByTestId("replay-play-toggle");
+    if ((await toggle.textContent())?.match(/pause/i)) await toggle.click();
+    await expect(toggle).toHaveText(/play/i);
 
     // Park on a fixed frame near the end of the terminal window: tower, arms
     // and booster all in view. Set the value programmatically + dispatch, as
@@ -180,6 +186,11 @@ test.describe("visual goldens (SLS-108)", () => {
     // Let the scrubbed frame render and the arms settle.
     await page.waitForTimeout(3_000);
 
-    await captureGolden(page, "replay-terminal-frame.png");
+    // Looser than the default: unlike the 65 km frame, this one has the
+    // chopstick arms in view, and their first-order lag never fully settles
+    // (see ARM_SETTLE_MS). The subject here fills much of the viewport —
+    // tower, arms, OLM, ground, booster — so 0.004 (~3,700 px) is still far
+    // smaller than any real geometry regression.
+    await captureGolden(page, "replay-terminal-frame.png", 0.004);
   });
 });

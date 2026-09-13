@@ -38,9 +38,40 @@ const STORAGE = {
  * lag of tau = 0.5 s driven by REAL dt — so they run even though the sim is
  * paused, and being exponential they converge without ever arriving. 3 s is
  * 6 tau (within ~0.25% of target, sub-pixel at these framings); the residual
- * motion is what `maxDiffPixelRatio` in playwright.config.ts absorbs.
+ * motion is what the per-capture `maxDiffPixelRatio` absorbs.
  */
 const ARM_SETTLE_MS = 3_000;
+
+/**
+ * Models that must have loaded before a frame is worth capturing. Suffixes,
+ * matched against the resource URL, so the `BASE_URL` prefix is irrelevant.
+ * Mirrors `models/glb/stackAsset.ts` (STACK_GLB_URL) and
+ * `scene/MechazillaTowerGLB.tsx` (TOWER_GLB_URL).
+ */
+const GLB_ASSETS: readonly string[] = [
+  "assets/starship-stack.glb",
+  "assets/mechazilla-tower.glb",
+];
+
+/**
+ * Diff tolerance, as a fraction of the 1280×720 frame.
+ *
+ * **Size this against the SUBJECT, not the frame.** The first version used
+ * 0.004 — 3,686 of 921,600 pixels — which sounds tight and is not: in the
+ * default-scene golden only 27,558 pixels are non-black and the booster
+ * itself is **921 pixels**. Deleting the vehicle outright, or silently
+ * swapping it for the procedural fallback, changes fewer pixels than the
+ * tolerance allowed and would have passed. That is the same
+ * "cannot fail for the reason it was written" trap this suite rejects
+ * elsewhere; it deserved to be caught here too.
+ *
+ * 0.0005 ≈ 460 px — half the booster — so any change to the subject trips
+ * it, while leaving room for antialiasing jitter around the edges.
+ *
+ * Frames whose subject fills much more of the viewport can afford a looser
+ * value; pass it explicitly and say why at the call site.
+ */
+const DEFAULT_MAX_DIFF_PIXEL_RATIO = 0.0005;
 
 /**
  * Seed localStorage BEFORE the app boots.
@@ -93,12 +124,27 @@ export async function waitForStableScene(page: Page): Promise<void> {
 
   // Fail loudly if the GLBs never arrive, instead of quietly golden-ing the
   // procedural fallback.
+  //
+  // Check `responseStatus`, not entry existence: a 404 produces a
+  // PerformanceResourceTiming entry exactly like a 200 does, so counting
+  // entries would pass while GLTFLoader rejected and the error boundary
+  // rendered the procedural stand-in. That matters most in the REGENERATE
+  // direction (`visual-goldens.yml` runs `--update-snapshots`), where a
+  // missing asset would be baked into the golden with nothing to compare it
+  // against. Both models are required — a tower-only failure is exactly the
+  // regression class these goldens exist for.
   await page.waitForFunction(
-    () =>
-      performance
-        .getEntriesByType("resource")
-        .filter((e) => e.name.endsWith(".glb")).length > 0,
-    undefined,
+    (urls: readonly string[]) =>
+      urls.every((url) =>
+        performance
+          .getEntriesByType("resource")
+          .some(
+            (e) =>
+              e.name.endsWith(url) &&
+              (e as PerformanceResourceTiming).responseStatus === 200,
+          ),
+      ),
+    GLB_ASSETS,
     { timeout: 20_000 },
   );
 
@@ -137,12 +183,16 @@ export async function gotoStableScene(page: Page, url = "/"): Promise<void> {
  * loop Playwright cannot freeze anyway. See the serial-execution note in
  * `visual-golden.spec.ts` for what DOES destroy the frame.
  */
-export async function captureGolden(page: Page, name: string): Promise<void> {
+export async function captureGolden(
+  page: Page,
+  name: string,
+  maxDiffPixelRatio = DEFAULT_MAX_DIFF_PIXEL_RATIO,
+): Promise<void> {
   const buffer = await page.screenshot({
     path: `test-results/actual-${name}`,
   });
   expect(buffer).toMatchSnapshot(name, {
-    maxDiffPixelRatio: 0.004,
+    maxDiffPixelRatio,
     threshold: 0.15,
   });
 }
