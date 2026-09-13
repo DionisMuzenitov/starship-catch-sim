@@ -23,8 +23,52 @@ export default defineConfig({
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}-{platform}{ext}",
 
   projects: [
+    // TEMP SLS-121: GL-backend matrix. `testMatch` keeps these scoped to the
+    // experiment spec so the main suite still runs once.
+    {
+      name: "x-control",
+      testMatch: /zz-tmp-sls121/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 },
+    },
+    {
+      name: "x-angle-gl",
+      testMatch: /zz-tmp-sls121/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+        launchOptions: { args: ["--use-angle=gl"] },
+      },
+    },
+    {
+      name: "x-unsafe-sw",
+      testMatch: /zz-tmp-sls121/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+        launchOptions: {
+          args: [
+            "--enable-unsafe-swiftshader",
+            "--ignore-gpu-blocklist",
+            "--disable-gpu-driver-bug-workarounds",
+          ],
+        },
+      },
+    },
+    {
+      name: "x-angle-swiftshader",
+      testMatch: /zz-tmp-sls121/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+        launchOptions: { args: ["--use-gl=angle", "--use-angle=swiftshader", "--disable-gpu-driver-bug-workarounds"] },
+      },
+    },
     {
       name: "chromium",
+      testIgnore: /zz-tmp-sls121/,
       use: {
         ...devices["Desktop Chrome"],
         // Pin everything that scales the framebuffer. `devices` supplies a
